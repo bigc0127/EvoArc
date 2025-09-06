@@ -151,7 +151,6 @@ EvoArc is built with privacy-by-design principles:
 - **Local Processing**: All settings and data remain on your device
 - **Encrypted DNS**: DNS over HTTPS prevents ISP tracking of your browsing
 - **Private Search**: Default to search engines that don't track users
-- **CloudKit Integration**: Optional iCloud sync uses Apple's privacy-preserving CloudKit
 
 ## 🤝 Contributing
 
