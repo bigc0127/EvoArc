@@ -1,11 +1,12 @@
 # EvoArc
 
 **Privacy-focused, ARC-inspired Web Browser for iOS and macOS**
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
 
 [![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20macOS-blue.svg)](https://developer.apple.com/)
 [![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-green.svg)](https://developer.apple.com/swiftui/)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
 EvoArc is a modern, privacy-first web browser built with SwiftUI that combines the best of privacy protection with an intuitive browsing experience. Inspired by the Arc browser's innovative design principles, EvoArc prioritizes user privacy while delivering powerful browsing capabilities across iOS and macOS platforms.
 
@@ -167,7 +168,19 @@ We welcome contributions to EvoArc! Please see our [Contributing Guidelines](CON
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**.
+
+**What this means:**
+- ✅ **You CAN**: Use, modify, distribute, and build upon this code
+- ✅ **You CAN**: Use it for personal, educational, or research purposes
+- ✅ **You CAN**: Create derivative works and share them
+- ❌ **You CANNOT**: Use this code for commercial purposes or make money from it
+
+**Attribution Required**: You must give appropriate credit and indicate if changes were made.
+
+For commercial licensing inquiries, please contact the project maintainer.
+
+See the [LICENSE](LICENSE) file for full details.
 
 ## 🙏 Acknowledgments
 
