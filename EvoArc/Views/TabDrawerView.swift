@@ -1,0 +1,375 @@
+//
+//  TabDrawerView.swift
+//  EvoArc
+//
+//  Created on 2025-09-04.
+//
+
+import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
+
+struct TabDrawerView: View {
+    @ObservedObject var tabManager: TabManager
+    @Namespace private var animationNamespace
+    
+    private var systemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.systemBackground)
+        #else
+        Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+    
+    private var secondarySystemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.secondarySystemBackground)
+        #else
+        Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            drawerHandle
+            headerSection
+            tabsGrid
+        }
+        .background(drawerBackground)
+        .modifier(PlatformCornerRadius())
+        .shadow(radius: 10)
+    }
+    
+    @ViewBuilder
+    private var drawerHandle: some View {
+        RoundedRectangle(cornerRadius: 2.5)
+            .fill(Color.gray.opacity(0.5))
+            .frame(width: 40, height: 5)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+    }
+    
+    @ViewBuilder
+    private var headerSection: some View {
+        HStack {
+            Text("\(tabManager.tabs.count) \(tabManager.tabs.count == 1 ? "Tab" : "Tabs")")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Button(action: {
+                tabManager.createNewTab()
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 10)
+    }
+    
+    @ViewBuilder
+    private var tabsGrid: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVGrid(columns: gridColumns, spacing: 15) {
+                ForEach(tabManager.tabs) { tab in
+                    tabCardView(for: tab)
+                }
+            }
+            .padding(.horizontal, 15)
+            .padding(.bottom, 20)
+        }
+    }
+    
+    @ViewBuilder
+    private func tabCardView(for tab: Tab) -> some View {
+        TabCardView(
+            tab: tab,
+            isSelected: tabManager.selectedTab?.id == tab.id,
+            onSelect: {
+                tabManager.selectTab(tab)
+            },
+            onClose: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    tabManager.closeTab(tab)
+                }
+            },
+            tabManager: tabManager
+        )
+        .matchedGeometryEffect(id: tab.id, in: animationNamespace)
+        .id(tab.id)
+    }
+    
+    private var gridColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: 15),
+            GridItem(.flexible(), spacing: 15)
+        ]
+    }
+    
+    @ViewBuilder
+    private var drawerBackground: some View {
+        systemBackgroundColor
+            .overlay(
+                Color.black.opacity(0.05)
+            )
+    }
+}
+
+struct PlatformCornerRadius: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.cornerRadius(20, corners: [.topLeft, .topRight])
+        #else
+        content.cornerRadius(20)
+        #endif
+    }
+}
+
+struct TabCardView: View {
+    let tab: Tab
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+    let tabManager: TabManager
+    
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging: Bool = false
+    
+    private let swipeThreshold: CGFloat = 80
+    
+    private var systemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.systemBackground)
+        #else
+        Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+    
+    private var secondarySystemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.secondarySystemBackground)
+        #else
+        Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+    
+    @ViewBuilder
+    private var engineContextMenu: some View {
+        Text("Browser Engine")
+        
+        Button(action: {
+            tabManager.changeBrowserEngine(for: tab, to: .webkit)
+        }) {
+            HStack {
+                Text(BrowserEngine.webkit.displayName)
+                Spacer()
+                if tab.browserEngine == .webkit {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
+        
+        Button(action: {
+            tabManager.changeBrowserEngine(for: tab, to: .blink)
+        }) {
+            HStack {
+                Text(BrowserEngine.blink.displayName)
+                Spacer()
+                if tab.browserEngine == .blink {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
+        
+        Divider()
+        
+        Button("Close Tab", action: onClose)
+    }
+    
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            cardContent
+            closeButtonOverlay
+        }
+        .background(deleteIndicatorBackground)
+        .offset(x: dragOffset)
+        .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0), value: dragOffset)
+        .simultaneousGesture(dragGesture)
+    }
+    
+    @ViewBuilder
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            headerRow
+            urlText
+            previewPlaceholder
+        }
+        .padding(12)
+        .background(cardBackground)
+        .onTapGesture {
+            if !isDragging {
+                onSelect()
+            }
+        }
+        .contextMenu {
+            engineContextMenu
+        }
+    }
+    
+    @ViewBuilder
+    private var headerRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "globe")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+            
+            Text(tab.title)
+                .font(.system(size: 14, weight: .medium))
+                .lineLimit(1)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            engineIndicatorBadge
+        }
+    }
+    
+    @ViewBuilder
+    private var urlText: some View {
+        if let url = tab.url {
+            Text(url.host ?? url.absoluteString)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+    }
+    
+    @ViewBuilder
+    private var previewPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color.gray.opacity(0.1))
+            .frame(height: 100)
+            .overlay(
+                Image(systemName: "doc.text")
+                    .font(.system(size: 30))
+                    .foregroundColor(.gray.opacity(0.3))
+            )
+    }
+    
+    @ViewBuilder
+    private var engineIndicatorBadge: some View {
+        Text(tab.browserEngine == .webkit ? "S" : "C")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .frame(width: 16, height: 16)
+            .background(
+                Circle()
+                    .fill(tab.browserEngine == .webkit ? Color.blue : Color.orange)
+            )
+    }
+    
+    @ViewBuilder
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(secondarySystemBackgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+            )
+    }
+    
+    @ViewBuilder
+    private var closeButtonOverlay: some View {
+        if abs(dragOffset) < 10 {
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary)
+                    .background(Circle().fill(systemBackgroundColor))
+            }
+            .offset(x: 5, y: -5)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: dragOffset)
+        }
+    }
+    
+    @ViewBuilder
+    private var deleteIndicatorBackground: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                if dragOffset > 0 {
+                    deleteIndicator(alignment: .leading)
+                } else if dragOffset < 0 {
+                    deleteIndicator(alignment: .trailing)
+                }
+            }
+            .cornerRadius(12)
+        }
+    }
+    
+    @ViewBuilder
+    private func deleteIndicator(alignment: Alignment) -> some View {
+        Color.red.opacity(min(Double(abs(dragOffset) / swipeThreshold), 1.0))
+            .overlay(
+                Image(systemName: "trash.fill")
+                    .foregroundColor(.white)
+                    .font(.system(size: 24))
+                    .frame(width: 60, alignment: .center),
+                alignment: alignment
+            )
+    }
+    
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in
+                withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 1, blendDuration: 0)) {
+                    dragOffset = value.translation.width
+                    isDragging = true
+                }
+            }
+            .onEnded { value in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    if abs(value.translation.width) > swipeThreshold {
+                        // Close the tab
+                        dragOffset = value.translation.width > 0 ? 300 : -300
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            onClose()
+                        }
+                    } else {
+                        // Snap back
+                        dragOffset = 0
+                        isDragging = false
+                    }
+                }
+            }
+    }
+}
+
+#if os(iOS)
+// Extension for rounded corners
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+    
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+#endif
