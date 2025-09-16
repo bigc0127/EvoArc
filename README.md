@@ -9,10 +9,11 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 ## ✨ Key Features
 
 ### 🔐 Privacy & Security
-- **DNS over HTTPS (DoH)** - Built-in DoH proxy server for encrypted DNS queries
+- **Local-First Privacy** - All data stays on your device with optional iCloud sync
 - **Privacy-focused search engines** - Default to Qwant, DuckDuckGo, Startpage, and other privacy-respecting search engines
 - **External search redirect protection** - Optional redirection of external searches through your preferred private search engine
 - **No tracking** - Zero data collection or user tracking
+- **iCloud Integration** - Secure sync using your personal iCloud account
 
 ### 🌐 Dual Browser Engine Support
 - **Safari Mode (WebKit)** - Native WebKit integration for optimal performance and privacy
@@ -55,11 +56,11 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 - `BrowserEngineProtocol.swift` - Protocol defining browser engine interface
 
 **Privacy & Networking**
-- `DNSProxyServer.swift` - Local DNS over HTTPS proxy implementation
-- `DoHProxy.swift` - DNS over HTTPS client and query handler
-- `DoHSchemeHandler.swift` - Custom URL scheme handler for DoH requests
-- `WebView+DoH.swift` - WebKit extensions for DNS over HTTPS integration
-- `DNSProfileGenerator.swift` - DNS configuration profile generation
+- `CloudKitPinnedTabManager.swift` - Secure tab syncing via CloudKit
+- `DoHSettingsManager.swift` - DNS settings management
+- `AdBlockManager.swift` - Content blocking functionality
+- `SearchPreloadManager.swift` - Privacy-focused search preloading
+- `SafePinnedTabManager.swift` - Secure tab state management
 
 **Data Models**
 - `BrowserSettings.swift` - Comprehensive settings management with UserDefaults persistence
@@ -123,9 +124,10 @@ xcodebuild test -project EvoArc.xcodeproj -scheme EvoArc -destination 'platform=
 - **Tab Drawer Position** (macOS): Left side
 
 ### Privacy Features
-- DNS over HTTPS is enabled by default
+- Local-first data storage
+- Optional iCloud sync via CloudKit
 - No telemetry or analytics collection
-- Minimal data retention
+- Zero data retention outside your device
 - Optional external search redirection
 
 ### Supported Search Engines
@@ -149,7 +151,7 @@ EvoArc is built with privacy-by-design principles:
 
 - **No Data Collection**: We don't collect, store, or transmit your personal data
 - **Local Processing**: All settings and data remain on your device
-- **Encrypted DNS**: DNS over HTTPS prevents ISP tracking of your browsing
+- **iCloud Integration**: Secure sync using your personal iCloud account
 - **Private Search**: Default to search engines that don't track users
 
 ## 🤝 Contributing
