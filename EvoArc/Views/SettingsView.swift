@@ -5,6 +5,48 @@
 //  Created on 2025-09-04.
 //
 
+/**
+ * # SettingsView
+ * 
+ * The main settings interface for EvoArc browser, providing configuration options for
+ * browsing behavior, search engines, browser appearance, and integrations.
+ * 
+ * ## Architecture Overview
+ * 
+ * ### For New Swift Developers:
+ * - **@StateObject**: Creates and owns an ObservableObject instance within this view
+ * - **@Environment(\.dismiss)**: Accesses the SwiftUI environment to dismiss the view
+ * - **@State**: Local view state that triggers UI updates when changed
+ * - **@ViewBuilder**: A function builder that constructs SwiftUI views conditionally
+ * - **#if os()**: Compiler directives for platform-specific code
+ * 
+ * ### Key Components:
+ * 1. **Platform Detection**: Automatically adapts UI layout for iOS vs macOS
+ * 2. **Settings Binding**: Two-way data binding with BrowserSettings.shared
+ * 3. **Form Validation**: Real-time validation for user inputs like homepage URLs
+ * 4. **Integration Management**: Handles Perplexity AI integration setup
+ * 
+ * ## Settings Categories:
+ * - **General**: Homepage configuration and basic browser settings
+ * - **Website Appearance**: Desktop vs mobile site preferences
+ * - **Browser Engine**: WebKit vs Blink rendering modes (macOS only)
+ * - **Search Engines**: Default search provider selection with privacy focus
+ * - **Pinned Tabs**: Tab persistence and sync options
+ * - **Interface**: URL bar auto-hide behavior
+ * - **Perplexity Integration**: AI-powered web analysis features
+ * 
+ * ## DNS Resolution:
+ * This app now uses standard system DNS resolution. All custom DNS-over-HTTPS
+ * (DOH) and ControlD integrations have been removed for simplicity.
+ * 
+ * ## Usage:
+ * ```swift
+ * .sheet(isPresented: $showingSettings) {
+ *     SettingsView(tabManager: tabManager)
+ * }
+ * ```
+ */
+
 import SwiftUI
 #if os(iOS)
 import UIKit
@@ -12,11 +54,29 @@ import UIKit
 import AppKit
 #endif
 
+/// The main settings interface view for EvoArc browser configuration
 struct SettingsView: View {
+    /// Reference to the global browser settings singleton
+    /// @StateObject ensures this view owns and observes the settings instance
     @StateObject private var settings = BrowserSettings.shared
+    
+    /// Reference to the Perplexity AI integration manager
+    /// Handles authentication and API interaction for AI features
+    @StateObject private var perplexityManager = PerplexityManager.shared
+    
+    /// Ad blocking manager
+    @StateObject private var adBlockManager = AdBlockManager.shared
+    
+    /// SwiftUI environment value for dismissing this modal view
+    /// Called when user taps "Done" or "Cancel" buttons
     @Environment(\.dismiss) private var dismiss
-    @State private var showingControlDSetup = false
+    
+    /// Local state for the homepage text field to enable real-time validation
+    /// Separate from settings.homepage to allow editing without immediate saves
     @State private var homepageText: String = ""
+    
+    /// Optional reference to the tab manager for creating new tabs
+    /// Used when user clicks links within settings (like Perplexity sign-in)
     var tabManager: TabManager?
     
     private var toolbarPlacement: ToolbarItemPlacement {
@@ -191,6 +251,103 @@ struct SettingsView: View {
         
         Divider()
         
+        // Pinned Tabs Section
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Pinned Tabs Sync")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            PinnedTabDebugView(tabManager: tabManager)
+        }
+        .padding(.vertical, 8)
+        
+        Divider()
+        
+        // Tab Management Section
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tab Management")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 8) {
+                HStack {
+                    Toggle("Confirm before closing pinned tabs", isOn: $settings.confirmClosingPinnedTabs)
+                    Spacer()
+                }
+                
+                Text("Show confirmation dialog when unpinning or closing pinned tabs to prevent accidental loss.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                HStack {
+                    Toggle("Persist tab groups across launches", isOn: $settings.persistTabGroups)
+                    Spacer()
+                }
+                
+                Text("Save tab groups and restore them when the app launches. When disabled, tab groups are temporary and lost when the app closes.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                HStack {
+                    Toggle("Hide empty tab groups", isOn: $settings.hideEmptyTabGroups)
+                    Spacer()
+                }
+                
+                Text("Hide tab groups that contain no tabs from the tab drawer and sidebar. When disabled, empty groups remain visible.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                // Tab Groups Management
+                if let tabManager = tabManager, !tabManager.tabGroups.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Manage Tab Groups")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        
+                        ForEach(tabManager.tabGroups) { group in
+                            HStack {
+                                Circle()
+                                    .fill(group.color.color)
+                                    .frame(width: 12, height: 12)
+                                
+                                Text(group.name)
+                                    .font(.system(size: 13))
+                                
+                                let tabCount = tabManager.getTabsInGroup(group).count
+                                Text("(\(tabCount) \(tabCount == 1 ? "tab" : "tabs"))")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    tabManager.deleteTabGroup(group, moveTabsToNoGroup: true)
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .help("Delete group (keeps tabs)")
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        
+                        Text("Delete groups to clean up your organization. Tabs will be moved to 'Other Tabs' section.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 8)
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        
+        Divider()
+        
         // User Interface Section
         VStack(alignment: .leading, spacing: 12) {
             Text("User Interface")
@@ -235,7 +392,116 @@ struct SettingsView: View {
         
         Divider()
         
-        // Search Section
+        // Ad Blocking Section
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ad Blocking")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 8) {
+                HStack {
+                    Toggle("Enable Ad Blocking", isOn: $settings.adBlockEnabled)
+                    Spacer()
+                }
+                
+                if settings.adBlockEnabled {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Status indicator
+                        HStack(spacing: 8) {
+                            Image(systemName: adBlockManager.isUpdating ? "arrow.triangle.2.circlepath" : "checkmark.shield")
+                                .foregroundColor(.green)
+                            Text("Rules: \(adBlockManager.activeRuleCount)  Updated: \(adBlockManager.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "never")")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Button("Update Now") { Task { await adBlockManager.updateSubscriptions(force: true) } }
+                                .buttonStyle(.bordered)
+                        }
+                        
+                        Toggle("Update lists on launch", isOn: $settings.adBlockAutoUpdateOnLaunch)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Toggle("Block JS-inserted ads (scriptlet)", isOn: $settings.adBlockScriptletEnabled)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Subscriptions:")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            
+                            // Subscription selection buttons
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(AdBlockList.allCases, id: \.self) { list in
+                                    Button(action: {
+                                        var current = Set(settings.selectedAdBlockLists)
+                                        if current.contains(list.rawValue) {
+                                            current.remove(list.rawValue)
+                                        } else {
+                                            current.insert(list.rawValue)
+                                        }
+                                        settings.selectedAdBlockLists = Array(current)
+                                    }) {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(list.displayName)
+                                                    .font(.system(size: 13))
+                                                Text(list.description)
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            Spacer()
+                                            let selected = Set(settings.selectedAdBlockLists).contains(list.rawValue)
+                                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(selected ? .accentColor : .secondary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        
+                        // Custom list URLs (GitHub raw, etc.)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Custom Lists (one URL per line)")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .padding(.top, 10)
+                            
+                            TextEditor(text: Binding(
+                                get: { settings.customAdBlockListURLs.joined(separator: "\n") },
+                                set: { settings.customAdBlockListURLs = $0.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
+                            ))
+                            .frame(minHeight: 80)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.25)))
+                            .font(.system(size: 12))
+                            
+                            Text("Paste URLs to EasyList/uBlock compatible lists (one per line). GitHub raw URLs work well.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        
+        Divider()
+        
+        // History Section
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Browsing History")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            HistorySettingsView(tabManager: tabManager)
+        }
+        .padding(.vertical, 8)
+        
+        Divider()
+        
+        // Perplexity Section
         VStack(alignment: .leading, spacing: 12) {
             Text("Search")
                 .font(.headline)
@@ -339,55 +605,72 @@ struct SettingsView: View {
             Text("When enabled, URLs from Google, Bing, DuckDuckGo, etc. opened from outside EvoArc will be redirected here using your default search engine.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+            
+            // Search preloading toggle
+            Toggle("Enable search result preloading", isOn: $settings.searchPreloadingEnabled)
+                .padding(.top, 10)
+            
+            Text("When enabled, search results and first links are preloaded as you type to improve performance. Disable to reduce network usage.")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 8)
-        Divider()
         
-        // Privacy & Security Section
+        // Perplexity Section
         VStack(alignment: .leading, spacing: 12) {
-            Text("Privacy & Security")
+            Text("Perplexity Integration")
                 .font(.headline)
                 .foregroundColor(.primary)
             
             VStack(spacing: 8) {
                 HStack {
-                    Text("DNS Provider:")
-                        .frame(width: 120, alignment: .leading)
-                    Text("ControlD")
-                        .foregroundColor(.secondary)
+                    Toggle("Enable Perplexity Features", isOn: $perplexityManager.isEnabled)
                     Spacer()
                 }
                 
-                HStack {
-                    Text("Protection from:")
-                        .frame(width: 120, alignment: .leading)
-                    Text("Malware, Phishing, & Ads")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                
-                HStack {
-                    Text("Protocol:")
-                        .frame(width: 120, alignment: .leading)
-                    Text("DNS over HTTPS")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                
-                HStack {
-                    Button(action: {
-                        openControlDSetup()
-                    }) {
-                        Label("Setup DNS Protection", systemImage: "shield.fill")
+                if perplexityManager.isEnabled {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            if perplexityManager.isAuthenticated {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Signed in to Perplexity")
+                                        .foregroundColor(.green)
+                                }
+                                
+                                Spacer()
+                                
+                                Button("Sign Out") {
+                                    perplexityManager.signOut()
+                                }
+                                .buttonStyle(.bordered)
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Button("Sign in to Perplexity") {
+                                        if let tabManager = tabManager {
+                                            dismiss()
+                                            tabManager.createNewTab(url: perplexityManager.loginURL)
+                                        }
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    
+                                    Button("Check Login Status") {
+                                        perplexityManager.refreshAuthenticationStatus()
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        Text("Perplexity integration allows you to quickly summarize web pages or send URLs to Perplexity for AI-powered analysis. Sign in to your Perplexity account to enable these features via right-click context menus or the browser toolbar.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .buttonStyle(.borderedProminent)
-                    
-                    Spacer()
                 }
-                
-                Text("To enable DNS over HTTPS system-wide, install the DNS profile. This will route all DNS queries through ControlD's free DNS service for enhanced privacy and malware protection.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 8)
@@ -519,6 +802,54 @@ struct SettingsView: View {
         }
         
         Section {
+            Toggle("Confirm before closing pinned tabs", isOn: $settings.confirmClosingPinnedTabs)
+            Toggle("Persist tab groups across launches", isOn: $settings.persistTabGroups)
+            
+            // Tab Groups Management
+            if let tabManager = tabManager, !tabManager.tabGroups.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Manage Tab Groups")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .padding(.top, 8)
+                    
+                    ForEach(tabManager.tabGroups) { group in
+                        HStack {
+                            Circle()
+                                .fill(group.color.color)
+                                .frame(width: 12, height: 12)
+                            
+                            Text(group.name)
+                                .font(.system(size: 15))
+                            
+                            let tabCount = tabManager.getTabsInGroup(group).count
+                            Text("(\(tabCount) \(tabCount == 1 ? "tab" : "tabs"))")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                tabManager.deleteTabGroup(group, moveTabsToNoGroup: true)
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        } header: {
+            Text("Tab Management")
+        } footer: {
+            Text("Pinned tab confirmation prevents accidental unpinning. Tab group persistence saves your groups between app launches. Delete groups to clean up organization - tabs will be kept.")
+                .font(.caption)
+        }
+        
+        Section {
             // Private engines
             VStack(alignment: .leading, spacing: 6) {
                 Text("Private search engines")
@@ -611,42 +942,153 @@ struct SettingsView: View {
             Text("When enabled, URLs from Google, Bing, DuckDuckGo, etc. opened from outside EvoArc will be redirected here using your default search engine.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+            
+            // Search preloading toggle
+            Toggle("Enable search result preloading", isOn: $settings.searchPreloadingEnabled)
+            
+            Text("Preloads search results as you type to improve performance. May increase network usage and send partial queries to your search engine.")
+                .font(.caption)
+                .foregroundColor(.secondary)
         } header: {
             Text("Search")
         }
         
+        // History Section (iOS)
         Section {
-            HStack {
-                Text("DNS Provider")
-                Spacer()
-                Text("ControlD")
-                    .foregroundColor(.secondary)
-            }
+            HistorySettingsView(tabManager: tabManager)
+        } header: {
+            Text("Browsing History")
+        } footer: {
+            Text("Manage your browsing history and clear data as needed. All history data is stored locally on your device.")
+                .font(.caption)
+        }
+        
+        // Perplexity Section (iOS)
+        Section {
+            Toggle("Enable Ad Blocking", isOn: $settings.adBlockEnabled)
             
-            HStack {
-                Text("Protection from")
-                Spacer()
-                Text("Malware, Phishing, & Ads")
-                    .foregroundColor(.secondary)
-            }
-            
-            HStack {
-                Text("Protocol")
-                Spacer()
-                Text("DNS over HTTPS")
-                    .foregroundColor(.secondary)
-            }
-            
-            Button(action: {
-                openControlDSetup()
-            }) {
-                Label("Setup DNS Protection", systemImage: "shield.fill")
-                    .foregroundColor(.accentColor)
+            if settings.adBlockEnabled {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Subscriptions")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .padding(.top, 8)
+                    
+                    // Subscription selection
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(AdBlockList.allCases, id: \.self) { list in
+                            Button(action: {
+                                var current = Set(settings.selectedAdBlockLists)
+                                if current.contains(list.rawValue) { current.remove(list.rawValue) } else { current.insert(list.rawValue) }
+                                settings.selectedAdBlockLists = Array(current)
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                    Text(list.displayName)
+                                        .font(.system(size: 15))
+                                    Text(list.description)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                let selected = Set(settings.selectedAdBlockLists).contains(list.rawValue)
+                                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selected ? .accentColor : .secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        
+                        // Custom provider option (removed with DoH)
+                        .buttonStyle(.plain)
+                        
+                    }
+                }
+                
+                // Custom list URLs (GitHub raw, etc.)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Custom Lists (one URL per line)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    TextEditor(text: Binding(
+                        get: { settings.customAdBlockListURLs.joined(separator: "\n") },
+                        set: { settings.customAdBlockListURLs = $0.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
+                    ))
+                    .frame(minHeight: 80)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.25)))
+                    
+                    Toggle("Block JS-inserted ads (scriptlet)", isOn: $settings.adBlockScriptletEnabled)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    HStack {
+                        Button(action: {
+                            Task { await adBlockManager.updateSubscriptions(force: true) }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: adBlockManager.isUpdating ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
+                                Text(adBlockManager.isUpdating ? "Updating…" : "Update Now")
+                            }
+                        }
+                        .disabled(adBlockManager.isUpdating)
+                        
+                        Spacer()
+                        
+                        Text("Rules: \(adBlockManager.activeRuleCount)  •  Updated: \(adBlockManager.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "never")")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         } header: {
-            Text("Privacy & Security")
+            Text("Ad Blocking")
         } footer: {
-            Text("To enable DNS over HTTPS system-wide, install the DNS profile. This will route all DNS queries through ControlD's free DNS service for enhanced privacy and malware protection.")
+            if settings.adBlockEnabled {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: adBlockManager.isUpdating ? "arrow.triangle.2.circlepath" : "checkmark.shield")
+                            .foregroundColor(.green)
+                        Text("Rules: \(adBlockManager.activeRuleCount)  Updated: \(adBlockManager.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "never")")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Toggle("Update lists on launch", isOn: $settings.adBlockAutoUpdateOnLaunch)
+                        .font(.caption)
+                }
+            }
+        }
+        
+        Section {
+            Toggle("Enable Perplexity Features", isOn: $perplexityManager.isEnabled)
+            
+            if perplexityManager.isEnabled {
+                if perplexityManager.isAuthenticated {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Signed in to Perplexity")
+                            .foregroundColor(.green)
+                    }
+                    
+                    Button("Sign Out") {
+                        perplexityManager.signOut()
+                    }
+                    .foregroundColor(.red)
+                } else {
+                    Button("Sign in to Perplexity") {
+                        if let tabManager = tabManager {
+                            dismiss()
+                            tabManager.createNewTab(url: perplexityManager.loginURL)
+                        }
+                    }
+                    .foregroundColor(.accentColor)
+                }
+            }
+        } header: {
+            Text("Perplexity Integration")
+        } footer: {
+            Text("Perplexity integration allows you to quickly summarize web pages or send URLs to Perplexity for AI-powered analysis. Sign in to your Perplexity account to enable these features via right-click context menus or the browser toolbar.")
                 .font(.caption)
         }
         
@@ -713,44 +1155,9 @@ struct SettingsView: View {
         
         // Validate URL
         if URL(string: urlToSave) != nil || urlToSave.isEmpty {
-            settings.homepage = urlToSave.isEmpty ? "https://www.qwant.com" : urlToSave
+            settings.homepage = urlToSave.isEmpty ? "https://www.google.com" : urlToSave
             homepageText = settings.homepage
         }
-    }
-    
-    private func openControlDSetup() {
-        guard let setupURL = URL(string: "https://controld.com/free-dns") else {
-            print("Error: Invalid ControlD setup URL")
-            return
-        }
-        
-        #if os(iOS)
-        // On iOS, prefer opening in app, fallback to Safari
-        if let tabManager = tabManager {
-            dismiss()
-            tabManager.createNewTab(url: setupURL)
-            print("Opening ControlD setup in new tab")
-        } else {
-            // Fallback: Open in Safari
-            if UIApplication.shared.canOpenURL(setupURL) {
-                UIApplication.shared.open(setupURL)
-                print("Opening ControlD setup in Safari")
-            } else {
-                print("Error: Cannot open ControlD setup URL")
-            }
-        }
-        #else
-        // On macOS, prefer opening in app, fallback to default browser
-        if let tabManager = tabManager {
-            dismiss()
-            tabManager.createNewTab(url: setupURL)
-            print("Opening ControlD setup in new tab")
-        } else {
-            // Fallback: Open in default browser
-            NSWorkspace.shared.open(setupURL)
-            print("Opening ControlD setup in default browser")
-        }
-        #endif
     }
     
     #if os(iOS)

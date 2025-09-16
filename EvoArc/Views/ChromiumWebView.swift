@@ -52,10 +52,19 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
     
     // MARK: - Shared Implementation
     private func createWebView(context: Context) -> WKWebView {
-        // Create a special configuration for Chromium mode
+        // Standard WebKit configuration for Chromium mode
         let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
         
-        // Configure for Chromium-like behavior
+        // Check if JavaScript should be blocked for this site
+        let jsEnabled = tab.url.map { !JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: $0) } ?? true
+        preferences.allowsContentJavaScript = jsEnabled
+        
+        configuration.defaultWebpagePreferences = preferences
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        // Apply content blocking (AdBlock) after webView creation below
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
@@ -89,6 +98,7 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         
         // Create the WebView with Chromium configuration
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        AdBlockManager.shared.applyContentBlocking(to: webView)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -201,6 +211,11 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
+                    
+                    // Add to browsing history
+                    let title = webView.title ?? parent.tab.title
+                    HistoryManager.shared.addEntry(url: url, title: title)
+                    print("📚 Chromium iOS: Added to history: \(title) - \(url.absoluteString)")
                 }
                 
                 // Inject Chrome-specific features after page load
@@ -355,10 +370,15 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
     
     // MARK: - Shared Implementation
     private func createWebView(context: Context) -> WKWebView {
-        // Create a special configuration for Chromium mode
+        // Standard WebKit configuration for Chromium mode
         let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
         
-        // Configure for Chromium-like behavior
+        // Apply content blocking (AdBlock) after webView creation below
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
@@ -392,6 +412,7 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
         
         // Create the WebView with Chromium configuration
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        AdBlockManager.shared.applyContentBlocking(to: webView)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -508,6 +529,11 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
+                    
+                    // Add to browsing history
+                    let title = webView.title ?? parent.tab.title
+                    HistoryManager.shared.addEntry(url: url, title: title)
+                    print("📚 Chromium macOS: Added to history: \(title) - \(url.absoluteString)")
                 }
                 
                 // Inject Chrome-specific features after page load

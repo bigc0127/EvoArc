@@ -5,51 +5,142 @@
 //  Created on 2025-09-04.
 //
 
+/**
+ * # WebView
+ * 
+ * A basic SwiftUI wrapper around WKWebView for iOS, providing essential web browsing
+ * functionality without scroll-based URL bar management. This is the simpler alternative
+ * to ScrollDetectingWebView when auto-hide features aren't needed.
+ * 
+ * ## Architecture Overview
+ * 
+ * ### For New Swift Developers:
+ * - **UIViewRepresentable**: Protocol that allows SwiftUI to wrap UIKit components
+ * - **WKWebView**: Apple's modern web rendering engine (WebKit)
+ * - **Coordinator**: Design pattern for handling delegate callbacks from UIKit
+ * - **KVO (Key-Value Observing)**: Automatic notification when object properties change
+ * 
+ * ### Component Responsibilities:
+ * 1. **WebView**: The SwiftUI wrapper that manages the WKWebView lifecycle
+ * 2. **Coordinator**: Handles WKWebView delegate methods and property observations
+ * 3. **Tab Integration**: Syncs web view state with EvoArc's tab management system
+ * 
+ * ## Key Features:
+ * - **Standard WebKit**: Uses system DNS resolution (no custom DNS providers)
+ * - **User Agent Management**: Automatically applies desktop/mobile user agents
+ * - **Navigation Handling**: Processes URL submissions and tab switching
+ * - **Loading State Tracking**: Monitors progress and updates tab state
+ * - **Gesture Support**: Enables swipe navigation between pages
+ * 
+ * ## WebKit Configuration:
+ * - JavaScript enabled for modern web functionality
+ * - Standard website data store for cookies and cache
+ * - No custom proxy or DNS-over-HTTPS configuration
+ * - Platform-appropriate media playback settings
+ * 
+ * ## Usage:
+ * ```swift
+ * WebView(
+ *     tab: currentTab,
+ *     urlString: $urlString,
+ *     shouldNavigate: $shouldNavigate,
+ *     onNavigate: { url in /* handle navigation */ }
+ * )
+ * ```
+ */
+
 import SwiftUI
 import WebKit
 
 #if os(iOS)
 import UIKit
 
+/// iOS-specific WebView implementation using UIViewRepresentable
+/// This struct bridges SwiftUI with UIKit's WKWebView component
 struct WebView: UIViewRepresentable {
+    /// The tab object this web view is displaying content for
+    /// @ObservedObject automatically updates the view when tab properties change
     @ObservedObject var tab: Tab
+    
+    /// Two-way binding to the URL bar text field in the parent view
+    /// Changes to this trigger navigation, and navigation updates this value
     @Binding var urlString: String
+    
+    /// Flag that triggers navigation when set to true by URL bar submission
+    /// Reset to false after navigation is processed
     @Binding var shouldNavigate: Bool
+    
+    /// Callback function executed when navigation to a new URL occurs
+    /// Used by parent views to update their state and UI
     let onNavigate: (URL) -> Void
+    
+    /// Reference to global browser settings for user agent and preferences
+    /// @StateObject ensures this view owns the settings instance
     @StateObject private var settings = BrowserSettings.shared
     
+    /// Creates the Coordinator that handles WKWebView delegate callbacks
+    /// The Coordinator pattern is SwiftUI's way of handling UIKit delegate methods
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
+    /// Creates and configures a new WKWebView instance for UIKit integration
+    /// This method is called by SwiftUI when the view first appears
+    /// - Parameter context: SwiftUI context containing the coordinator and other data
+    /// - Returns: A fully configured WKWebView ready for web browsing
     func makeUIView(context: Context) -> WKWebView {
-        // Use basic configuration to test WebView loading
+        // Standard WebKit configuration
         let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
         
+        // Check if JavaScript should be blocked for this site
+        let jsEnabled = tab.url.map { !JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: $0) } ?? true
+        preferences.allowsContentJavaScript = jsEnabled
+        
+        configuration.defaultWebpagePreferences = preferences
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
+        #if os(iOS)
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        configuration.allowsAirPlayForMediaPlayback = true
+        configuration.allowsPictureInPictureMediaPlayback = true
+        #endif
+        
+        // Create the WebView with zero frame (SwiftUI will handle sizing)
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
-        webView.uiDelegate = context.coordinator
+        
+        // Apply content blocking (AdBlock)
+        AdBlockManager.shared.applyContentBlocking(to: webView)
+        
+        // Set up delegate pattern - coordinator handles all WebKit callbacks
+        webView.navigationDelegate = context.coordinator  // Handle navigation events
+        webView.uiDelegate = context.coordinator          // Handle UI events (alerts, etc.)
+        
+        // Enable swipe gestures for back/forward navigation (iOS standard behavior)
         webView.allowsBackForwardNavigationGestures = true
         
-        // Set custom user agent based on settings
+        // Apply user agent string based on user's desktop/mobile preference
+        // This determines whether websites show mobile or desktop versions
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
-        // Store reference to webView in the tab
+        // Establish bidirectional reference between tab and web view
+        // This allows the tab to control the web view and vice versa
         DispatchQueue.main.async {
             tab.webView = webView
         }
         
-        // Set coordinator's webView reference
+        // Give coordinator access to web view for delegate method implementation
         context.coordinator.webView = webView
         
-        // Add observers for loading state
+        // Set up Key-Value Observing (KVO) for automatic UI updates
+        // These observers automatically update the tab state when WebView properties change
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.title), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.canGoBack), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.canGoForward), options: .new, context: nil)
         
-        // Load initial URL if available
+        // Load the tab's current URL if one exists (handles tab restoration)
         if let url = tab.url {
             webView.load(URLRequest(url: url))
         }
@@ -133,8 +224,15 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
             // We only update the UI state when navigation actually starts
             Task { @MainActor in
+                // Force loading state to true when navigation starts
+                parent.tab.isLoading = true
+                parent.tab.estimatedProgress = 0.0
+                parent.tab.startLoadingTimeout()
+                print("💪 Started loading timeout for tab: \(parent.tab.id)")
+                
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
@@ -144,18 +242,52 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                // Force loading state to false when navigation finishes
+                parent.tab.isLoading = false
+                parent.tab.estimatedProgress = 1.0
+                parent.tab.stopLoadingTimeout()
+                print("🚫 Stopped loading timeout for tab: \(parent.tab.id)")
+                
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
+                    
+                    // Add to browsing history
+                    let title = webView.title ?? parent.tab.title
+                    HistoryManager.shared.addEntry(url: url, title: title)
+                    print("📚 Added to history: \(title) - \(url.absoluteString)")
+                    
+                    // Apply JavaScript blocking settings for the new URL
+                    let jsBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: url)
+                    if jsBlocked != !webView.configuration.defaultWebpagePreferences.allowsContentJavaScript {
+                        // JavaScript setting needs to be updated
+                        webView.configuration.defaultWebpagePreferences.allowsContentJavaScript = !jsBlocked
+                        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = !jsBlocked
+                    }
+                    
+                    // Check for Perplexity authentication when navigating to Perplexity pages
+                    PerplexityManager.shared.checkForLoginOnNavigation(to: url)
                 }
             }
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            // Handle canceled requests (error code -999) gracefully
             let nsError = error as NSError
+            print("😨 iOS: didFailProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown") - Error: \(nsError.code)")
+            
+            Task { @MainActor in
+                // Force loading state to false when navigation fails
+                parent.tab.isLoading = false
+                parent.tab.estimatedProgress = 0.0
+                parent.tab.stopLoadingTimeout()
+                print("🚫 Stopped loading timeout for failed navigation: \(parent.tab.id)")
+            }
+            
+            // Handle canceled requests (error code -999) gracefully
             if nsError.code == NSURLErrorCancelled {
+                print("💫 Navigation cancelled (expected)")
                 return
             }
             
@@ -222,8 +354,12 @@ struct WebView: NSViewRepresentable {
     }
     
     func makeNSView(context: Context) -> WKWebView {
-        // Use basic configuration to test WebView loading
-        let configuration = WKWebViewConfiguration()
+        // Create DoH-enabled WebKit configuration using the version-aware factory
+        // This automatically selects the best DoH approach based on iOS version:
+        // - iOS 17+: Network proxy approach (not yet implemented)
+        // - iOS 14-16: URLSession protocol interception
+        // - iOS 13-: Standard configuration without DoH
+        let configuration = DoHConfigurationFactory.createWebViewConfiguration()
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -332,6 +468,13 @@ struct WebView: NSViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 macOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            // Force loading state to true when navigation starts
+            parent.tab.isLoading = true
+            parent.tab.estimatedProgress = 0.0
+            parent.tab.startLoadingTimeout()
+            print("💪 macOS: Started loading timeout for tab: \(parent.tab.id)")
+            
             if let url = webView.url {
                 parent.tab.url = url
                 parent.urlString = url.absoluteString
@@ -340,16 +483,35 @@ struct WebView: NSViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ macOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            // Force loading state to false when navigation finishes
+            parent.tab.isLoading = false
+            parent.tab.estimatedProgress = 1.0
+            parent.tab.stopLoadingTimeout()
+            print("🚫 macOS: Stopped loading timeout for tab: \(parent.tab.id)")
+            
             if let url = webView.url {
                 parent.tab.url = url
                 parent.urlString = url.absoluteString
+                
+                // Check for Perplexity authentication when navigating to Perplexity pages
+                PerplexityManager.shared.checkForLoginOnNavigation(to: url)
             }
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            // Handle canceled requests (error code -999) gracefully
             let nsError = error as NSError
+            print("😨 macOS: didFailProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown") - Error: \(nsError.code)")
+            
+            // Force loading state to false when navigation fails
+            parent.tab.isLoading = false
+            parent.tab.estimatedProgress = 0.0
+            parent.tab.stopLoadingTimeout()
+            print("🚫 macOS: Stopped loading timeout for failed navigation: \(parent.tab.id)")
+            
+            // Handle canceled requests (error code -999) gracefully
             if nsError.code == NSURLErrorCancelled {
+                print("💫 macOS: Navigation cancelled (expected)")
                 return
             }
             

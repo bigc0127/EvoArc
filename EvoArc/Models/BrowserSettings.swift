@@ -78,6 +78,34 @@ enum TabDrawerPosition: String, CaseIterable {
 }
 #endif
 
+// Ad blocking subscription options
+enum AdBlockList: String, CaseIterable, Identifiable {
+    case peterLowe
+    case adAway
+    case oneHostsLite
+    case stevenBlack
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .peterLowe: return "Peter Lowe’s List"
+        case .adAway: return "AdAway Hosts"
+        case .oneHostsLite: return "1Hosts (Lite)"
+        case .stevenBlack: return "StevenBlack (basic)"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .peterLowe: return "Compact list of common ad and tracking domains"
+        case .adAway: return "Mobile-focused ad and malware domains"
+        case .oneHostsLite: return "Lightweight curated host list"
+        case .stevenBlack: return "Combined reputable hosts list (large)"
+        }
+    }
+}
+
 class BrowserSettings: ObservableObject {
     static let shared = BrowserSettings()
     
@@ -134,6 +162,14 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // Search preloading setting (enabled by default)
+    @Published var searchPreloadingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(searchPreloadingEnabled, forKey: "searchPreloadingEnabled")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     #if os(macOS)
     @Published var tabDrawerPosition: TabDrawerPosition {
         didSet {
@@ -142,6 +178,64 @@ class BrowserSettings: ObservableObject {
         }
     }
     #endif
+    
+    // Confirmation for closing pinned tabs
+    @Published var confirmClosingPinnedTabs: Bool {
+        didSet {
+            UserDefaults.standard.set(confirmClosingPinnedTabs, forKey: "confirmClosingPinnedTabs")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
+    // Persistence for tab groups and their tabs
+    @Published var persistTabGroups: Bool {
+        didSet {
+            UserDefaults.standard.set(persistTabGroups, forKey: "persistTabGroups")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
+    // Hide empty tab groups from the UI
+    @Published var hideEmptyTabGroups: Bool {
+        didSet {
+            UserDefaults.standard.set(hideEmptyTabGroups, forKey: "hideEmptyTabGroups")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
+    // MARK: - Ad Blocking Settings
+    
+    // Enable/disable ad blocking
+    @Published var adBlockEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockEnabled, forKey: "adBlockEnabled")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
+    // Selected ad block lists
+    @Published var selectedAdBlockLists: [String] {
+        didSet {
+            UserDefaults.standard.set(selectedAdBlockLists, forKey: "selectedAdBlockLists")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
+    // Auto-update lists on launch
+    @Published var adBlockAutoUpdateOnLaunch: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockAutoUpdateOnLaunch, forKey: "adBlockAutoUpdateOnLaunch")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
+    // Enable scriptlet that hides JS-inserted ad elements
+    @Published var adBlockScriptletEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockScriptletEnabled, forKey: "adBlockScriptletEnabled")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
     
     private init() {
         // Set default based on device type
@@ -166,11 +260,11 @@ class BrowserSettings: ObservableObject {
             self.useDesktopMode = defaultDesktopMode
         }
         
-        // Load homepage setting with default to Qwant
+        // Load homepage setting with default to Google
         if let storedHomepage = UserDefaults.standard.string(forKey: "homepage") {
             self.homepage = storedHomepage
         } else {
-            self.homepage = "https://www.qwant.com"
+            self.homepage = "https://www.google.com"
         }
         
         // Load auto-hide URL bar setting with default to true
@@ -195,12 +289,19 @@ class BrowserSettings: ObservableObject {
             self.browserEngine = .webkit
         }
         
-        // Load default search engine setting with default to Qwant
+        // Load AdBlock scriptlet toggle (default on)
+        if UserDefaults.standard.object(forKey: "adBlockScriptletEnabled") != nil {
+            self.adBlockScriptletEnabled = UserDefaults.standard.bool(forKey: "adBlockScriptletEnabled")
+        } else {
+            self.adBlockScriptletEnabled = true
+        }
+        
+        // Load default search engine setting with default to Google
         if let seString = UserDefaults.standard.string(forKey: "defaultSearchEngine"),
            let se = SearchEngine(rawValue: seString) {
             self.defaultSearchEngine = se
         } else {
-            self.defaultSearchEngine = .qwant
+            self.defaultSearchEngine = .google
         }
         
         // Load custom search template (default template includes {query})
@@ -219,6 +320,62 @@ class BrowserSettings: ObservableObject {
             self.tabDrawerPosition = .left
         }
         #endif
+        
+        // Load confirm closing pinned tabs setting with default to true
+        if UserDefaults.standard.object(forKey: "confirmClosingPinnedTabs") != nil {
+            self.confirmClosingPinnedTabs = UserDefaults.standard.bool(forKey: "confirmClosingPinnedTabs")
+        } else {
+            self.confirmClosingPinnedTabs = true
+        }
+        
+        // Load persist tab groups setting with default to false
+        if UserDefaults.standard.object(forKey: "persistTabGroups") != nil {
+            self.persistTabGroups = UserDefaults.standard.bool(forKey: "persistTabGroups")
+        } else {
+            self.persistTabGroups = false
+        }
+        
+        // Load hide empty tab groups setting with default to false
+        if UserDefaults.standard.object(forKey: "hideEmptyTabGroups") != nil {
+            self.hideEmptyTabGroups = UserDefaults.standard.bool(forKey: "hideEmptyTabGroups")
+        } else {
+            self.hideEmptyTabGroups = false
+        }
+        
+        // Load AdBlock enabled setting (default true)
+        if UserDefaults.standard.object(forKey: "adBlockEnabled") != nil {
+            self.adBlockEnabled = UserDefaults.standard.bool(forKey: "adBlockEnabled")
+        } else {
+            self.adBlockEnabled = true
+        }
+        
+        // Load selected ad block lists (default to Peter Lowe + AdAway)
+        if let stored = UserDefaults.standard.array(forKey: "selectedAdBlockLists") as? [String] {
+            self.selectedAdBlockLists = stored
+        } else {
+            self.selectedAdBlockLists = [AdBlockList.peterLowe.rawValue, AdBlockList.adAway.rawValue]
+        }
+        
+        // Auto-update on launch (default true)
+        if UserDefaults.standard.object(forKey: "adBlockAutoUpdateOnLaunch") != nil {
+            self.adBlockAutoUpdateOnLaunch = UserDefaults.standard.bool(forKey: "adBlockAutoUpdateOnLaunch")
+        } else {
+            self.adBlockAutoUpdateOnLaunch = true
+        }
+        
+        // Custom list URLs
+        if let customLists = UserDefaults.standard.array(forKey: "customAdBlockListURLs") as? [String] {
+            self.customAdBlockListURLs = customLists
+        } else {
+            self.customAdBlockListURLs = []
+        }
+        
+        // Load search preloading setting with default to true (enabled by default)
+        if UserDefaults.standard.object(forKey: "searchPreloadingEnabled") != nil {
+            self.searchPreloadingEnabled = UserDefaults.standard.bool(forKey: "searchPreloadingEnabled")
+        } else {
+            self.searchPreloadingEnabled = true
+        }
     }
     
     var userAgentString: String {
@@ -240,8 +397,8 @@ class BrowserSettings: ObservableObject {
         if !homepage.contains("://") {
             return URL(string: "https://\(homepage)")
         }
-        // Fallback to Qwant
-        return URL(string: "https://www.qwant.com")
+        // Fallback to Google
+        return URL(string: "https://www.google.com")
     }
     
     // Build a search URL for the current default search engine
@@ -272,7 +429,7 @@ class BrowserSettings: ObservableObject {
         case .custom:
             let template = customSearchTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
             guard template.contains("{query}") else {
-                return URL(string: "https://www.qwant.com/?q=\(encoded)")
+                return URL(string: "https://www.google.com/search?q=\(encoded)")
             }
             let urlString = template.replacingOccurrences(of: "{query}", with: encoded)
             if let url = URL(string: urlString),
@@ -280,7 +437,7 @@ class BrowserSettings: ObservableObject {
                url.host != nil {
                 return url
             } else {
-                return URL(string: "https://www.qwant.com/?q=\(encoded)")
+                return URL(string: "https://www.google.com/search?q=\(encoded)")
             }
         }
     }
@@ -315,9 +472,25 @@ class BrowserSettings: ObservableObject {
         let urlString = template.replacingOccurrences(of: "{query}", with: encoded)
         return URL(string: urlString)
     }
+    
+    // MARK: - AdBlock Helpers
+    
+    /// Convenience accessor for selected lists as enums
+    var selectedAdBlockListsEnum: [AdBlockList] {
+        selectedAdBlockLists.compactMap { AdBlockList(rawValue: $0) }
+    }
+    
+    // Custom list URLs (uBlock/EasyList compatible text). Users can paste GitHub raw URLs.
+    @Published var customAdBlockListURLs: [String] {
+        didSet {
+            UserDefaults.standard.set(customAdBlockListURLs, forKey: "customAdBlockListURLs")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
 }
 
 extension Notification.Name {
     static let browserSettingsChanged = Notification.Name("browserSettingsChanged")
     static let browserEngineChanged = Notification.Name("browserEngineChanged")
+    static let adBlockSettingsChanged = Notification.Name("adBlockSettingsChanged")
 }

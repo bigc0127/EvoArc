@@ -14,7 +14,13 @@ import AppKit
 
 struct TabDrawerView: View {
     @ObservedObject var tabManager: TabManager
+    @StateObject private var settings = BrowserSettings.shared
+    @StateObject private var bookmarkManager = BookmarkManager.shared
     @Namespace private var animationNamespace
+    @State private var showingCreateGroupSheet = false
+    @State private var newGroupName = ""
+    @State private var newGroupColor: TabGroupColor = .blue
+    @State private var showingBookmarks = false
     
     private var systemBackgroundColor: Color {
         #if os(iOS)
@@ -41,6 +47,49 @@ struct TabDrawerView: View {
         .background(drawerBackground)
         .modifier(PlatformCornerRadius())
         .shadow(radius: 10)
+        .sheet(isPresented: $showingCreateGroupSheet) {
+            NewTabGroupView(
+                name: $newGroupName,
+                color: $newGroupColor,
+                onCancel: {
+                    showingCreateGroupSheet = false
+                    newGroupName = ""
+                    newGroupColor = .blue
+                },
+                onCreate: {
+                    let trimmed = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        _ = tabManager.createTabGroup(name: trimmed, color: newGroupColor)
+                    }
+                    showingCreateGroupSheet = false
+                    newGroupName = ""
+                    newGroupColor = .blue
+                }
+            )
+            #if os(macOS)
+            .frame(minWidth: 420, minHeight: 360)
+            #endif
+        }
+.sheet(isPresented: $showingBookmarks) {
+            BookmarksView(tabManager: tabManager)
+            #if os(macOS)
+                .frame(minWidth: 820, minHeight: 600)
+            #endif
+        }
+        .confirmationDialog(
+            "Unpin Tab",
+            isPresented: $tabManager.showUnpinConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Unpin", role: .destructive) {
+                tabManager.confirmUnpinTab()
+            }
+            Button("Cancel", role: .cancel) {
+                tabManager.cancelUnpinTab()
+            }
+        } message: {
+            Text("Are you sure you want to unpin this tab? It will remain open but no longer be pinned.")
+        }
     }
     
     @ViewBuilder
@@ -59,7 +108,31 @@ struct TabDrawerView: View {
                 .font(.headline)
                 .foregroundColor(.primary)
             
+            if !tabManager.tabGroups.isEmpty {
+                Text("• \(tabManager.tabGroups.count) \(tabManager.tabGroups.count == 1 ? "Group" : "Groups")")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
             Spacer()
+            
+            Button(action: {
+                showingBookmarks = true
+            }) {
+                Image(systemName: "bookmark.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            Button(action: {
+                showingCreateGroupSheet = true
+            }) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 18))
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(PlainButtonStyle())
             
             Button(action: {
                 tabManager.createNewTab()
@@ -77,12 +150,71 @@ struct TabDrawerView: View {
     @ViewBuilder
     private var tabsGrid: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVGrid(columns: gridColumns, spacing: 15) {
-                ForEach(tabManager.tabs) { tab in
-                    tabCardView(for: tab)
+            LazyVStack(spacing: 20) {
+                // Pinned tabs section
+                let pinnedTabs = tabManager.tabs.filter { $0.isPinned }
+                if !pinnedTabs.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.accentColor)
+                            Text("Pinned")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 15)
+                        
+                        LazyVGrid(columns: gridColumns, spacing: 15) {
+                            ForEach(pinnedTabs) { tab in
+                                tabCardView(for: tab)
+                            }
+                        }
+                        .padding(.horizontal, 15)
+                    }
+                }
+                
+                // Tab groups sections
+                ForEach(tabManager.tabGroups) { group in
+                    let groupTabs = tabManager.getTabsInGroup(group).filter { !$0.isPinned }
+                    if !settings.hideEmptyTabGroups || !groupTabs.isEmpty {
+                        TabGroupSectionView(
+                            group: group,
+                            tabs: groupTabs,
+                            tabManager: tabManager,
+                            gridColumns: gridColumns
+                        ) { tab in
+                            tabCardView(for: tab)
+                        }
+                    }
+                }
+                
+                // Ungrouped tabs section
+                let ungroupedTabs = tabManager.getUngroupedTabs().filter { !$0.isPinned }
+                if !ungroupedTabs.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if (!pinnedTabs.isEmpty || !tabManager.tabGroups.isEmpty) {
+                            HStack {
+                                Text("Other Tabs")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 15)
+                        }
+                        
+                        LazyVGrid(columns: gridColumns, spacing: 15) {
+                            ForEach(ungroupedTabs) { tab in
+                                tabCardView(for: tab)
+                            }
+                        }
+                        .padding(.horizontal, 15)
+                    }
                 }
             }
-            .padding(.horizontal, 15)
             .padding(.bottom, 20)
         }
     }
@@ -120,6 +252,82 @@ struct TabDrawerView: View {
                 Color.black.opacity(0.05)
             )
     }
+    
+    // Legacy createGroupSheet removed. Using NewTabGroupView instead.
+    /* Removed legacy UI */
+}
+
+struct TabGroupSectionView<TabCard: View>: View {
+    @ObservedObject var group: TabGroup
+    let tabs: [Tab]
+    let tabManager: TabManager
+    let gridColumns: [GridItem]
+    @ViewBuilder let tabCardView: (Tab) -> TabCard
+    
+    @State private var showingDeleteConfirmation = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Circle()
+                    .fill(group.color.color)
+                    .frame(width: 12, height: 12)
+                
+                Text(group.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("(\(tabs.count))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button(action: {
+                    withAnimation(.spring()) {
+                        group.update(isCollapsed: !group.isCollapsed)
+                    }
+                }) {
+                    Image(systemName: group.isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Button(action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 15)
+            
+            if !group.isCollapsed {
+                LazyVGrid(columns: gridColumns, spacing: 15) {
+                    ForEach(tabs) { tab in
+                        tabCardView(tab)
+                    }
+                }
+                .padding(.horizontal, 15)
+            }
+        }
+        .confirmationDialog(
+            "Delete Group",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Group Only") {
+                tabManager.deleteTabGroup(group, moveTabsToNoGroup: true)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will delete the group but keep all tabs. The tabs will be moved to 'Other Tabs'.")
+        }
+    }
 }
 
 struct PlatformCornerRadius: ViewModifier {
@@ -141,6 +349,9 @@ struct TabCardView: View {
     
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging: Bool = false
+    @State private var showingNewGroupAlert = false
+    @State private var newGroupName = ""
+    @State private var newGroupColor: TabGroupColor = .blue
     
     private let swipeThreshold: CGFloat = 80
     
@@ -161,7 +372,60 @@ struct TabCardView: View {
     }
     
     @ViewBuilder
-    private var engineContextMenu: some View {
+    private var contextMenu: some View {
+        // Pin/Unpin option
+        if tab.isPinned {
+            Button(action: {
+                tabManager.requestUnpinTab(tab)
+            }) {
+                Label("Unpin Tab", systemImage: "pin.slash")
+            }
+        } else {
+            Button(action: {
+                tabManager.pinTab(tab)
+            }) {
+                Label("Pin Tab", systemImage: "pin")
+            }
+        }
+        
+        Divider()
+        
+        // Tab Group options
+        if tab.groupID != nil {
+            Button(action: {
+                tabManager.removeTabFromGroup(tab)
+            }) {
+                Label("Remove from Group", systemImage: "folder.badge.minus")
+            }
+        }
+        
+        // Always show "Create New Group" option
+        Button(action: {
+            showingNewGroupAlert = true
+        }) {
+            Label("Create New Group", systemImage: "folder.badge.plus")
+        }
+        
+        // Show existing groups if any exist
+        if !tabManager.tabGroups.isEmpty {
+            Menu("Add to Existing Group") {
+                ForEach(tabManager.tabGroups.filter { $0.id != tab.groupID }) { group in
+                    Button(action: {
+                        tabManager.addTabToGroup(tab, group: group)
+                    }) {
+                        HStack {
+                            Circle()
+                                .fill(group.color.color)
+                                .frame(width: 12, height: 12)
+                            Text(group.name)
+                        }
+                                    }
+                }
+            }
+        }
+        
+        Divider()
+        
         Text("Browser Engine")
         
         Button(action: {
@@ -202,6 +466,23 @@ struct TabCardView: View {
         .offset(x: dragOffset)
         .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0), value: dragOffset)
         .simultaneousGesture(dragGesture)
+        .sheet(isPresented: $showingNewGroupAlert) {
+            NewTabGroupView(
+                name: $newGroupName,
+                color: $newGroupColor,
+                onCancel: {
+                    resetGroupCreation()
+                    showingNewGroupAlert = false
+                },
+                onCreate: {
+                    createNewGroupAndAddTab()
+                    showingNewGroupAlert = false
+                }
+            )
+            #if os(macOS)
+            .frame(minWidth: 400, minHeight: 320)
+            #endif
+        }
     }
     
     @ViewBuilder
@@ -219,16 +500,22 @@ struct TabCardView: View {
             }
         }
         .contextMenu {
-            engineContextMenu
+            contextMenu
         }
     }
     
     @ViewBuilder
     private var headerRow: some View {
         HStack(spacing: 8) {
-            Image(systemName: "globe")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
+            if tab.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.accentColor)
+            } else {
+                Image(systemName: "globe")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
             
             Text(tab.title)
                 .font(.system(size: 14, weight: .medium))
@@ -348,6 +635,23 @@ struct TabCardView: View {
                     }
                 }
             }
+    }
+    
+    // Legacy newGroupSheet removed. Using NewTabGroupView instead.
+    /* Removed legacy UI */
+    
+    private func createNewGroupAndAddTab() {
+        let trimmedName = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty {
+            let group = tabManager.createTabGroup(name: trimmedName, color: newGroupColor)
+            tabManager.addTabToGroup(tab, group: group)
+            resetGroupCreation()
+        }
+    }
+    
+    private func resetGroupCreation() {
+        newGroupName = ""
+        newGroupColor = .blue
     }
 }
 

@@ -212,8 +212,6 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8F6D9032E6A00220001783A /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-			);
 			projectRoot = "";
 			targets = (
 				C8F6D9012E6A00220001783A /* EvoArc */,
@@ -290,6 +288,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 69LLXLJW63;
@@ -301,8 +300,14 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/EvoArc/Frameworks",
 				);
+				"GCC_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = EvoArc/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = EvoArc;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This browser needs access to camera for web pages that request it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This browser needs access to location for web pages that request it.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This browser needs access to microphone for web pages that request it.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -323,6 +328,9 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=xros*]" = com.ConnorNeedling.EvoArc;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -331,6 +339,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				"SWIFT_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
@@ -343,6 +352,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 69LLXLJW63;
@@ -354,8 +364,14 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/EvoArc/Frameworks",
 				);
+				"GCC_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = EvoArc/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = EvoArc;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This browser needs access to camera for web pages that request it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This browser needs access to location for web pages that request it.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This browser needs access to microphone for web pages that request it.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -376,6 +392,9 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.ConnorNeedling.EvoArc;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=xros*]" = com.ConnorNeedling.EvoArc;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -384,6 +403,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				"SWIFT_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";

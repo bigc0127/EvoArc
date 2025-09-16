@@ -5,18 +5,79 @@
 //  Created on 2025-09-05.
 //
 
+/**
+ * # ScrollDetectingWebView
+ * 
+ * A SwiftUI wrapper around WKWebView that provides scroll-based URL bar visibility management.
+ * This component is the core web browsing engine for EvoArc, providing cross-platform 
+ * (iOS and macOS) web content rendering with auto-hide URL bar functionality.
+ * 
+ * ## Architecture Overview
+ * 
+ * ### For New Swift Developers:
+ * - **UIViewRepresentable/NSViewRepresentable**: These protocols allow SwiftUI to wrap UIKit (iOS) or AppKit (macOS) components
+ * - **@Binding**: A two-way connection between parent and child views that automatically updates both when changed
+ * - **@ObservedObject**: Watches for changes in an ObservableObject and updates the UI when properties change
+ * - **Coordinator**: A design pattern used by SwiftUI representables to handle delegate callbacks from UIKit/AppKit
+ * 
+ * ### Component Structure:
+ * 1. **ScrollDetectingWebView**: The main SwiftUI view that chooses iOS or macOS implementation
+ * 2. **ScrollAwareWebView**: Platform-specific implementations that handle WebKit integration
+ * 3. **Coordinator**: Manages WebKit delegate callbacks and scroll detection
+ * 
+ * ## Key Features:
+ * - **Cross-Platform**: Single interface works on both iOS and macOS
+ * - **Scroll Detection**: Hides/shows URL bar based on scroll direction
+ * - **Tab Management**: Integrates with EvoArc's tab system
+ * - **Standard DNS**: Uses system DNS resolution (no custom DNS providers)
+ * - **WebKit Integration**: Full WKWebView functionality with custom user agents
+ * 
+ * ## Usage:
+ * ```swift
+ * ScrollDetectingWebView(
+ *     tab: currentTab,
+ *     urlString: $urlString,
+ *     shouldNavigate: $shouldNavigate,
+ *     urlBarVisible: $urlBarVisible,
+ *     onNavigate: { url in /* handle navigation */ },
+ *     autoHideEnabled: settings.autoHideURLBar,
+ *     tabManager: tabManager
+ * )
+ * ```
+ */
+
 import SwiftUI
 import WebKit
 
+/// The main SwiftUI view that provides scroll-aware web browsing functionality
+/// This view automatically chooses between iOS and macOS implementations
 struct ScrollDetectingWebView: View {
+    /// The tab object containing the web content and state
+    /// - Note: Tab is an ObservableObject that tracks loading state, URL, title, etc.
     let tab: Tab
+    
+    /// Two-way binding to the URL bar text field
+    /// - Note: @Binding creates a connection between parent and child views
     @Binding var urlString: String
+    
+    /// Flag indicating whether navigation should occur (set by URL bar submission)
     @Binding var shouldNavigate: Bool
+    
+    /// Controls whether the URL bar is visible (affected by scroll direction)
     @Binding var urlBarVisible: Bool
+    
+    /// Callback function called when navigation to a new URL occurs
+    /// - Parameter url: The URL that was navigated to
     let onNavigate: (URL) -> Void
+    
+    /// Whether auto-hide functionality is enabled for the URL bar
     let autoHideEnabled: Bool
+    
+    /// Reference to the tab manager for creating new tabs and handling context menus
     let tabManager: TabManager
     
+    /// The main body of the SwiftUI view
+    /// Creates the platform-specific ScrollAwareWebView and handles scroll-based URL bar visibility
     var body: some View {
         ScrollAwareWebView(
             tab: tab,
@@ -24,15 +85,21 @@ struct ScrollDetectingWebView: View {
             shouldNavigate: $shouldNavigate,
             onNavigate: onNavigate,
             tabManager: tabManager,
+            // This closure is called whenever the user scrolls in the web view
             onScrollChange: { scrollDirection in
+                // Only hide/show URL bar if auto-hide is enabled in settings
                 if autoHideEnabled {
+                    // Animate the URL bar visibility change for smooth UX
                     withAnimation(.easeInOut(duration: 0.3)) {
                         switch scrollDirection {
                         case .up:
+                            // Scrolling up - show URL bar (user wants to navigate)
                             urlBarVisible = true
                         case .down:
+                            // Scrolling down - hide URL bar (user is reading content)
                             urlBarVisible = false
                         case .none:
+                            // No significant scroll change - do nothing
                             break
                         }
                     }
@@ -42,9 +109,14 @@ struct ScrollDetectingWebView: View {
     }
 }
 
+/// Represents the direction of scroll movement in the web view
+/// Used to determine whether to show or hide the URL bar
 enum ScrollDirection {
+    /// User is scrolling upward (towards the top of the page)
     case up
+    /// User is scrolling downward (towards the bottom of the page)
     case down
+    /// No significant scroll movement detected
     case none
 }
 
@@ -62,8 +134,18 @@ struct ScrollAwareWebView: UIViewRepresentable {
     }
     
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = DoHProxy.shared.createConfiguration()
+        // Standard configuration
+        let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
+        
+        // Check if JavaScript should be blocked for this site
+        let jsEnabled = tab.url.map { !JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: $0) } ?? true
+        preferences.allowsContentJavaScript = jsEnabled
+        
+        configuration.defaultWebpagePreferences = preferences
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        AdBlockManager.shared.applyContentBlocking(to: webView)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.scrollView.delegate = context.coordinator
@@ -78,11 +160,8 @@ struct ScrollAwareWebView: UIViewRepresentable {
         context.coordinator.setupObservers()
         
         if let url = tab.url {
-            print("Loading initial URL: \(url)")
             let request = URLRequest(url: url)
             webView.load(request)
-        } else {
-            print("Tab has no URL to load")
         }
         
         return webView
@@ -152,8 +231,10 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 switch keyPath {
                 case #keyPath(WKWebView.isLoading):
                     self.parent.tab.isLoading = webView.isLoading
+                    print("ℹ️ iOS KVO isLoading=\(webView.isLoading) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.estimatedProgress):
                     self.parent.tab.estimatedProgress = webView.estimatedProgress
+                    print("📈 iOS progress=\(String(format: "%.2f", webView.estimatedProgress)) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
@@ -182,7 +263,12 @@ struct ScrollAwareWebView: UIViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                parent.tab.isLoading = true
+                parent.tab.estimatedProgress = 0.0
+                parent.tab.startLoadingTimeout()
+                print("💪 iOS: Started loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
@@ -192,10 +278,27 @@ struct ScrollAwareWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                parent.tab.isLoading = false
+                parent.tab.estimatedProgress = 1.0
+                parent.tab.stopLoadingTimeout()
+                print("🚫 iOS: Stopped loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
+                    
+                    // Add to browsing history
+                    let title = webView.title ?? parent.tab.title
+                    HistoryManager.shared.addEntry(url: url, title: title)
+                    print("📚 iOS: Added to history: \(title) - \(url.absoluteString)")
+                    
+                    // Apply JavaScript blocking settings for the new URL
+                    let jsBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: url)
+                    if jsBlocked != !webView.configuration.defaultWebpagePreferences.allowsContentJavaScript {
+                        webView.configuration.defaultWebpagePreferences.allowsContentJavaScript = !jsBlocked
+                        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = !jsBlocked
+                    }
                 }
             }
         }
@@ -203,13 +306,16 @@ struct ScrollAwareWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             let nsError = error as NSError
             if nsError.code == NSURLErrorCancelled {
-                print("Navigation cancelled (expected)")
+                print("💫 iOS: Navigation cancelled (expected)")
                 return
             }
-            print("🚨 Navigation failed: \(error)")
-            print("🚨 Error code: \(nsError.code)")
-            print("🚨 Error domain: \(nsError.domain)")
-            print("🚨 Error description: \(nsError.localizedDescription)")
+            Task { @MainActor in
+                parent.tab.isLoading = false
+                parent.tab.estimatedProgress = 0.0
+                parent.tab.stopLoadingTimeout()
+                print("🚫 iOS: Stopped loading timeout for failed nav: \(parent.tab.id)")
+            }
+            print("😨 iOS: didFailProvisionalNavigation - URL=\(webView.url?.absoluteString ?? "unknown") code=\(nsError.code) domain=\(nsError.domain) desc=\(nsError.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -245,23 +351,70 @@ struct ScrollAwareWebView: UIViewRepresentable {
         // MARK: - Context Menu Support
         @available(iOS 13.0, *)
         func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-            guard let linkURL = elementInfo.linkURL else {
-                completionHandler(nil)
-                return
-            }
-            
             let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-                let openInNewTab = UIAction(title: "Open in New Tab", image: UIImage(systemName: "plus.square.on.square")) { [weak self] _ in
-                    DispatchQueue.main.async {
-                        self?.parent.tabManager.createNewTab(url: linkURL)
+                var linkActions: [UIAction] = []
+                var pageActions: [UIAction] = []
+                
+                // Link-specific actions
+                if let linkURL = elementInfo.linkURL {
+                    let openInNewTab = UIAction(title: "Open in New Tab", image: UIImage(systemName: "plus.square.on.square")) { [weak self] _ in
+                        DispatchQueue.main.async {
+                            self?.parent.tabManager.createNewTab(url: linkURL)
+                        }
+                    }
+                    
+                    let copyLink = UIAction(title: "Copy Link", image: UIImage(systemName: "doc.on.doc")) { _ in
+                        UIPasteboard.general.string = linkURL.absoluteString
+                    }
+                    
+                    linkActions.append(contentsOf: [openInNewTab, copyLink])
+                    
+                    // Perplexity actions for link
+                    if PerplexityManager.shared.isAuthenticated {
+                        let summarizeLink = UIAction(title: "Summarize Link with Perplexity", image: UIImage(systemName: "doc.text.magnifyingglass")) { _ in
+                            DispatchQueue.main.async {
+                                PerplexityManager.shared.performAction(.summarize, for: linkURL)
+                            }
+                        }
+                        
+                        let sendLinkToPerplexity = UIAction(title: "Send Link to Perplexity", image: UIImage(systemName: "arrow.up.right.square")) { _ in
+                            DispatchQueue.main.async {
+                                PerplexityManager.shared.performAction(.sendToPerplexity, for: linkURL)
+                            }
+                        }
+                        
+                        linkActions.append(contentsOf: [summarizeLink, sendLinkToPerplexity])
                     }
                 }
                 
-                let copyLink = UIAction(title: "Copy Link", image: UIImage(systemName: "doc.on.doc")) { _ in
-                    UIPasteboard.general.string = linkURL.absoluteString
+                // Page-level actions (always available when right-clicking)
+                if let currentURL = webView.url, PerplexityManager.shared.isAuthenticated {
+                    let summarizePage = UIAction(title: "Summarize Page with Perplexity", image: UIImage(systemName: "doc.text.magnifyingglass")) { _ in
+                        DispatchQueue.main.async {
+                            PerplexityManager.shared.performAction(.summarize, for: currentURL, title: webView.title)
+                        }
+                    }
+                    
+                    let sendPageToPerplexity = UIAction(title: "Send Page to Perplexity", image: UIImage(systemName: "arrow.up.right.square")) { _ in
+                        DispatchQueue.main.async {
+                            PerplexityManager.shared.performAction(.sendToPerplexity, for: currentURL, title: webView.title)
+                        }
+                    }
+                    
+                    pageActions.append(contentsOf: [summarizePage, sendPageToPerplexity])
                 }
                 
-                return UIMenu(title: "", children: [openInNewTab, copyLink])
+                var menuItems: [UIMenuElement] = []
+                
+                if !linkActions.isEmpty {
+                    menuItems.append(UIMenu(title: "", options: .displayInline, children: linkActions))
+                }
+                
+                if !pageActions.isEmpty {
+                    menuItems.append(UIMenu(title: "", options: .displayInline, children: pageActions))
+                }
+                
+                return menuItems.isEmpty ? nil : UIMenu(title: "", children: menuItems)
             }
             
             completionHandler(configuration)
@@ -294,8 +447,18 @@ struct ScrollAwareWebView: NSViewRepresentable {
     }
     
     func makeNSView(context: Context) -> WKWebView {
-        let configuration = DoHProxy.shared.createConfiguration()
+        // Standard configuration
+        let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
+        
+        // Check if JavaScript should be blocked for this site
+        let jsEnabled = tab.url.map { !JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: $0) } ?? true
+        preferences.allowsContentJavaScript = jsEnabled
+        
+        configuration.defaultWebpagePreferences = preferences
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        AdBlockManager.shared.applyContentBlocking(to: webView)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -308,13 +471,11 @@ struct ScrollAwareWebView: NSViewRepresentable {
         context.coordinator.webView = webView
         context.coordinator.setupObservers()
         context.coordinator.setupScrollObserver()
+        context.coordinator.setupRightClickGesture()
         
         if let url = tab.url {
-            print("Loading initial URL (macOS): \(url)")
             let request = URLRequest(url: url)
             webView.load(request)
-        } else {
-            print("Tab has no URL to load (macOS)")
         }
         
         return webView
@@ -414,8 +575,10 @@ struct ScrollAwareWebView: NSViewRepresentable {
                 switch keyPath {
                 case #keyPath(WKWebView.isLoading):
                     self.parent.tab.isLoading = webView.isLoading
+                    print("ℹ️ macOS KVO isLoading=\(webView.isLoading) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.estimatedProgress):
                     self.parent.tab.estimatedProgress = webView.estimatedProgress
+                    print("📈 macOS progress=\(String(format: "%.2f", webView.estimatedProgress)) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
@@ -430,7 +593,12 @@ struct ScrollAwareWebView: NSViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 macOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                parent.tab.isLoading = true
+                parent.tab.estimatedProgress = 0.0
+                parent.tab.startLoadingTimeout()
+                print("💪 macOS: Started loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
@@ -440,10 +608,27 @@ struct ScrollAwareWebView: NSViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ macOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                parent.tab.isLoading = false
+                parent.tab.estimatedProgress = 1.0
+                parent.tab.stopLoadingTimeout()
+                print("🚫 macOS: Stopped loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
+                    
+                    // Add to browsing history
+                    let title = webView.title ?? parent.tab.title
+                    HistoryManager.shared.addEntry(url: url, title: title)
+                    print("📚 macOS: Added to history: \(title) - \(url.absoluteString)")
+                    
+                    // Apply JavaScript blocking settings for the new URL
+                    let jsBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: url)
+                    if jsBlocked != !webView.configuration.defaultWebpagePreferences.allowsContentJavaScript {
+                        webView.configuration.defaultWebpagePreferences.allowsContentJavaScript = !jsBlocked
+                        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = !jsBlocked
+                    }
                 }
             }
         }
@@ -451,13 +636,15 @@ struct ScrollAwareWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             let nsError = error as NSError
             if nsError.code == NSURLErrorCancelled {
-                print("Navigation cancelled (expected) - macOS")
+                print("💫 macOS: Navigation cancelled (expected)")
                 return
             }
-            print("🚨 Navigation failed (macOS): \(error)")
-            print("🚨 Error code: \(nsError.code)")
-            print("🚨 Error domain: \(nsError.domain)")
-            print("🚨 Error description: \(nsError.localizedDescription)")
+            // Ensure we don't stay stuck
+            parent.tab.isLoading = false
+            parent.tab.estimatedProgress = 0.0
+            parent.tab.stopLoadingTimeout()
+            print("🚫 macOS: Stopped loading timeout for failed nav: \(parent.tab.id)")
+            print("😨 macOS: didFailProvisionalNavigation - URL=\(webView.url?.absoluteString ?? "unknown") code=\(nsError.code) domain=\(nsError.domain) desc=\(nsError.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -491,8 +678,54 @@ struct ScrollAwareWebView: NSViewRepresentable {
         }
         
         // MARK: - Context Menu Support
-        // Note: macOS doesn't have WKContextMenuElementInfo like iOS
-        // Context menus on macOS work differently and are handled by the system
+        func setupRightClickGesture() {
+            guard let webView = webView else { return }
+            
+            let rightClickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleRightClick(_:)))
+            rightClickGesture.buttonMask = 0x2 // Right mouse button
+            webView.addGestureRecognizer(rightClickGesture)
+        }
+        
+        @objc private func handleRightClick(_ gestureRecognizer: NSClickGestureRecognizer) {
+            guard let webView = webView,
+                  PerplexityManager.shared.isAuthenticated,
+                  let currentURL = webView.url else { return }
+            
+            let menu = NSMenu()
+            
+            let summarizeItem = NSMenuItem(title: "Summarize Page with Perplexity", action: #selector(summarizePageWithPerplexity), keyEquivalent: "")
+            summarizeItem.target = self
+            summarizeItem.representedObject = ["url": currentURL, "title": webView.title ?? ""]
+            menu.addItem(summarizeItem)
+            
+            let sendItem = NSMenuItem(title: "Send Page to Perplexity", action: #selector(sendPageToPerplexity), keyEquivalent: "")
+            sendItem.target = self
+            sendItem.representedObject = ["url": currentURL, "title": webView.title ?? ""]
+            menu.addItem(sendItem)
+            
+            let location = gestureRecognizer.location(in: webView)
+            menu.popUp(positioning: nil, at: location, in: webView)
+        }
+        
+        @objc private func summarizePageWithPerplexity(_ sender: NSMenuItem) {
+            guard let info = sender.representedObject as? [String: Any],
+                  let url = info["url"] as? URL else { return }
+            
+            let title = info["title"] as? String
+            DispatchQueue.main.async {
+                PerplexityManager.shared.performAction(.summarize, for: url, title: title)
+            }
+        }
+        
+        @objc private func sendPageToPerplexity(_ sender: NSMenuItem) {
+            guard let info = sender.representedObject as? [String: Any],
+                  let url = info["url"] as? URL else { return }
+            
+            let title = info["title"] as? String
+            DispatchQueue.main.async {
+                PerplexityManager.shared.performAction(.sendToPerplexity, for: url, title: title)
+            }
+        }
         
         deinit {
             if let webView = webView {

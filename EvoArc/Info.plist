@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>INIntentsSupported</key>
+	<array>
+		<string>Intent</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -12,17 +16,6 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
-	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>This browser needs access to camera for web pages that request it.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This browser needs access to microphone for web pages that request it.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This browser needs access to location for web pages that request it.</string>
-</dict>
-</plist>
-	<array>
-		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>
