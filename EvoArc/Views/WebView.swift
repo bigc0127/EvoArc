@@ -228,8 +228,7 @@ struct WebView: UIViewRepresentable {
             // We only update the UI state when navigation actually starts
             Task { @MainActor in
                 // Force loading state to true when navigation starts
-                parent.tab.isLoading = true
-                parent.tab.estimatedProgress = 0.0
+                // Loading state is handled by KVO
                 parent.tab.startLoadingTimeout()
                 print("💪 Started loading timeout for tab: \(parent.tab.id)")
                 
