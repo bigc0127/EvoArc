@@ -264,7 +264,7 @@ class BrowserSettings: ObservableObject {
         if let storedHomepage = UserDefaults.standard.string(forKey: "homepage") {
             self.homepage = storedHomepage
         } else {
-            self.homepage = "https://www.google.com"
+            self.homepage = "https://www.qwant.com"
         }
         
         // Load auto-hide URL bar setting with default to true
@@ -398,7 +398,7 @@ class BrowserSettings: ObservableObject {
             return URL(string: "https://\(homepage)")
         }
         // Fallback to Google
-        return URL(string: "https://www.google.com")
+        return URL(string: "https://www.qwant.com")
     }
     
     // Build a search URL for the current default search engine

@@ -117,7 +117,7 @@ xcodebuild test -project EvoArc.xcodeproj -scheme EvoArc -destination 'platform=
 
 ### Default Settings
 - **Search Engine**: Qwant (privacy-focused)
-- **Homepage**: Qwant homepage
+- **Homepage**: Qwant (www.qwant.com)
 - **Browser Engine**: WebKit (Safari Mode)
 - **Desktop Mode**: Enabled on iPad and macOS, disabled on iPhone
 - **Auto-hide URL Bar**: Enabled
