@@ -130,6 +130,13 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    @Published var showNavigationButtons: Bool {
+        didSet {
+            UserDefaults.standard.set(showNavigationButtons, forKey: "showNavigationButtons")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     // When enabled, external search URLs (e.g., from Spotlight or other apps)
     // will be redirected to the user's default search engine within EvoArc.
     @Published var redirectExternalSearches: Bool {
@@ -237,6 +244,22 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    /// Shows download completion notifications
+    @Published var showDownloadNotifications: Bool {
+        didSet {
+            UserDefaults.standard.set(showDownloadNotifications, forKey: "showDownloadNotifications")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
+    /// Automatically opens non-viewable downloads when completed (e.g., zip files)
+    @Published var autoOpenDownloads: Bool {
+        didSet {
+            UserDefaults.standard.set(autoOpenDownloads, forKey: "autoOpenDownloads")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     private init() {
         // Set default based on device type
         let defaultDesktopMode: Bool
@@ -264,7 +287,7 @@ class BrowserSettings: ObservableObject {
         if let storedHomepage = UserDefaults.standard.string(forKey: "homepage") {
             self.homepage = storedHomepage
         } else {
-            self.homepage = "https://www.qwant.com"
+            self.homepage = "https://start.duckduckgo.com"
         }
         
         // Load auto-hide URL bar setting with default to true
@@ -272,6 +295,17 @@ class BrowserSettings: ObservableObject {
             self.autoHideURLBar = UserDefaults.standard.bool(forKey: "autoHideURLBar")
         } else {
             self.autoHideURLBar = true
+        }
+        
+        // Load show navigation buttons setting with platform-specific defaults
+        if UserDefaults.standard.object(forKey: "showNavigationButtons") != nil {
+            self.showNavigationButtons = UserDefaults.standard.bool(forKey: "showNavigationButtons")
+        } else {
+            #if os(iOS)
+            self.showNavigationButtons = false  // Default to hidden on iOS
+            #else
+            self.showNavigationButtons = true   // Default to visible on macOS
+            #endif
         }
         
         // Load redirect external searches toggle with default to false
@@ -296,12 +330,26 @@ class BrowserSettings: ObservableObject {
             self.adBlockScriptletEnabled = true
         }
         
+        // Load download notification setting (default on)
+        if UserDefaults.standard.object(forKey: "showDownloadNotifications") != nil {
+            self.showDownloadNotifications = UserDefaults.standard.bool(forKey: "showDownloadNotifications")
+        } else {
+            self.showDownloadNotifications = true
+        }
+        
+        // Load auto-open downloads setting (default off)
+        if UserDefaults.standard.object(forKey: "autoOpenDownloads") != nil {
+            self.autoOpenDownloads = UserDefaults.standard.bool(forKey: "autoOpenDownloads")
+        } else {
+            self.autoOpenDownloads = false
+        }
+        
         // Load default search engine setting with default to Google
         if let seString = UserDefaults.standard.string(forKey: "defaultSearchEngine"),
            let se = SearchEngine(rawValue: seString) {
             self.defaultSearchEngine = se
         } else {
-            self.defaultSearchEngine = .google
+            self.defaultSearchEngine = .duckduckgo
         }
         
         // Load custom search template (default template includes {query})

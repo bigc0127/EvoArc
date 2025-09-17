@@ -6,16 +6,34 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct EvoArcApp: App {
+    @StateObject private var tabManager = TabManager()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ZStack(alignment: .bottom) {
+                ContentView()
+                    .onOpenURL { url in
+                        // Handle URLs opened from other apps
+                        handleIncomingURL(url)
+                    }
+                
+                DownloadProgressOverlay(isPresented: .constant(false))
+            }
+                .handlesExternalEvents(preferring: Set(["com.evoarc.browser.openURL"]), allowing: Set(["com.evoarc.browser.openURL"]))
         }
         #if os(macOS)
         .commands {
+            // Add Commands menu item for URL handling
             CommandGroup(after: .newItem) {
+                Button("Open URL...") {
+                    handleOpenURLDialog()
+                }
+                .keyboardShortcut("L", modifiers: [.command])
+                
                 Button("New Tab") {
                     NotificationCenter.default.post(name: .newTab, object: nil)
                 }
@@ -29,6 +47,42 @@ struct EvoArcApp: App {
         }
         #endif
     }
+    
+    private func handleIncomingURL(_ url: URL) {
+        if url.scheme == "evoarc" {
+            // Handle our custom scheme
+            if let urlString = url.host,
+               let decodedURL = URL(string: urlString) {
+                tabManager.createNewTab(url: decodedURL)
+            }
+        } else {
+            // Handle direct URLs
+            tabManager.createNewTab(url: url)
+        }
+    }
+    
+    #if os(macOS)
+    private func handleOpenURLDialog() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [UTType.url, UTType.html, UTType.text]
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                // If it's a local file, create a file:// URL
+                if url.scheme == nil || url.scheme == "file" {
+                    tabManager.createNewTab(url: url)
+                } else if let urlString = try? String(contentsOf: url),
+                          let webURL = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    // If it's a .url file or text file containing a URL, open that URL
+                    tabManager.createNewTab(url: webURL)
+                }
+            }
+        }
+    }
+    #endif
 }
 
 #if os(macOS)

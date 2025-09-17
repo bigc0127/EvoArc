@@ -29,6 +29,8 @@ final class SearchSuggestionsManager: ObservableObject {
     // MARK: - Published Properties
     @Published private(set) var suggestions: [SearchSuggestion] = []
     @Published private(set) var isLoading = false
+    // Most recent query requested (used by UI heuristics)
+    @Published private(set) var lastQuery: String = ""
     
     // MARK: - Private Properties
     private var searchTask: Task<Void, Never>?
@@ -54,6 +56,9 @@ final class SearchSuggestionsManager: ObservableObject {
         debounceTask?.cancel()
         
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Track last query for consumers
+        lastQuery = trimmedQuery
         
         // Return empty suggestions for very short queries
         guard trimmedQuery.count >= 1 else {
@@ -102,6 +107,7 @@ final class SearchSuggestionsManager: ObservableObject {
         debounceTask?.cancel()
         suggestions = []
         isLoading = false
+        lastQuery = ""
     }
     
     /// Clear the suggestion cache

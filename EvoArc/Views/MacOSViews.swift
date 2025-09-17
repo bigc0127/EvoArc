@@ -802,7 +802,23 @@ struct MacOSBottomBarView: View {
                         .textFieldStyle(PlainTextFieldStyle())
                         .onReceive(selectedTab.$url) { newURL in
                             if !isURLBarFocused {
-                                urlEditingText = newURL?.absoluteString ?? ""
+                                // Only show URL if explicitly enabled
+                                if selectedTab.showURLInBar {
+                                    urlEditingText = newURL?.absoluteString ?? ""
+                                } else {
+                                    urlEditingText = ""
+                                }
+                            }
+                        }
+                        .onTapGesture {
+                            if !isTextFieldFocused {
+                                // When user taps URL bar, enable URL display
+                                selectedTab.showURLInBar = true
+                                // Show current URL if available
+                                if let currentURL = selectedTab.webView?.url {
+                                    urlEditingText = currentURL.absoluteString
+                                }
+                                isTextFieldFocused = true
                             }
                         }
                         .onChange(of: urlEditingText) { _, newValue in
@@ -955,6 +971,16 @@ struct MacOSBottomBarView: View {
                                 )
                             }
                             
+                            Button(action: {
+                                settings.adBlockEnabled.toggle()
+                                selectedTab.webView?.reload()
+                            }) {
+                                Label(
+                                    settings.adBlockEnabled ? "Disable Ad Blocking" : "Enable Ad Blocking",
+                                    systemImage: settings.adBlockEnabled ? "eye.slash" : "eye"
+                                )
+                            }
+                            
                             // JavaScript blocking toggle for current site
                             if let currentURL = selectedTab.url {
                                 Button(action: {
@@ -973,10 +999,17 @@ struct MacOSBottomBarView: View {
                             Divider()
                             
                             Button(action: {
-                                // Share functionality
+                                if let url = selectedTab.url {
+                                    let picker = NSSharingServicePicker(items: [url])
+                                    // Present the picker relative to the Share menu item
+                                    if let menuItem = NSApplication.shared.keyWindow?.contentView?.window?.contentView {
+                                        picker.show(relativeTo: .zero, of: menuItem, preferredEdge: .minY)
+                                    }
+                                }
                             }) {
                                 Label("Share", systemImage: "square.and.arrow.up")
                             }
+                            .disabled(selectedTab.url == nil)
                             
                             // Perplexity options
                             if PerplexityManager.shared.isAuthenticated, let currentURL = selectedTab.url {
@@ -1222,6 +1255,14 @@ struct SafariStyleSuggestionsView: View {
         
         return Array(combined.prefix(4))
     }
+}
+
+// MARK: - Supporting Types
+struct SuggestionRowData {
+    let text: String
+    let subtitle: String?
+    let icon: String
+    let action: () -> Void
 }
 
 #endif

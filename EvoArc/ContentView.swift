@@ -15,7 +15,12 @@ import AppKit
 import Combine
 
 struct ContentView: View {
+    // State Objects
     @StateObject private var tabManager = TabManager()
+    @StateObject private var settings = BrowserSettings.shared
+    @StateObject private var perplexityManager = PerplexityManager.shared
+    
+    // State Variables
     @State private var urlString: String = ""
     @State private var isURLBarFocused: Bool = false
     @State private var dragOffset: CGSize = .zero
@@ -24,16 +29,35 @@ struct ContentView: View {
     @State private var shouldNavigate: Bool = false
     @State private var urlBarVisible: Bool = true
     @State private var lastScrollOffset: CGFloat = 0
-    @StateObject private var settings = BrowserSettings.shared
-    @StateObject private var perplexityManager = PerplexityManager.shared
-    @AppStorage("hasShownDefaultBrowserPrompt") private var hasShownDefaultBrowserPrompt: Bool = false
     @State private var showDefaultBrowserTip: Bool = false
+    @State private var keyboardHeight: CGFloat = 0
+    @State private var keyboardVisible: Bool = false
     
+    // App Storage
+    @AppStorage("hasShownDefaultBrowserPrompt") private var hasShownDefaultBrowserPrompt: Bool = false
+    
+    // Environment Values
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    // MARK: - Main View
     var body: some View {
         GeometryReader { geometry in
+            #if os(iOS)
+            // Set up keyboard observers
+            let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = keyboardFrame.height
+                    keyboardVisible = true
+                }
+            }
+            let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
+                keyboardVisible = false
+            }
+            #endif
             ZStack {
                 #if os(iOS)
-                // iOS Layout: URL bar at bottom with tab drawer overlay
+// MARK: - iOS Layout
+                // URL bar at bottom with tab drawer overlay
                 VStack(spacing: 0) {
                     // Web content area
                     if !tabManager.tabs.isEmpty && tabManager.isInitialized {
@@ -75,8 +99,12 @@ struct ContentView: View {
                         }
                     }
                     
-                    // Bottom URL bar and controls - conditionally included in layout
-                    if urlBarVisible || !settings.autoHideURLBar {
+                }
+                
+                // Bottom URL bar - aligned to bottom using ZStack
+                if urlBarVisible || !settings.autoHideURLBar {
+                    VStack {
+                        Spacer()
                         if let selected = tabManager.selectedTab {
                             BottomBarView(
                                 urlString: $urlString,
@@ -88,11 +116,15 @@ struct ContentView: View {
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
+                            .ignoresSafeArea(.keyboard, edges: .bottom)
+                            .padding(.bottom, keyboardVisible ? keyboardHeight : 0)
+                            .animation(.easeOut(duration: 0.25), value: keyboardHeight)
                         }
                     }
                 }
                 #else
-                // macOS Layout: Tab drawer on side, URL bar at bottom
+                // MARK: - macOS Layout
+                // Tab drawer on side, URL bar at bottom
                 HStack(spacing: 0) {
                     // Side tab drawer (left or right based on setting)
                     if settings.tabDrawerPosition == .left && tabManager.isTabDrawerVisible {
@@ -142,10 +174,10 @@ struct ContentView: View {
                             }
                         }
                         
-                        // Bottom URL bar (macOS style) - conditionally included in layout
+                        // Bottom URL bar and controls - conditionally included in layout
                         if urlBarVisible || !settings.autoHideURLBar {
                             if let selected = tabManager.selectedTab {
-                                MacOSBottomBarView(
+                                BottomBarView(
                                     urlString: $urlString,
                                     isURLBarFocused: $isURLBarFocused,
                                     tabManager: tabManager,
@@ -158,13 +190,13 @@ struct ContentView: View {
                             }
                         }
                     }
-                    
-                    // Side tab drawer (right side)
-                    if settings.tabDrawerPosition == .right && tabManager.isTabDrawerVisible {
-                        MacOSTabDrawerView(tabManager: tabManager)
-                            .frame(width: 300)
-                            .transition(.move(edge: .trailing))
-                    }
+                }
+                
+                // Side tab drawer (right side)
+                if settings.tabDrawerPosition == .right && tabManager.isTabDrawerVisible {
+                    MacOSTabDrawerView(tabManager: tabManager)
+                        .frame(width: 300)
+                        .transition(.move(edge: .trailing))
                 }
                 #endif
                 
@@ -173,9 +205,7 @@ struct ContentView: View {
                 if tabManager.isTabDrawerVisible {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                        .onTapGesture {
-                            tabManager.hideTabDrawer()
-                        }
+                        .onTapGesture { tabManager.hideTabDrawer() }
                     
                     VStack {
                         Spacer()
@@ -208,7 +238,7 @@ struct ContentView: View {
                         Spacer()
                         Rectangle()
                             .fill(Color.clear)
-                            .frame(height: 80) // Increased height for easier access
+                            .frame(height: 80)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 withAnimation(.easeInOut(duration: 0.3)) {
@@ -218,7 +248,6 @@ struct ContentView: View {
                             .gesture(
                                 DragGesture()
                                     .onEnded { value in
-                                        // Swipe up from bottom to show URL bar
                                         if value.translation.height < -20 {
                                             withAnimation(.easeInOut(duration: 0.3)) {
                                                 urlBarVisible = true
@@ -230,27 +259,7 @@ struct ContentView: View {
                 }
                 #endif
                 
-                // Invisible area at bottom to show URL bar when hovered (macOS only)
-                #if os(macOS)
-                if settings.autoHideURLBar && !urlBarVisible {
-                    VStack {
-                        Spacer()
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(height: 80) // Height for hover detection
-                            .contentShape(Rectangle())
-                            .onHover { hovering in
-                                if hovering {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        urlBarVisible = true
-                                    }
-                                }
-                            }
-                    }
-                }
-                #endif
-                
-                // macOS hover area for tab drawer (only when not visible)
+                // macOS hover area for tab drawer
                 #if os(macOS)
                 if !tabManager.isTabDrawerVisible {
                     HStack {
@@ -347,7 +356,7 @@ struct ContentView: View {
                         }
                         .padding(16)
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(14), style: .continuous)
                                 .fill(Color(UIColor.systemBackground))
                                 .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
                         )
@@ -358,7 +367,7 @@ struct ContentView: View {
                 }
                 #endif
             }
-.onAppear {
+            .onAppear {
                 setupInitialURL()
                 AdBlockManager.shared.refreshOnLaunchIfNeeded()
                 #if os(iOS)
@@ -393,7 +402,7 @@ struct ContentView: View {
             tabManager.createNewTab()
         }
         #endif
-.sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $showingSettings) {
             SettingsView(tabManager: tabManager)
         }
         .sheet(item: $perplexityManager.currentRequest) { request in
@@ -408,7 +417,9 @@ struct ContentView: View {
         .onOpenURL { incomingURL in
             handleIncomingURL(incomingURL)
         }
-}
+    }
+    
+    // MARK: - Helper Functions
     
     #if os(iOS)
     private func openAppSettings() {
@@ -421,7 +432,12 @@ struct ContentView: View {
     
     private func setupInitialURL() {
         if let selectedTab = tabManager.selectedTab {
-            urlString = selectedTab.url?.absoluteString ?? ""
+            // Only show URL if explicitly enabled
+            if selectedTab.showURLInBar {
+                urlString = selectedTab.url?.absoluteString ?? ""
+            } else {
+                urlString = ""
+            }
         }
     }
     
@@ -440,6 +456,8 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - URL Parsing
+    
     private func extractSearchQuery(from url: URL) -> String? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
         let host = (components.host ?? "").lowercased()
@@ -449,52 +467,52 @@ struct ContentView: View {
             items.first { $0.name.lowercased() == key }?.value
         }
         
-// Google: https://www.google.com/search?q=... or /url?q=...
+        // Google: https://www.google.com/search?q=... or /url?q=...
         if host.contains("google.") && (path.hasPrefix("/search") || path.hasPrefix("/url")) {
             return value(for: "q")
         }
         
-// DuckDuckGo: https://duckduckgo.com/?q=...
+        // DuckDuckGo: https://duckduckgo.com/?q=...
         if host.contains("duckduckgo.") {
             return value(for: "q")
         }
         
-// Bing: https://www.bing.com/search?q=...
+        // Bing: https://www.bing.com/search?q=...
         if host.contains("bing.") {
             return value(for: "q")
         }
         
         // Yahoo: https://search.yahoo.com/search?p=...
         if host.contains("yahoo.") {
-return value(for: "p")
+            return value(for: "p")
         }
         
-// Qwant: https://www.qwant.com/?q=...
+        // Qwant: https://www.qwant.com/?q=...
         if host.contains("qwant.") {
             return value(for: "q")
         }
         
-// Startpage: https://www.startpage.com/sp/search?q=...
+        // Startpage: https://www.startpage.com/sp/search?q=...
         if host.contains("startpage.") {
             return value(for: "q")
         }
         
-// Presearch: https://presearch.com/search?q=...
+        // Presearch: https://presearch.com/search?q=...
         if host.contains("presearch") {
             return value(for: "q")
         }
         
-// Ecosia: https://www.ecosia.org/search?q=...
+        // Ecosia: https://www.ecosia.org/search?q=...
         if host.contains("ecosia.") {
             return value(for: "q")
         }
         
         // Perplexity: https://www.perplexity.ai/search?q=... (sometimes 'query')
         if host.contains("perplexity.ai") {
-return value(for: "q") ?? value(for: "query")
+            return value(for: "q") ?? value(for: "query")
         }
         
-// Yandex: https://yandex.com/search/?text=...
+        // Yandex: https://yandex.com/search/?text=...
         if host.contains("yandex.") {
             return value(for: "text") ?? value(for: "q")
         }
@@ -503,785 +521,7 @@ return value(for: "q") ?? value(for: "query")
     }
 }
 
-struct BottomBarView: View {
-    @Binding var urlString: String
-    @Binding var isURLBarFocused: Bool
-    @ObservedObject var tabManager: TabManager
-    @ObservedObject var selectedTab: Tab
-    @Binding var showingSettings: Bool
-    @Binding var shouldNavigate: Bool
-    @StateObject private var settings = BrowserSettings.shared
-    @StateObject private var bookmarkManager = BookmarkManager.shared
-    @StateObject private var searchPreloadManager = SearchPreloadManager.shared
-    @State private var urlEditingText: String = ""
-    @State private var searchTimer: Timer?
-    @FocusState private var isTextFieldFocused: Bool
-    
-    private var systemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    private var secondarySystemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Progress bar
-            if selectedTab.isLoading {
-                ProgressView(value: selectedTab.estimatedProgress, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle())
-                    .frame(height: 2)
-            }
-            
-            HStack(spacing: 10) {
-                // Tab indicator (swipe up to open) - always visible
-                VStack(spacing: 2) {
-                    Image(systemName: "chevron.compact.up")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    Text("\(tabManager.tabs.count)")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.secondary)
-                }
-                .frame(width: 28)
-                
-                // Navigation buttons - hidden when URL bar is focused
-                if !isURLBarFocused {
-                    HStack(spacing: 8) {
-                        // Back button
-                        Button(action: {
-                            selectedTab.webView?.goBack()
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18))
-                                .frame(width: 36, height: 36)
-                                .contentShape(Rectangle())
-                        }
-                        .disabled(!selectedTab.canGoBack)
-                        
-                        // Forward button
-                        Button(action: {
-                            selectedTab.webView?.goForward()
-                        }) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 18))
-                                .frame(width: 36, height: 36)
-                                .contentShape(Rectangle())
-                        }
-                        .disabled(!selectedTab.canGoForward)
-                    }
-                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                }
-                
-                // URL bar - expanded when focused
-                HStack {
-                    Button(action: {
-                        if selectedTab.isLoading {
-                            selectedTab.webView?.stopLoading()
-                        }
-                    }) {
-                        Image(systemName: selectedTab.isLoading ? "xmark" : "lock.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-                    .disabled(!selectedTab.isLoading)
-                    
-                    TextField("Search or enter address", text: $urlEditingText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .onReceive(selectedTab.$url) { newURL in
-                            if !isURLBarFocused {
-                                urlEditingText = newURL?.absoluteString ?? ""
-                            }
-                        }
-                        .onChange(of: urlEditingText) { _, newValue in
-                            // Cancel previous timer
-                            searchTimer?.invalidate()
-                            
-                            // Trigger search suggestions immediately (with debouncing in manager)
-                            SearchSuggestionsManager.shared.getSuggestions(for: newValue)
-                            
-                            // Preload search results after a delay
-                            if newValue.count > 2 {
-                                searchTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
-                                    searchPreloadManager.preloadSearch(for: newValue)
-                                }
-                            }
-                        }
-                        .onSubmit {
-                            urlString = urlEditingText
-                            shouldNavigate = true
-                            isTextFieldFocused = false
-                        }
-                        .focused($isTextFieldFocused)
-                        .onTapGesture {
-                            if !isTextFieldFocused {
-                                urlEditingText = urlString
-                                isTextFieldFocused = true
-                            }
-                        }
-                        .onChange(of: isTextFieldFocused) { _, focused in
-                            isURLBarFocused = focused
-                        }
-                    
-                    HStack(spacing: 8) {
-                        // Show preloading indicator when active
-                        if searchPreloadManager.isPreloading {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                        }
-                        
-                        // Bookmark button - only show when not focused or if there's a current URL
-                        if !isURLBarFocused, let currentURL = selectedTab.url {
-                            Button(action: {
-                                if bookmarkManager.isBookmarked(url: currentURL) {
-                                    if let bookmark = bookmarkManager.getBookmark(for: currentURL) {
-                                        bookmarkManager.removeBookmark(bookmark)
-                                    }
-                                } else {
-                                    let title = selectedTab.title.isEmpty ? currentURL.host ?? currentURL.absoluteString : selectedTab.title
-                                    bookmarkManager.addBookmark(title: title, url: currentURL, folderID: bookmarkManager.favoritesFolder?.id)
-                                }
-                            }) {
-                                Image(systemName: bookmarkManager.isBookmarked(url: currentURL) ? "bookmark.fill" : "bookmark")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(bookmarkManager.isBookmarked(url: currentURL) ? .accentColor : .secondary)
-                            }
-                        }
-                        
-                        // Clear button when focused
-                        if isURLBarFocused && !urlEditingText.isEmpty {
-                            Button(action: {
-                                urlEditingText = ""
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        // Reload/stop button - only show when not focused
-                        if !isURLBarFocused {
-                            if selectedTab.isLoading {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                            } else {
-                                Button(action: {
-                                    selectedTab.webView?.reload()
-                                }) {
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 12))
-                                }
-                            }
-                        }
-                        
-                        // Done button when focused
-                        if isURLBarFocused {
-                            Button(action: {
-                                isTextFieldFocused = false
-                                urlString = urlEditingText
-                                if !urlEditingText.isEmpty {
-                                    shouldNavigate = true
-                                }
-                            }) {
-                                Text("Done")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(secondarySystemBackgroundColor)
-                .cornerRadius(8)
-                .animation(.easeInOut(duration: 0.25), value: isURLBarFocused)
-                
-                // Right side buttons - hidden when URL bar is focused
-                if !isURLBarFocused {
-                    HStack(spacing: 8) {
-                        // Pin/Unpin button
-                        Button(action: {
-                            if selectedTab.isPinned {
-                                tabManager.unpinTab(selectedTab)
-                            } else {
-                                tabManager.pinTab(selectedTab)
-                            }
-                        }) {
-                            Image(systemName: selectedTab.isPinned ? "pin.slash" : "pin")
-                                .font(.system(size: 18))
-                                .foregroundColor(selectedTab.isPinned ? .accentColor : .primary)
-                        }
-                        .disabled(selectedTab.url == nil)
-                        
-                        // Menu button
-                        Menu {
-                            Button(action: {
-                                tabManager.createNewTab()
-                            }) {
-                                Label("New Tab", systemImage: "plus.square")
-                            }
-                            
-                            Button(action: {
-                                // Navigate to homepage in current tab
-                                if let homepage = BrowserSettings.shared.homepageURL {
-                                    selectedTab.webView?.load(URLRequest(url: homepage))
-                                }
-                            }) {
-                                Label("Home", systemImage: "house")
-                            }
-                            
-                            Divider()
-                            
-                            Button(action: {
-                                settings.useDesktopMode.toggle()
-                            }) {
-                                Label(
-                                    settings.useDesktopMode ? "Request Mobile Website" : "Request Desktop Website",
-                                    systemImage: settings.useDesktopMode ? "iphone" : "desktopcomputer"
-                                )
-                            }
-                            
-                            // JavaScript blocking toggle for current site
-                            if let currentURL = selectedTab.url {
-                                Button(action: {
-                                    JavaScriptBlockingManager.shared.toggleJavaScriptBlocking(for: currentURL)
-                                    // Reload the page to apply the change
-                                    selectedTab.webView?.reload()
-                                }) {
-                                    let isBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: currentURL)
-                                    Label(
-                                        isBlocked ? "Enable JavaScript" : "Disable JavaScript",
-                                        systemImage: isBlocked ? "play.fill" : "stop.fill"
-                                    )
-                                }
-                            }
-                            
-                            Divider()
-                            
-                            Button(action: {
-                                // Share functionality
-                            }) {
-                                Label("Share", systemImage: "square.and.arrow.up")
-                            }
-                            
-                            Button(action: {
-                                showingSettings = true
-                            }) {
-                                Label("Settings", systemImage: "gear")
-                            }
-                            
-                            // Note: Preloaded search results option removed from ellipsis menu to prevent duplication
-                            
-                            // Perplexity options
-                            if PerplexityManager.shared.isAuthenticated, let currentURL = selectedTab.url {
-                                Divider()
-                                
-                                Button(action: {
-                                    PerplexityManager.shared.performAction(
-                                        .summarize,
-                                        for: currentURL,
-                                        title: selectedTab.title
-                                    )
-                                }) {
-                                    Label("Summarize with Perplexity", systemImage: "doc.text.magnifyingglass")
-                                }
-                                
-                                Button(action: {
-                                    PerplexityManager.shared.performAction(
-                                        .sendToPerplexity,
-                                        for: currentURL,
-                                        title: selectedTab.title
-                                    )
-                                }) {
-                                    Label("Send to Perplexity", systemImage: "arrow.up.right.square")
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 20))
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(systemBackgroundColor)
-            .animation(.easeInOut(duration: 0.25), value: isURLBarFocused)
-            
-            // Enhanced suggestions with history and search - Safari-style clean interface
-            if isURLBarFocused {
-                EnhancedSuggestionsView(
-                    query: urlEditingText,
-                    preloadedResult: searchPreloadManager.getPreloadedResult(for: urlEditingText),
-                    onSuggestionTap: { suggestion in
-                        urlEditingText = suggestion
-                        urlString = suggestion
-                        shouldNavigate = true
-                        isTextFieldFocused = false
-                    },
-                    onTopResultTap: { url in
-                        urlString = url.absoluteString
-                        shouldNavigate = true
-                        isTextFieldFocused = false
-                    }
-                )
-                .background(secondarySystemBackgroundColor)
-                .cornerRadius(8)
-                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                .padding(.horizontal, 12)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .onAppear {
-            urlEditingText = urlString
-        }
-        .onDisappear {
-            searchTimer?.invalidate()
-        }
-    }
-    
-    private func formatURL(from string: String) -> URL? {
-        // Check if it's already a valid URL
-        if let url = URL(string: string), url.scheme != nil {
-            return url
-        }
-        
-        // Check if it looks like a domain
-        if string.contains(".") && !string.contains(" ") {
-            if let url = URL(string: "https://\(string)") {
-                return url
-            }
-        }
-        
-        // Otherwise, treat it as a search query using the selected default search engine
-        let searchQuery = string
-        return BrowserSettings.shared.searchURL(for: searchQuery)
-    }
-    
-}
-
-struct SearchSuggestionsView: View {
-    let query: String
-    let suggestions: [String]
-    let preloadedResult: SearchPreloadManager.SearchResult?
-    let onSuggestionTap: (String) -> Void
-    let onTopResultTap: (URL) -> Void
-    
-    private var systemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Top search result (if available)
-            if let preloadedResult = preloadedResult,
-               let firstResultURL = preloadedResult.firstResultURL {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Image(systemName: "1.circle.fill")
-                            .foregroundColor(.accentColor)
-                            .font(.system(size: 14))
-                        Text("Top Result")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                    
-                    Button(action: {
-                        onTopResultTap(firstResultURL)
-                    }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(preloadedResult.firstResultTitle ?? firstResultURL.host ?? "Website")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.leading)
-                                    .lineLimit(2)
-                                
-                                Text(firstResultURL.host ?? firstResultURL.absoluteString)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(systemBackgroundColor.opacity(0.5))
-                
-                Divider()
-            }
-            
-            // Search suggestions
-            ForEach(suggestions, id: \.self) { suggestion in
-                Button(action: {
-                    onSuggestionTap(suggestion)
-                }) {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        
-                        Text(suggestion)
-                            .font(.system(size: 14))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        // Highlight matching part
-                        if suggestion.lowercased().contains(query.lowercased()) {
-                            Image(systemName: "arrow.up.left")
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.clear)
-                .contentShape(Rectangle())
-                
-                if suggestion != suggestions.last {
-                    Divider()
-                        .padding(.leading, 32)
-                }
-            }
-        }
-        .frame(maxHeight: 300)
-    }
-}
-
-struct EnhancedSuggestionsView: View {
-    let query: String
-    let preloadedResult: SearchPreloadManager.SearchResult?
-    let onSuggestionTap: (String) -> Void
-    let onTopResultTap: (URL) -> Void
-    
-    @StateObject private var suggestionManager = SuggestionManager()
-    @StateObject private var searchSuggestionManager = SearchSuggestionsManager.shared
-    @StateObject private var bookmarkManager = BookmarkManager.shared
-    
-    private var systemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    private var secondarySystemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Top result from website (if available)
-            if let preloadedResult = preloadedResult,
-               let firstResultURL = preloadedResult.firstResultURL {
-                TopResultView(
-                    title: preloadedResult.firstResultTitle ?? firstResultURL.host ?? "Website",
-                    url: firstResultURL,
-                    onTap: { onTopResultTap(firstResultURL) }
-                )
-                .background(systemBackgroundColor.opacity(0.5))
-                
-                Divider()
-            }
-            
-            // Search Suggestions (privacy-focused via DuckDuckGo, but searches use user's preferred engine)
-            if !query.isEmpty && !searchSuggestionManager.suggestions.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    // No section header for search suggestions - match Safari's clean look
-                    ForEach(searchSuggestionManager.suggestions.indices, id: \.self) { index in
-                        let suggestion = searchSuggestionManager.suggestions[index]
-                        Button(action: { onSuggestionTap(suggestion.text) }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 20, height: 20)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(suggestion.text)
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                
-                                Spacer()
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.clear)
-                        .contentShape(Rectangle())
-                        
-                        if index < searchSuggestionManager.suggestions.count - 1 {
-                            Divider()
-                                .padding(.leading, 48)
-                        }
-                    }
-                }
-                
-                if !getBookmarkSuggestions(for: query).isEmpty || !HistoryManager.shared.getHistorySuggestions(for: query).isEmpty {
-                    Divider()
-                }
-            }
-            
-            // Bookmarks and History Section
-            if !query.isEmpty {
-                let historySuggestions = HistoryManager.shared.getHistorySuggestions(for: query)
-                let bookmarkSuggestions = getBookmarkSuggestions(for: query)
-                let combinedSuggestions = getCombinedSuggestions(bookmarkSuggestions: bookmarkSuggestions, historySuggestions: historySuggestions)
-                
-                if !combinedSuggestions.isEmpty {
-                    SuggestionSectionView(
-                        title: "Bookmarks and History",
-                        suggestions: combinedSuggestions
-                    )
-                }
-            } else {
-                // Show recent history and bookmarks when no query
-                let recentHistory = Array(HistoryManager.shared.recentHistory.prefix(3))
-                let recentBookmarks = Array(bookmarkManager.bookmarks.prefix(3))
-                
-                if !recentHistory.isEmpty {
-                    SuggestionSectionView(
-                        title: "Recently Visited",
-                        suggestions: recentHistory.map { entry in
-                            SuggestionRowData(
-                                text: entry.title,
-                                subtitle: entry.url.host ?? entry.url.absoluteString,
-                                icon: "clock",
-                                action: { onTopResultTap(entry.url) }
-                            )
-                        }
-                    )
-                    
-                    if !recentBookmarks.isEmpty {
-                        Divider()
-                    }
-                }
-                
-                if !recentBookmarks.isEmpty {
-                    SuggestionSectionView(
-                        title: "Bookmarks",
-                        suggestions: recentBookmarks.map { bookmark in
-                            SuggestionRowData(
-                                text: bookmark.title,
-                                subtitle: bookmark.url.host ?? bookmark.url.absoluteString,
-                                icon: "bookmark.fill",
-                                action: { onTopResultTap(bookmark.url) }
-                            )
-                        }
-                    )
-                }
-            }
-        }
-        .frame(maxHeight: 400)
-        .onAppear {
-            if !query.isEmpty {
-                searchSuggestionManager.getSuggestions(for: query)
-                suggestionManager.getSuggestions(for: query)
-            }
-        }
-        .onChange(of: query) { _, newQuery in
-            if !newQuery.isEmpty {
-                searchSuggestionManager.getSuggestions(for: newQuery)
-                suggestionManager.getSuggestions(for: newQuery)
-            }
-        }
-    }
-    
-    private func getBookmarkSuggestions(for query: String) -> [Bookmark] {
-        let lowercaseQuery = query.lowercased()
-        return bookmarkManager.bookmarks.filter { bookmark in
-            bookmark.title.lowercased().contains(lowercaseQuery) ||
-            bookmark.url.absoluteString.lowercased().contains(lowercaseQuery) ||
-            bookmark.url.host?.lowercased().contains(lowercaseQuery) == true
-        }
-    }
-    
-    private func getCombinedSuggestions(bookmarkSuggestions: [Bookmark], historySuggestions: [HistoryEntry]) -> [SuggestionRowData] {
-        var combined: [SuggestionRowData] = []
-        
-        // Add bookmark suggestions (up to 2)
-        combined.append(contentsOf: bookmarkSuggestions.prefix(2).map { bookmark in
-            SuggestionRowData(
-                text: bookmark.title,
-                subtitle: bookmark.url.host ?? bookmark.url.absoluteString,
-                icon: "bookmark.fill",
-                action: { onTopResultTap(bookmark.url) }
-            )
-        })
-        
-        // Add history suggestions (up to 2)
-        combined.append(contentsOf: historySuggestions.prefix(2).map { historyEntry in
-            SuggestionRowData(
-                text: historyEntry.title,
-                subtitle: historyEntry.url.host ?? historyEntry.url.absoluteString,
-                icon: "clock",
-                action: { onTopResultTap(historyEntry.url) }
-            )
-        })
-        
-        return Array(combined.prefix(4))
-    }
-}
-
-struct TopResultView: View {
-    let title: String
-    let url: URL
-    let onTap: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Image(systemName: "1.circle.fill")
-                    .foregroundColor(.accentColor)
-                    .font(.system(size: 14))
-                Text("Top Result")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
-            
-            Button(action: onTap) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                        
-                        Text(url.host ?? url.absoluteString)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-    }
-}
-
-struct SuggestionRowData {
-    let text: String
-    let subtitle: String?
-    let icon: String
-    let action: () -> Void
-}
-
-struct SuggestionSectionView: View {
-    let title: String
-    let suggestions: [SuggestionRowData]
-    
-    private var secondarySystemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(secondarySystemBackgroundColor.opacity(0.5))
-            
-            // Suggestions
-            ForEach(suggestions.indices, id: \.self) { index in
-                let suggestion = suggestions[index]
-                Button(action: suggestion.action) {
-                    HStack(spacing: 12) {
-                        Image(systemName: suggestion.icon)
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                            .frame(width: 20, height: 20)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(suggestion.text)
-                                .font(.system(size: 15))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                            
-                            if let subtitle = suggestion.subtitle {
-                                Text(subtitle)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        
-                        Spacer()
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.horizontal, 16)
-                .padding(.vertical, suggestion.subtitle != nil ? 8 : 10)
-                .background(Color.clear)
-                .contentShape(Rectangle())
-                
-                if index < suggestions.count - 1 {
-                    Divider()
-                        .padding(.leading, 48)
-                }
-            }
-        }
-    }
-}
-
+// MARK: - macOS Extensions
 #if os(macOS)
 extension Notification.Name {
     static let toggleTabDrawer = Notification.Name("toggleTabDrawer")
@@ -1291,3 +531,4 @@ extension Notification.Name {
 #Preview {
     ContentView()
 }
+

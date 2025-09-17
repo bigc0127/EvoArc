@@ -20,6 +20,7 @@ class Tab: ObservableObject, Identifiable {
     @Published var browserEngine: BrowserEngine = .webkit
     @Published var isPinned: Bool = false
     @Published var groupID: UUID? = nil
+    @Published var showURLInBar: Bool = false
     
     weak var webView: WKWebView?
     
@@ -28,11 +29,14 @@ class Tab: ObservableObject, Identifiable {
     private let loadingTimeout: TimeInterval = 30.0 // 30 seconds timeout
     
     init(url: URL? = nil, browserEngine: BrowserEngine? = nil, isPinned: Bool = false, groupID: UUID? = nil) {
-        // Use provided URL or default to homepage
+        // Store URL for loading but don't show in bar for new tabs or homepage
         if let url = url {
             self.url = url
+            // Only hide URL for homepage, show for all other URLs
+            self.showURLInBar = url != BrowserSettings.shared.homepageURL
         } else {
             self.url = BrowserSettings.shared.homepageURL
+            self.showURLInBar = false // Hide URL for new tabs
         }
         
         // Use provided engine or default from settings

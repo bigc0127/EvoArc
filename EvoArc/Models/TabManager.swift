@@ -65,6 +65,7 @@ class TabManager: ObservableObject {
     
     func createNewTab(url: URL? = nil) {
         let newTab = Tab(url: url)
+        newTab.showURLInBar = false // Ensure URL bar starts empty
         tabs.append(newTab)
         selectedTab = newTab
         

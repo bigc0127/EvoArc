@@ -17,25 +17,27 @@ struct TabDrawerView: View {
     @StateObject private var settings = BrowserSettings.shared
     @StateObject private var bookmarkManager = BookmarkManager.shared
     @Namespace private var animationNamespace
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var showingCreateGroupSheet = false
     @State private var newGroupName = ""
     @State private var newGroupColor: TabGroupColor = .blue
     @State private var showingBookmarks = false
     
+    // Constants for base sizes that will be dynamically scaled
+    private let baseHandleHeight: CGFloat = 5
+    private let baseHandleWidth: CGFloat = 40
+    private let baseIconSize: CGFloat = 18
+    private let baseSpacing: CGFloat = 15
+    private let baseCornerRadius: CGFloat = 20
+    private let glassOpacity: CGFloat = 0.7
+    
     private var systemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
+        .appBackground
     }
     
     private var secondarySystemBackgroundColor: Color {
-        #if os(iOS)
-        Color(UIColor.secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
+        .cardBackground
     }
     
     var body: some View {
@@ -46,7 +48,7 @@ struct TabDrawerView: View {
         }
         .background(drawerBackground)
         .modifier(PlatformCornerRadius())
-        .shadow(radius: 10)
+            .themeShadow()
         .sheet(isPresented: $showingCreateGroupSheet) {
             NewTabGroupView(
                 name: $newGroupName,
@@ -94,11 +96,11 @@ struct TabDrawerView: View {
     
     @ViewBuilder
     private var drawerHandle: some View {
-        RoundedRectangle(cornerRadius: 2.5)
-            .fill(Color.gray.opacity(0.5))
-            .frame(width: 40, height: 5)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
+        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(2.5))
+            .fill(Color.secondaryLabel)
+            .scaledFrame(width: baseHandleWidth, height: baseHandleHeight)
+            .scaledPadding(.top, 8)
+            .scaledPadding(.bottom, 12)
     }
     
     @ViewBuilder
@@ -106,12 +108,14 @@ struct TabDrawerView: View {
         HStack {
             Text("\(tabManager.tabs.count) \(tabManager.tabs.count == 1 ? "Tab" : "Tabs")")
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(.primaryLabel)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility3)
             
             if !tabManager.tabGroups.isEmpty {
                 Text("• \(tabManager.tabGroups.count) \(tabManager.tabGroups.count == 1 ? "Group" : "Groups")")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
             }
             
             Spacer()
@@ -120,8 +124,9 @@ struct TabDrawerView: View {
                 showingBookmarks = true
             }) {
                 Image(systemName: "bookmark.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: UIScaleMetrics.iconSize(16)))
                     .foregroundColor(.accentColor)
+.frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -129,8 +134,9 @@ struct TabDrawerView: View {
                 showingCreateGroupSheet = true
             }) {
                 Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 18))
+                    .font(.system(size: UIScaleMetrics.iconSize(18)))
                     .foregroundColor(.accentColor)
+                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -138,19 +144,20 @@ struct TabDrawerView: View {
                 tabManager.createNewTab()
             }) {
                 Image(systemName: "plus")
-                    .font(.system(size: 20))
+                    .font(.system(size: UIScaleMetrics.iconSize(20)))
                     .foregroundColor(.accentColor)
+                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
+        .scaledPadding(.horizontal, 20)
+        .scaledPadding(.bottom, 10)
     }
     
     @ViewBuilder
     private var tabsGrid: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: UIScaleMetrics.scaledPadding(20)) {
                 // Pinned tabs section
                 let pinnedTabs = tabManager.tabs.filter { $0.isPinned }
                 if !pinnedTabs.isEmpty {
@@ -240,17 +247,27 @@ struct TabDrawerView: View {
     
     private var gridColumns: [GridItem] {
         [
-            GridItem(.flexible(), spacing: 15),
-            GridItem(.flexible(), spacing: 15)
+            GridItem(.flexible(), spacing: UIScaleMetrics.scaledPadding(baseSpacing)),
+            GridItem(.flexible(), spacing: UIScaleMetrics.scaledPadding(baseSpacing))
         ]
     }
     
     @ViewBuilder
     private var drawerBackground: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                GlassBackgroundView(style: colorScheme == .dark ? .dark : .light)
+                    .opacity(glassOpacity)
+            }
+        } else {
+            systemBackgroundColor
+        }
+        #else
         systemBackgroundColor
-            .overlay(
-                Color.black.opacity(0.05)
-            )
+        #endif
     }
     
     // Legacy createGroupSheet removed. Using NewTabGroupView instead.
@@ -264,6 +281,11 @@ struct TabGroupSectionView<TabCard: View>: View {
     let gridColumns: [GridItem]
     @ViewBuilder let tabCardView: (Tab) -> TabCard
     
+    // Constants for base sizes that will be dynamically scaled
+    private let baseColorIndicatorSize: CGFloat = 12
+    private let baseIconSize: CGFloat = 12
+    private let baseSpacing: CGFloat = 15
+    
     @State private var showingDeleteConfirmation = false
     
     var body: some View {
@@ -271,16 +293,18 @@ struct TabGroupSectionView<TabCard: View>: View {
             HStack {
                 Circle()
                     .fill(group.color.color)
-                    .frame(width: 12, height: 12)
+                    .scaledFrame(width: baseColorIndicatorSize, height: baseColorIndicatorSize)
                 
                 Text(group.name)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 
                 Text("(\(tabs.count))")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 
                 Spacer()
                 
@@ -290,8 +314,9 @@ struct TabGroupSectionView<TabCard: View>: View {
                     }
                 }) {
                     Image(systemName: group.isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.system(size: 12))
+                        .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.secondary)
+.frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
                 }
                 .buttonStyle(PlainButtonStyle())
                 
@@ -299,15 +324,16 @@ struct TabGroupSectionView<TabCard: View>: View {
                     showingDeleteConfirmation = true
                 }) {
                     Image(systemName: "trash")
-                        .font(.system(size: 12))
+                        .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.red)
+                        .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal, 15)
             
             if !group.isCollapsed {
-                LazyVGrid(columns: gridColumns, spacing: 15) {
+                LazyVGrid(columns: gridColumns, spacing: UIScaleMetrics.scaledPadding(baseSpacing)) {
                     ForEach(tabs) { tab in
                         tabCardView(tab)
                     }
@@ -346,6 +372,12 @@ struct TabCardView: View {
     let onSelect: () -> Void
     let onClose: () -> Void
     let tabManager: TabManager
+    
+    // Constants for base sizes that will be dynamically scaled
+    private let baseHeaderIconSize: CGFloat = 14
+    private let baseCloseButtonSize: CGFloat = 20
+    private let basePreviewHeight: CGFloat = 100
+    private let baseCornerRadius: CGFloat = 12
     
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging: Bool = false
@@ -509,18 +541,21 @@ struct TabCardView: View {
         HStack(spacing: 8) {
             if tab.isPinned {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: 12))
+                    .font(.system(size: UIScaleMetrics.iconSize(12)))
                     .foregroundColor(.accentColor)
+                    .scaledFrame(width: baseHeaderIconSize, height: baseHeaderIconSize)
             } else {
                 Image(systemName: "globe")
-                    .font(.system(size: 14))
+                    .font(.system(size: UIScaleMetrics.iconSize(14)))
                     .foregroundColor(.secondary)
+                    .scaledFrame(width: baseHeaderIconSize, height: baseHeaderIconSize)
             }
             
             Text(tab.title)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: UIScaleMetrics.iconSize(14), weight: .medium))
                 .lineLimit(1)
                 .foregroundColor(.primary)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility3)
             
             Spacer()
             engineIndicatorBadge
@@ -531,9 +566,10 @@ struct TabCardView: View {
     private var urlText: some View {
         if let url = tab.url {
             Text(url.host ?? url.absoluteString)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .font(.system(size: UIScaleMetrics.iconSize(12)))
+                .foregroundColor(.secondaryLabel)
                 .lineLimit(1)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         }
     }
     
@@ -541,10 +577,10 @@ struct TabCardView: View {
     private var previewPlaceholder: some View {
         RoundedRectangle(cornerRadius: 8)
             .fill(Color.gray.opacity(0.1))
-            .frame(height: 100)
+            .scaledFrame(height: basePreviewHeight)
             .overlay(
                 Image(systemName: "doc.text")
-                    .font(.system(size: 30))
+                    .font(.system(size: UIScaleMetrics.iconSize(30)))
                     .foregroundColor(.gray.opacity(0.3))
             )
     }
@@ -552,9 +588,9 @@ struct TabCardView: View {
     @ViewBuilder
     private var engineIndicatorBadge: some View {
         Text(tab.browserEngine == .webkit ? "S" : "C")
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: UIScaleMetrics.iconSize(10), weight: .bold))
             .foregroundColor(.white)
-            .frame(width: 16, height: 16)
+            .scaledFrame(width: 16, height: 16)
             .background(
                 Circle()
                     .fill(tab.browserEngine == .webkit ? Color.blue : Color.orange)
@@ -563,10 +599,10 @@ struct TabCardView: View {
     
     @ViewBuilder
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(baseCornerRadius))
             .fill(secondarySystemBackgroundColor)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(baseCornerRadius))
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
     }
@@ -576,8 +612,9 @@ struct TabCardView: View {
         if abs(dragOffset) < 10 {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: UIScaleMetrics.iconSize(baseCloseButtonSize)))
                     .foregroundColor(.secondary)
+                    .scaledFrame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
                     .background(Circle().fill(systemBackgroundColor))
             }
             .offset(x: 5, y: -5)

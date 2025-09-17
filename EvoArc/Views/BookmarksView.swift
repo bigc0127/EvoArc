@@ -18,6 +18,8 @@ struct BookmarksView: View {
     @StateObject private var bookmarkManager = BookmarkManager.shared
     @ObservedObject var tabManager: TabManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    private let glassOpacity: CGFloat = 0.7
 
     @State private var searchText = ""
     @State private var showingAddFolder = false
@@ -61,7 +63,22 @@ struct BookmarksView: View {
                             .padding(.vertical, 12)
                         }
                         .buttonStyle(.plain)
-                        .background(Color(UIColor.secondarySystemBackground))
+                        .background {
+                            #if os(iOS)
+                            if #available(iOS 26.0, *) {
+                                RoundedRectangle(cornerRadius: 0)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay {
+                                        GlassBackgroundView(style: colorScheme == .dark ? .dark : .light)
+                                            .opacity(glassOpacity)
+                                    }
+                            } else {
+                                Color(UIColor.secondarySystemBackground)
+                            }
+                            #else
+                            Color(NSColor.controlBackgroundColor)
+                            #endif
+                        }
                         Divider()
                     }
                 }

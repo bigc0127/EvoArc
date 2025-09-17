@@ -200,7 +200,9 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     parent.onNavigate(url)
                 }
             }
@@ -210,7 +212,11 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    // Show URL unless it's the homepage
+                    parent.tab.showURLInBar = url != BrowserSettings.shared.homepageURL
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
@@ -518,7 +524,9 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     parent.onNavigate(url)
                 }
             }
@@ -528,7 +536,11 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    // Show URL unless it's the homepage
+                    parent.tab.showURLInBar = url != BrowserSettings.shared.homepageURL
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title

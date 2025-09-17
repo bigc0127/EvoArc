@@ -234,7 +234,9 @@ struct WebView: UIViewRepresentable {
                 
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     parent.onNavigate(url)
                 }
             }
@@ -251,7 +253,11 @@ struct WebView: UIViewRepresentable {
                 
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    // Show URL unless it's the homepage
+                    parent.tab.showURLInBar = url != BrowserSettings.shared.homepageURL
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
@@ -295,12 +301,47 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            // Allow all navigation by default
+            // Intercept link activations that trigger downloads
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url {
+                // If the URL looks like a direct file (no HTML), let URLSession handle it
+                let fileExtensions = ["zip","pdf","png","jpg","jpeg","gif","mp4","mov","mp3","wav","dmg","pkg","ipa","csv","txt","json"]
+                if fileExtensions.contains(url.pathExtension.lowercased()) {
+                    DownloadManager.shared.downloadFile(from: url)
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
             decisionHandler(.allow)
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-            // Allow all responses by default
+            // For MIME types we can't show, check if it's a download
+            if !navigationResponse.canShowMIMEType,
+               let url = navigationResponse.response.url,
+               let mimeType = navigationResponse.response.mimeType {
+                // Known downloadable MIME types
+                let downloadableTypes = [
+                    "application/pdf",
+                    "application/zip",
+                    "application/x-zip",
+                    "application/x-zip-compressed",
+                    "application/octet-stream",
+                    "image/jpeg",
+                    "image/png",
+                    "image/gif",
+                    "audio/mpeg",
+                    "video/mp4",
+                    "text/csv",
+                    "text/plain"
+                ]
+                
+                if downloadableTypes.contains(mimeType.lowercased()) {
+                    DownloadManager.shared.downloadFile(from: url)
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
             decisionHandler(.allow)
         }
         
@@ -476,7 +517,9 @@ struct WebView: NSViewRepresentable {
             
             if let url = webView.url {
                 parent.tab.url = url
-                parent.urlString = url.absoluteString
+                if parent.tab.showURLInBar {
+                    parent.urlString = url.absoluteString
+                }
                 parent.onNavigate(url)
             }
         }
@@ -491,7 +534,9 @@ struct WebView: NSViewRepresentable {
             
             if let url = webView.url {
                 parent.tab.url = url
-                parent.urlString = url.absoluteString
+                if parent.tab.showURLInBar {
+                    parent.urlString = url.absoluteString
+                }
                 
                 // Check for Perplexity authentication when navigating to Perplexity pages
                 PerplexityManager.shared.checkForLoginOnNavigation(to: url)

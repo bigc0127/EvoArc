@@ -238,15 +238,27 @@ final class SuggestionManager: ObservableObject {
     private func updateSuggestions(history: [HistoryEntry], search: [SearchSuggestion]) {
         var combined: [SuggestionItem] = []
         
-        // Add history suggestions (max 4)
-        for entry in history.prefix(4) {
+        // Add history suggestions first (max 3)
+        for entry in history.prefix(3) {
             combined.append(SuggestionItem(historyEntry: entry))
         }
         
-        // Add search suggestions to fill remaining slots (max 4)
+        // Add search suggestions to fill remaining slots (max 5)
         let remainingSlots = max(0, 8 - combined.count)
         for suggestion in search.prefix(remainingSlots) {
-            combined.append(SuggestionItem(searchSuggestion: suggestion))
+            // Convert to search suggestion that will use the user's default search engine
+            let item = SuggestionItem(searchSuggestion: suggestion)
+            combined.append(item)
+        }
+        
+        // Check if query might be a URL
+        let queryString = SearchSuggestionsManager.shared.lastQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !queryString.isEmpty,
+           !queryString.isEmpty,
+           !queryString.contains(" "),
+           queryString.contains(".") {
+            let urlSuggestion = SuggestionItem(urlSuggestion: queryString)
+            combined.insert(urlSuggestion, at: 0)
         }
         
         suggestions = combined

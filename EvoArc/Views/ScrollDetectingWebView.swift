@@ -286,7 +286,11 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 print("🚫 iOS: Stopped loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    // Show URL unless it's the homepage
+                    parent.tab.showURLInBar = url != BrowserSettings.shared.homepageURL
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
@@ -616,7 +620,11 @@ struct ScrollAwareWebView: NSViewRepresentable {
                 print("🚫 macOS: Stopped loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
-                    parent.urlString = url.absoluteString
+                    // Show URL unless it's the homepage
+                    parent.tab.showURLInBar = url != BrowserSettings.shared.homepageURL
+                    if parent.tab.showURLInBar {
+                        parent.urlString = url.absoluteString
+                    }
                     
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title

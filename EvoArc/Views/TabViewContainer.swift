@@ -41,11 +41,15 @@ struct TabViewContainer: View {
         .onReceive(tabManager.$selectedTab) { _ in
             // Update URL bar when tab switches
             if let selectedTab = tabManager.selectedTab {
-                // Use the actual WebView URL if available, otherwise fallback to tab.url
-                if let webViewURL = selectedTab.webView?.url {
-                    urlString = webViewURL.absoluteString
+                // Only update URL string if explicitly showing URL
+                if selectedTab.showURLInBar {
+                    if let webViewURL = selectedTab.webView?.url {
+                        urlString = webViewURL.absoluteString
+                    } else {
+                        urlString = selectedTab.url?.absoluteString ?? ""
+                    }
                 } else {
-                    urlString = selectedTab.url?.absoluteString ?? ""
+                    urlString = "" // Keep URL bar empty
                 }
             }
         }
