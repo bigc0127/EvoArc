@@ -1,0 +1,24 @@
+theme: minima
+title: EvoArc Browser
+description: A privacy-focused, modern web browser for iOS and macOS
+author: Connor Needling
+baseurl: "/EvoArc"
+url: "https://bigc0127.github.io"
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/

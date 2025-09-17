@@ -11,6 +11,7 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 ### 🔐 Privacy & Security
 - **Local-First Privacy** - All data stays on your device with optional iCloud sync
 - **Privacy-focused search engines** - Default to Qwant, DuckDuckGo, Startpage, and other privacy-respecting search engines
+- **Advanced Ad Blocking** - Built-in ad and tracker blocking with customizable filter lists
 - **External search redirect protection** - Optional redirection of external searches through your preferred private search engine
 - **No tracking** - Zero data collection or user tracking
 - **iCloud Integration** - Secure sync using your personal iCloud account
@@ -26,6 +27,9 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 - **Desktop/Mobile mode toggle** - Adaptive user agent switching
 - **Auto-hiding URL bar** - Distraction-free browsing experience
 - **Smart device defaults** - iPad defaults to desktop mode, iPhone to mobile mode
+- **Downloads Management** - Customizable download location and behavior
+- **Dynamic Type Support** - Full accessibility support with adaptive UI scaling
+- **Ad Block Customization** - Choose from multiple filter lists with auto-updates
 
 ### 📱 Cross-Platform Experience
 - **Universal SwiftUI design** - Consistent experience across iOS and macOS
@@ -77,7 +81,7 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 
 ### Prerequisites
 - Xcode 15.0 or later
-- iOS 17.0+ / macOS 14.0+
+- iOS 18.0+ / macOS 14.0+
 - Swift 5.9+
 
 ### Installation
