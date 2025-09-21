@@ -56,7 +56,7 @@ struct ContentView: View {
             #endif
             ZStack {
                 #if os(iOS)
-// MARK: - iOS Layout
+                // MARK: - iOS Layout
                 // URL bar at bottom with tab drawer overlay
                 VStack(spacing: 0) {
                     // Web content area
@@ -98,10 +98,9 @@ struct ContentView: View {
                             Spacer()
                         }
                     }
-                    
                 }
                 
-                // Bottom URL bar - aligned to bottom using ZStack
+                // Bottom URL bar
                 if urlBarVisible || !settings.autoHideURLBar {
                     VStack {
                         Spacer()
@@ -116,7 +115,7 @@ struct ContentView: View {
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
-                            .ignoresSafeArea(.keyboard, edges: .bottom)
+                            .ignoresSafeArea(.keyboard)
                             .padding(.bottom, keyboardVisible ? keyboardHeight : 0)
                             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
                         }
@@ -190,13 +189,13 @@ struct ContentView: View {
                             }
                         }
                     }
-                }
-                
-                // Side tab drawer (right side)
-                if settings.tabDrawerPosition == .right && tabManager.isTabDrawerVisible {
-                    MacOSTabDrawerView(tabManager: tabManager)
-                        .frame(width: 300)
-                        .transition(.move(edge: .trailing))
+                    
+                    // Side tab drawer (right side)
+                    if settings.tabDrawerPosition == .right && tabManager.isTabDrawerVisible {
+                        MacOSTabDrawerView(tabManager: tabManager)
+                            .frame(width: 300)
+                            .transition(.move(edge: .trailing))
+                    }
                 }
                 #endif
                 
@@ -229,10 +228,8 @@ struct ContentView: View {
                             )
                     }
                 }
-                #endif
                 
                 // Invisible area at bottom to show URL bar when touched (iOS only)
-                #if os(iOS)
                 if settings.autoHideURLBar && !urlBarVisible {
                     VStack {
                         Spacer()
@@ -381,42 +378,43 @@ struct ContentView: View {
                 }
                 #endif
             }
-        }
-        #if os(iOS)
-        .gesture(
-            DragGesture()
-                .onEnded { value in
-                    // Swipe up from bottom to show tab drawer
-                    if value.translation.height < -100 {
-                        // Check if swipe started from bottom area
-                        tabManager.toggleTabDrawer()
+            #if os(iOS)
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        // Swipe up from bottom to show tab drawer
+                        if value.translation.height < -100 {
+                            // Check if swipe started from bottom area
+                            tabManager.toggleTabDrawer()
+                        }
                     }
-                }
-        )
-        #endif
-        #if os(macOS)
-        .onReceive(NotificationCenter.default.publisher(for: .toggleTabDrawer)) { _ in
-            tabManager.toggleTabDrawer()
+            )
+            #endif
+            #if os(macOS)
+            .onReceive(NotificationCenter.default.publisher(for: .toggleTabDrawer)) { _ in
+                tabManager.toggleTabDrawer()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .newTab)) { _ in
+                tabManager.createNewTab()
+            }
+            #endif
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(tabManager: tabManager)
+            }
+            .sheet(item: $perplexityManager.currentRequest) { request in
+                PerplexityModalView(request: request, onDismiss: {
+                    perplexityManager.dismissModal()
+                })
+            }
+            .onChange(of: tabManager.selectedTab?.id) {
+                // Update URL bar when switching tabs
+                setupInitialURL()
+            }
+            .onOpenURL { incomingURL in
+                handleIncomingURL(incomingURL)
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .newTab)) { _ in
-            tabManager.createNewTab()
-        }
-        #endif
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(tabManager: tabManager)
-        }
-        .sheet(item: $perplexityManager.currentRequest) { request in
-            PerplexityModalView(request: request, onDismiss: {
-                perplexityManager.dismissModal()
-            })
-        }
-        .onChange(of: tabManager.selectedTab?.id) {
-            // Update URL bar when switching tabs
-            setupInitialURL()
-        }
-        .onOpenURL { incomingURL in
-            handleIncomingURL(incomingURL)
-        }
+        .ignoresSafeArea()
     }
     
     // MARK: - Helper Functions

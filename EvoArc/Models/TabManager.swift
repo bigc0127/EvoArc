@@ -233,7 +233,7 @@ class TabManager: ObservableObject {
     
     // MARK: - Tab Group Methods
     
-    func createTabGroup(name: String, color: TabGroupColor = .blue, selectedTabIDs: [UUID] = []) -> TabGroup {
+    func createTabGroup(name: String, color: TabGroupColor = .blue, selectedTabIDs: [String] = []) -> TabGroup {
         let group = TabGroup(name: name, color: color)
         tabGroups.append(group)
         
@@ -368,7 +368,7 @@ class TabManager: ObservableObject {
                 }
                 
                 // Also save tab ID-based mapping as fallback for current session
-                tabGroupAssignments["id_" + tab.id.uuidString] = groupID
+                tabGroupAssignments["id_" + tab.id] = groupID
             }
             
             if let encoded = try? JSONEncoder().encode(tabGroupAssignments) {
@@ -483,7 +483,7 @@ class TabManager: ObservableObject {
                 
                 // Fallback to tab ID-based lookup
                 if groupID == nil,
-                   let groupIDString = decoded["id_" + tab.id.uuidString] {
+                   let groupIDString = decoded["id_" + tab.id] {
                     groupID = UUID(uuidString: groupIDString)
                 }
                 

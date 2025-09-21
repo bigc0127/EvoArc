@@ -490,9 +490,8 @@ struct TabCardView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             cardContent
-            closeButtonOverlay
         }
         .background(deleteIndicatorBackground)
         .offset(x: dragOffset)
@@ -503,11 +502,11 @@ struct TabCardView: View {
                 name: $newGroupName,
                 color: $newGroupColor,
                 onCancel: {
-                    resetGroupCreation()
+                    handleResetGroupCreation()
                     showingNewGroupAlert = false
                 },
                 onCreate: {
-                    createNewGroupAndAddTab()
+                    handleCreateNewGroupAndAddTab()
                     showingNewGroupAlert = false
                 }
             )
@@ -520,9 +519,11 @@ struct TabCardView: View {
     @ViewBuilder
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            headerRow
-            urlText
-            previewPlaceholder
+            VStack(alignment: .leading, spacing: 8) {
+                headerRow
+                urlText
+                previewPlaceholder
+            }
         }
         .padding(12)
         .background(cardBackground)
@@ -558,6 +559,7 @@ struct TabCardView: View {
                 .dynamicTypeSize(...DynamicTypeSize.accessibility3)
             
             Spacer()
+            
             engineIndicatorBadge
         }
     }
@@ -575,121 +577,135 @@ struct TabCardView: View {
     
     @ViewBuilder
     private var previewPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(Color.gray.opacity(0.1))
-            .scaledFrame(height: basePreviewHeight)
-            .overlay(
-                Image(systemName: "doc.text")
-                    .font(.system(size: UIScaleMetrics.iconSize(30)))
-                    .foregroundColor(.gray.opacity(0.3))
-            )
+        GeometryReader { geo in
+            TabThumbnailView(tab: tab)
+                .frame(width: geo.size.width, height: geo.size.width * 9/16)
+                .clipped()
+                .background(
+                    RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(8))
+                        .fill(Color.gray.opacity(0.1))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(8)))
+        }
+        .frame(height: UIScaleMetrics.maxDimension(basePreviewHeight))
     }
-    
-    @ViewBuilder
-    private var engineIndicatorBadge: some View {
+    }
+
+private extension TabCardView {
+    var engineIndicatorBadge: some View {
         Text(tab.browserEngine == .webkit ? "S" : "C")
-            .font(.system(size: UIScaleMetrics.iconSize(10), weight: .bold))
+            .font(.system(size: UIScaleMetrics.iconSize(10), weight: .medium))
             .foregroundColor(.white)
-            .scaledFrame(width: 16, height: 16)
+            .scaledFrame(width: 20, height: 20)
             .background(
                 Circle()
-                    .fill(tab.browserEngine == .webkit ? Color.blue : Color.orange)
+                    .fill(tab.browserEngine == .webkit ? Color.blue.opacity(0.8) : Color.orange.opacity(0.8))
             )
     }
     
-    @ViewBuilder
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(baseCornerRadius))
+    var cardBackground: some View {
+        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(12))
             .fill(secondarySystemBackgroundColor)
             .overlay(
-                RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(baseCornerRadius))
+                RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(12))
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
     }
     
-    @ViewBuilder
-    private var closeButtonOverlay: some View {
-        if abs(dragOffset) < 10 {
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: UIScaleMetrics.iconSize(baseCloseButtonSize)))
-                    .foregroundColor(.secondary)
-                    .scaledFrame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
-                    .background(Circle().fill(systemBackgroundColor))
+    var closeButtonOverlay: some View {
+        Group {
+            if abs(dragOffset) < 10 {
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: UIScaleMetrics.iconSize(20)))
+                        .foregroundColor(.secondary)
+                        .scaledFrame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .background(Circle().fill(systemBackgroundColor))
+                }
+                .offset(x: 5, y: -5)
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: dragOffset)
             }
-            .offset(x: 5, y: -5)
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.2), value: dragOffset)
         }
     }
     
-    @ViewBuilder
-    private var deleteIndicatorBackground: some View {
-        GeometryReader { geometry in
+    var deleteIndicatorBackground: some View {
+        GeometryReader { _ in
             HStack(spacing: 0) {
                 if dragOffset > 0 {
-                    deleteIndicator(alignment: .leading)
+                    leadingDeleteIndicator
                 } else if dragOffset < 0 {
-                    deleteIndicator(alignment: .trailing)
+                    trailingDeleteIndicator
                 }
             }
             .cornerRadius(12)
         }
     }
     
-    @ViewBuilder
-    private func deleteIndicator(alignment: Alignment) -> some View {
+    var leadingDeleteIndicator: some View {
         Color.red.opacity(min(Double(abs(dragOffset) / swipeThreshold), 1.0))
             .overlay(
                 Image(systemName: "trash.fill")
                     .foregroundColor(.white)
                     .font(.system(size: 24))
                     .frame(width: 60, alignment: .center),
-                alignment: alignment
+                alignment: .leading
             )
     }
     
-    private var dragGesture: some Gesture {
+    var trailingDeleteIndicator: some View {
+        Color.red.opacity(min(Double(abs(dragOffset) / swipeThreshold), 1.0))
+            .overlay(
+                Image(systemName: "trash.fill")
+                    .foregroundColor(.white)
+                    .font(.system(size: 24))
+                    .frame(width: 60, alignment: .center),
+                alignment: .trailing
+            )
+    }
+    
+    var dragGesture: some Gesture {
         DragGesture(minimumDistance: 20)
-            .onChanged { value in
+            .onChanged { [self] value in
+                let width = value.translation.width
+                let isMoving = true
                 withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 1, blendDuration: 0)) {
-                    dragOffset = value.translation.width
-                    isDragging = true
+                    self.dragOffset = width
+                    self.isDragging = isMoving
                 }
             }
-            .onEnded { value in
+            .onEnded { [self] value in
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     if abs(value.translation.width) > swipeThreshold {
                         // Close the tab
-                        dragOffset = value.translation.width > 0 ? 300 : -300
+                        self.dragOffset = value.translation.width > 0 ? 300 : -300
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                             onClose()
                         }
                     } else {
                         // Snap back
-                        dragOffset = 0
-                        isDragging = false
+                        self.dragOffset = 0
+                        self.isDragging = false
                     }
                 }
             }
     }
     
-    // Legacy newGroupSheet removed. Using NewTabGroupView instead.
-    /* Removed legacy UI */
-    
-    private func createNewGroupAndAddTab() {
+    func handleCreateNewGroupAndAddTab() {
         let trimmedName = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedName.isEmpty {
             let group = tabManager.createTabGroup(name: trimmedName, color: newGroupColor)
             tabManager.addTabToGroup(tab, group: group)
-            resetGroupCreation()
+            handleResetGroupCreation()
         }
     }
     
-    private func resetGroupCreation() {
+    func handleResetGroupCreation() {
         newGroupName = ""
         newGroupColor = .blue
-    }
+
+}
+
 }
 
 #if os(iOS)

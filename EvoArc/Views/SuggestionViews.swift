@@ -243,9 +243,8 @@ final class SuggestionManager: ObservableObject {
             combined.append(SuggestionItem(historyEntry: entry))
         }
         
-        // Add search suggestions to fill remaining slots (max 5)
-        let remainingSlots = max(0, 8 - combined.count)
-        for suggestion in search.prefix(remainingSlots) {
+        // Add search suggestions (max 4)
+        for suggestion in search.prefix(4) {
             // Convert to search suggestion that will use the user's default search engine
             let item = SuggestionItem(searchSuggestion: suggestion)
             combined.append(item)

@@ -9,8 +9,10 @@ import Foundation
 import Combine
 import WebKit
 
+@MainActor
 class Tab: ObservableObject, Identifiable {
-    let id = UUID()
+    let id = UUID().uuidString
+    var thumbnailUpdateTimer: Timer?
     @Published var title: String = "New Tab"
     @Published var url: URL?
     @Published var isLoading: Bool = false
@@ -80,6 +82,16 @@ class Tab: ObservableObject, Identifiable {
     }
     
     deinit {
-        stopLoadingTimeout()
+        // Cancel any active timers
+        loadingTimer?.invalidate()
+        loadingTimer = nil
+        thumbnailUpdateTimer?.invalidate()
+        thumbnailUpdateTimer = nil
+        
+        // Clean up on main actor
+        Task { @MainActor [weak self] in
+            guard let id = self?.id else { return }
+            ThumbnailManager.shared.removeThumbnail(for: id)
+        }
     }
 }

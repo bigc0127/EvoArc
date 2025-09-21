@@ -99,6 +99,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         // Create the WebView with Chromium configuration
         let webView = WKWebView(frame: .zero, configuration: configuration)
         AdBlockManager.shared.applyContentBlocking(to: webView)
+        
+        // Set delegates
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true

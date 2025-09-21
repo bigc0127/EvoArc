@@ -275,6 +275,9 @@ struct WebView: UIViewRepresentable {
                     // Check for Perplexity authentication when navigating to Perplexity pages
                     PerplexityManager.shared.checkForLoginOnNavigation(to: url)
                 }
+                
+                // Capture a thumbnail of the web content for the tab selector
+                ThumbnailManager.shared.captureThumbnail(for: webView, tab: self.parent.tab)
             }
         }
         

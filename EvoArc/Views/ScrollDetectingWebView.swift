@@ -304,6 +304,9 @@ struct ScrollAwareWebView: UIViewRepresentable {
                         webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = !jsBlocked
                     }
                 }
+                
+                // Capture a thumbnail of the web content for the tab selector
+                ThumbnailManager.shared.captureThumbnail(for: webView, tab: self.parent.tab)
             }
         }
         
@@ -638,6 +641,9 @@ struct ScrollAwareWebView: NSViewRepresentable {
                         webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically = !jsBlocked
                     }
                 }
+                
+                // Capture a thumbnail of the web content for the tab selector
+                ThumbnailManager.shared.captureThumbnail(for: webView, tab: self.parent.tab)
             }
         }
         
