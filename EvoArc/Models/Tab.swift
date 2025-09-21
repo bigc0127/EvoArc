@@ -23,6 +23,7 @@ class Tab: ObservableObject, Identifiable {
     @Published var isPinned: Bool = false
     @Published var groupID: UUID? = nil
     @Published var showURLInBar: Bool = false
+    @Published var readerModeEnabled: Bool = false
     
     weak var webView: WKWebView?
     

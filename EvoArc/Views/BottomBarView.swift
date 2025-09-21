@@ -3,6 +3,12 @@ import WebKit
 
 // FIX: Ensure all braces match.
 struct BottomBarView: View {
+    // State variable to track swipe direction
+    @State private var swipeDirection: SwipeDirection = .none
+    
+    enum SwipeDirection {
+        case left, right, none
+    }
     @Binding var urlString: String
     @Binding var isURLBarFocused: Bool
     @ObservedObject var tabManager: TabManager
@@ -27,11 +33,11 @@ struct BottomBarView: View {
     }
 
     // Constants for base sizes that will be dynamically scaled
-    private let baseIconSize: CGFloat = 20  // Increased to match new bar height
-    private let baseTabIndicatorSize: CGFloat = 32  // Increased to match new bar height
-    private let baseButtonSize: CGFloat = 48  // Increased to match new bar height
-    private let baseURLBarHeight: CGFloat = 77  // Increased by 75% from 44
-    private let glassOpacity: CGFloat = 0.45
+    private let baseIconSize: CGFloat = 15  // Reduced by 25% from original 20
+    private let baseTabIndicatorSize: CGFloat = 24  // Reduced by 25% from original 32
+    private let baseButtonSize: CGFloat = 36  // Reduced by 25% from original 48
+    private let baseURLBarHeight: CGFloat = 58  // Reduced by 25% from original 77
+    // Visual style constants
 
     private var scaledIconSize: CGFloat { baseIconSize * dynamicTypeSize.customScaleFactor }
     private var scaledTabIndicatorSize: CGFloat { baseTabIndicatorSize * dynamicTypeSize.customScaleFactor }
@@ -103,14 +109,47 @@ struct BottomBarView: View {
                                     suggestionManager.clearSuggestions()
                                 }
                             )
-                            .background(Color(UIColor.systemBackground))
+            .background(Color(.systemBackground))
+            .gesture(
+                DragGesture(minimumDistance: 30)
+                    .onEnded { value in
+                        let horizontalAmount = value.translation.width
+                        
+                        if abs(horizontalAmount) > 50 { // Threshold for swipe
+                            if horizontalAmount > 0 {
+                                // Swipe right - go to previous tab
+                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                   currentIndex > 0 {
+                                    withAnimation {
+                                        swipeDirection = .right
+                                        tabManager.selectTab(tabManager.tabs[currentIndex - 1])
+                                    }
+                                }
+                            } else {
+                                // Swipe left - go to next tab
+                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                   currentIndex < tabManager.tabs.count - 1 {
+                                    withAnimation {
+                                        swipeDirection = .left
+                                        tabManager.selectTab(tabManager.tabs[currentIndex + 1])
+                                    }
+                                }
+                            }
+                            
+                            // Reset swipe direction after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                swipeDirection = .none
+                            }
+                        }
+                    }
+            )
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.1), radius: 8)
                         }
                         .frame(height: suggestionsHeight)
                         .clipped()
                         .padding(.horizontal, 12)
-                        .offset(y: -15)
+                        .offset(y: -11)  // Reduced by 25% from -15 to maintain proper spacing with shorter bar
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
 
@@ -312,7 +351,7 @@ struct BottomBarView: View {
                                             .fill(.thinMaterial)
                                             .overlay {
                                                 GlassBackgroundView(style: colorScheme == .dark ? .dark : .light)
-                                                    .opacity(glassOpacity)
+                                                    .opacity(0.2)
                                             }
                                             .overlay {
                                                 RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(12), style: .continuous)
@@ -345,6 +384,13 @@ struct BottomBarView: View {
                                                 .foregroundColor(selectedTab.isPinned ? .accentColor : .primary)
                                         }
                                         .disabled(selectedTab.url == nil)
+
+                                        // Reader mode indicator
+                                        if selectedTab.readerModeEnabled {
+                                            Image(systemName: "textformat.size")
+                                                .font(.system(size: 16))
+                                                .foregroundColor(.accentColor)
+                                        }
 
                                         // Menu button
                                         Menu {
@@ -419,6 +465,50 @@ struct BottomBarView: View {
                                             }
                                             .disabled(selectedTab.url == nil)
 
+                                            Divider()
+
+                                            Button(action: {
+                                                // Toggle reader mode using two-finger swipe handler
+                                                selectedTab.readerModeEnabled.toggle()
+                                                if selectedTab.readerModeEnabled {
+                                                    selectedTab.webView?.evaluateJavaScript("""
+                                                    (function(){
+                                                      try {
+                                                        if (!document.getElementById('evoarc-reader-style')) {
+                                                          var style = document.createElement('style');
+                                                          style.id = 'evoarc-reader-style';
+                                                          style.textContent = `
+                                                            #evoarc-reader-style { display: none; }
+                                                            .evoarc-reader body { background:#f7f7f7 !important; }
+                                                            .evoarc-reader article, .evoarc-reader main, .evoarc-reader #content, .evoarc-reader .content, .evoarc-reader .post, .evoarc-reader .entry { max-width: 700px; margin: 0 auto; padding: 16px; background: #ffffff !important; color: #111 !important; line-height: 1.6; font-size: 19px; }
+                                                            .evoarc-reader p { line-height: 1.7 !important; }
+                                                            .evoarc-reader img, .evoarc-reader video, .evoarc-reader figure { max-width: 100%; height: auto; }
+                                                            .evoarc-reader nav, .evoarc-reader header, .evoarc-reader footer, .evoarc-reader aside, .evoarc-reader .sidebar, .evoarc-reader .ads, .evoarc-reader [role='banner'], .evoarc-reader [role='navigation'], .evoarc-reader [role='complementary'] { display: none !important; }
+                                                          `;
+                                                          document.head.appendChild(style);
+                                                        }
+                                                        document.documentElement.classList.add('evoarc-reader');
+                                                        return true;
+                                                      } catch (e) { return false; }
+                                                    })();
+                                                    """, completionHandler: nil)
+                                                } else {
+                                                    selectedTab.webView?.evaluateJavaScript("""
+                                                    (function(){
+                                                      try {
+                                                        var style = document.getElementById('evoarc-reader-style');
+                                                        if (style && style.parentNode) { style.parentNode.removeChild(style); }
+                                                        document.documentElement.classList.remove('evoarc-reader');
+                                                        return true;
+                                                      } catch (e) { return false; }
+                                                    })();
+                                                    """, completionHandler: nil)
+                                                }
+                                            }) {
+                                                Label(selectedTab.readerModeEnabled ? "Disable Reader Mode" : "Enable Reader Mode",
+                                                      systemImage: "textformat.size")
+                                            }
+
                                             Button(action: { showingSettings = true }) {
                                                 Label("Settings", systemImage: "gear")
                                             }
@@ -449,18 +539,106 @@ struct BottomBarView: View {
                             }
                             .scaledPadding(.horizontal, 12)
                             .scaledPadding(.vertical, 10)
+                            // Add horizontal swipe gesture for tab switching
+                            .gesture(
+                                DragGesture(minimumDistance: 20)
+                                    .onEnded { value in
+                                        let horizontalAmount = value.translation.width
+                                        let verticalAmount = value.translation.height
+                                        
+                                        // Check if the gesture is primarily horizontal (to avoid conflicts with vertical gestures)
+                                        if abs(horizontalAmount) > abs(verticalAmount) * 1.5 && abs(horizontalAmount) > 50 {
+                                            if horizontalAmount > 0 {
+                                                // Swipe right - go to previous tab
+                                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                                   currentIndex > 0 {
+                                                    withAnimation {
+                                                        swipeDirection = .right
+                                                        tabManager.selectTab(tabManager.tabs[currentIndex - 1])
+                                                    }
+                                                }
+                                            } else {
+                                                // Swipe left - go to next tab
+                                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                                   currentIndex < tabManager.tabs.count - 1 {
+                                                    withAnimation {
+                                                        swipeDirection = .left
+                                                        tabManager.selectTab(tabManager.tabs[currentIndex + 1])
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Reset swipe direction after a delay
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                swipeDirection = .none
+                                            }
+                                        }
+                                    }
+                            )
+                            // Add two-finger swipe down gesture for reader mode
+                            .gesture(
+                                DragGesture(minimumDistance: 20)
+                                    .simultaneously(with: DragGesture(minimumDistance: 20))
+                                    .onEnded { value in
+                                        let verticalAmount = value.first?.translation.height ?? 0
+                                        let horizontalAmount = value.first?.translation.width ?? 0
+                                        
+                                        // Check if the gesture is primarily vertical and downward
+                                        if verticalAmount > abs(horizontalAmount) * 1.5 && verticalAmount > 50 {
+                                            // Toggle reader mode
+                                            selectedTab.readerModeEnabled.toggle()
+                                            if selectedTab.readerModeEnabled {
+                                                selectedTab.webView?.evaluateJavaScript("""
+                                                (function(){
+                                                  try {
+                                                    if (!document.getElementById('evoarc-reader-style')) {
+                                                      var style = document.createElement('style');
+                                                      style.id = 'evoarc-reader-style';
+                                                      style.textContent = `
+                                                        #evoarc-reader-style { display: none; }
+                                                        .evoarc-reader body { background:#f7f7f7 !important; }
+                                                        .evoarc-reader article, .evoarc-reader main, .evoarc-reader #content, .evoarc-reader .content, .evoarc-reader .post, .evoarc-reader .entry { max-width: 700px; margin: 0 auto; padding: 16px; background: #ffffff !important; color: #111 !important; line-height: 1.6; font-size: 19px; }
+                                                        .evoarc-reader p { line-height: 1.7 !important; }
+                                                        .evoarc-reader img, .evoarc-reader video, .evoarc-reader figure { max-width: 100%; height: auto; }
+                                                        .evoarc-reader nav, .evoarc-reader header, .evoarc-reader footer, .evoarc-reader aside, .evoarc-reader .sidebar, .evoarc-reader .ads, .evoarc-reader [role='banner'], .evoarc-reader [role='navigation'], .evoarc-reader [role='complementary'] { display: none !important; }
+                                                      `;
+                                                      document.head.appendChild(style);
+                                                    }
+                                                    document.documentElement.classList.add('evoarc-reader');
+                                                    return true;
+                                                  } catch (e) { return false; }
+                                                })();
+                                                """, completionHandler: nil)
+                                            } else {
+                                                selectedTab.webView?.evaluateJavaScript("""
+                                                (function(){
+                                                  try {
+                                                    var style = document.getElementById('evoarc-reader-style');
+                                                    if (style && style.parentNode) { style.parentNode.removeChild(style); }
+                                                    document.documentElement.classList.remove('evoarc-reader');
+                                                    return true;
+                                                  } catch (e) { return false; }
+                                                })();
+                                                """, completionHandler: nil)
+                                            }
+                                        }
+                                    }
+                            )
                             .background {
                                 #if os(iOS)
                                 if #available(iOS 26.0, *) {
                                     ZStack {
                                         Rectangle()
-                                            .fill(.thinMaterial)
+                                            .fill(settings.useModernBottomBar ? .regularMaterial : .ultraThinMaterial)
+                                            .opacity(settings.useModernBottomBar ? 0.7 : 0.95)
                                         GlassBackgroundView(style: colorScheme == .dark ? .dark : .light)
-                                            .opacity(glassOpacity)
+                                            .opacity(settings.useModernBottomBar ? 0.08 : 0.65)
+                                            .blur(radius: settings.useModernBottomBar ? 0.1 : 1.2)
                                     }
                                     .overlay {
                                         Rectangle()
-                                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                            .stroke(Color.white.opacity(settings.useModernBottomBar ? 0.08 : 0.15), 
+                                                    lineWidth: settings.useModernBottomBar ? 0.2 : 0.3)
                                     }
                                 } else {
                                     backgroundColor

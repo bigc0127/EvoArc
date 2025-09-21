@@ -123,6 +123,12 @@ struct WebView: UIViewRepresentable {
         // This determines whether websites show mobile or desktop versions
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
+        // Two-finger swipe down to toggle Reader Mode
+        let readerSwipe = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleReaderSwipe(_:)))
+        readerSwipe.direction = .down
+        readerSwipe.numberOfTouchesRequired = 2
+        webView.addGestureRecognizer(readerSwipe)
+        
         // Establish bidirectional reference between tab and web view
         // This allows the tab to control the web view and vice versa
         DispatchQueue.main.async {
@@ -366,6 +372,57 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
             // Handle JavaScript confirms (default to OK)
             completionHandler(true)
+        }
+        
+        @objc func handleReaderSwipe(_ gesture: UISwipeGestureRecognizer) {
+            guard gesture.state == .ended, let webView = webView else { return }
+            // Toggle reader mode state
+            parent.tab.readerModeEnabled.toggle()
+            if parent.tab.readerModeEnabled {
+                applyReaderMode(on: webView)
+            } else {
+                removeReaderMode(on: webView)
+            }
+        }
+        
+        private func applyReaderMode(on webView: WKWebView) {
+            let css = """
+            #evoarc-reader-style { display: none; }
+            .evoarc-reader body { background:#f7f7f7 !important; }
+            .evoarc-reader article, .evoarc-reader main, .evoarc-reader #content, .evoarc-reader .content, .evoarc-reader .post, .evoarc-reader .entry { max-width: 700px; margin: 0 auto; padding: 16px; background: #ffffff !important; color: #111 !important; line-height: 1.6; font-size: 19px; }
+            .evoarc-reader p { line-height: 1.7 !important; }
+            .evoarc-reader img, .evoarc-reader video, .evoarc-reader figure { max-width: 100%; height: auto; }
+            .evoarc-reader nav, .evoarc-reader header, .evoarc-reader footer, .evoarc-reader aside, .evoarc-reader .sidebar, .evoarc-reader .ads, .evoarc-reader [role='banner'], .evoarc-reader [role='navigation'], .evoarc-reader [role='complementary'] { display: none !important; }
+            """
+            let js = """
+            (function(){
+              try {
+                if (!document.getElementById('evoarc-reader-style')) {
+                  var style = document.createElement('style');
+                  style.id = 'evoarc-reader-style';
+                  style.textContent = `\(css.replacingOccurrences(of: "`", with: "\\`"))`;
+                  document.head.appendChild(style);
+                }
+                document.documentElement.classList.add('evoarc-reader');
+                return true;
+              } catch (e) { return false; }
+            })();
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+        
+        private func removeReaderMode(on webView: WKWebView) {
+            let js = """
+            (function(){
+              try {
+                var style = document.getElementById('evoarc-reader-style');
+                if (style && style.parentNode) { style.parentNode.removeChild(style); }
+                document.documentElement.classList.remove('evoarc-reader');
+                return true;
+              } catch (e) { return false; }
+            })();
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
         
         deinit {

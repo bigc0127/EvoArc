@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 @main
 struct EvoArcApp: App {
     @StateObject private var tabManager = TabManager()
+    @State private var showFirstRunSetup = !UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
     
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,12 @@ struct EvoArcApp: App {
                     .onOpenURL { url in
                         // Handle URLs opened from other apps
                         handleIncomingURL(url)
+                    }
+                    .sheet(isPresented: $showFirstRunSetup, onDismiss: {
+                        // Recompute in case user dismissed without completing
+                        showFirstRunSetup = !UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
+                    }) {
+                        FirstRunSetupView()
                     }
                 
                 DownloadProgressOverlay(isPresented: .constant(false))

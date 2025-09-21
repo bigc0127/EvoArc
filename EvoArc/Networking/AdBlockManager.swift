@@ -17,6 +17,8 @@ final class AdBlockManager: ObservableObject {
     
     // MARK: - Public Types
     enum Subscription: String, CaseIterable, Identifiable {
+        case easyList
+        case easyListPrivacy
         case peterLowe
         case adAway
         case oneHostsLite
@@ -26,7 +28,9 @@ final class AdBlockManager: ObservableObject {
         
         var displayName: String {
             switch self {
-            case .peterLowe: return "Peter Lowe’s List"
+            case .easyList: return "EasyList"
+            case .easyListPrivacy: return "EasyList Privacy"
+            case .peterLowe: return "Peter Lowe's List"
             case .adAway: return "AdAway Hosts"
             case .oneHostsLite: return "1Hosts (Lite)"
             case .stevenBlack: return "StevenBlack (basic)"
@@ -35,6 +39,8 @@ final class AdBlockManager: ObservableObject {
         
         var description: String {
             switch self {
+            case .easyList: return "General purpose ad blocking rules"
+            case .easyListPrivacy: return "Additional privacy protection rules"
             case .peterLowe: return "Compact list of common ad and tracking domains"
             case .adAway: return "Mobile-focused ad and malware domains"
             case .oneHostsLite: return "Lightweight curated host list"
@@ -42,9 +48,13 @@ final class AdBlockManager: ObservableObject {
             }
         }
         
-        // Host-format list URLs (plaintext)
+        // Host-format list URLs (plaintext) and ABP lists
         var url: URL {
             switch self {
+            case .easyList:
+                return URL(string: "https://easylist.to/easylist/easylist.txt")!
+            case .easyListPrivacy:
+                return URL(string: "https://easylist.to/easylist/easyprivacy.txt")!
             case .peterLowe:
                 return URL(string: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext")!
             case .adAway:
@@ -98,6 +108,12 @@ final class AdBlockManager: ObservableObject {
         // Map list -> URL
         func listURL(_ list: AdBlockList) -> URL {
             switch list {
+            case .easyList:
+                // EasyList is in ABP format; we will parse it for selectors and domains where applicable
+                return URL(string: "https://easylist.to/easylist/easylist.txt")!
+            case .easyListPrivacy:
+                // EasyPrivacy complements EasyList with privacy rules
+                return URL(string: "https://easylist.to/easylist/easyprivacy.txt")!
             case .peterLowe:
                 return URL(string: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext")!
             case .adAway:

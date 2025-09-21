@@ -80,6 +80,8 @@ enum TabDrawerPosition: String, CaseIterable {
 
 // Ad blocking subscription options
 enum AdBlockList: String, CaseIterable, Identifiable {
+    case easyList
+    case easyListPrivacy
     case peterLowe
     case adAway
     case oneHostsLite
@@ -89,7 +91,9 @@ enum AdBlockList: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .peterLowe: return "Peter Lowe’s List"
+        case .easyList: return "EasyList"
+        case .easyListPrivacy: return "EasyList Privacy"
+        case .peterLowe: return "Peter Lowe's List"
         case .adAway: return "AdAway Hosts"
         case .oneHostsLite: return "1Hosts (Lite)"
         case .stevenBlack: return "StevenBlack (basic)"
@@ -98,6 +102,8 @@ enum AdBlockList: String, CaseIterable, Identifiable {
     
     var description: String {
         switch self {
+        case .easyList: return "General purpose ad blocking rules"
+        case .easyListPrivacy: return "Additional privacy protection rules"
         case .peterLowe: return "Compact list of common ad and tracking domains"
         case .adAway: return "Mobile-focused ad and malware domains"
         case .oneHostsLite: return "Lightweight curated host list"
@@ -109,9 +115,16 @@ enum AdBlockList: String, CaseIterable, Identifiable {
 class BrowserSettings: ObservableObject {
     static let shared = BrowserSettings()
     
-    @Published var useDesktopMode: Bool {
+    @Published var useDesktopMode = false {
         didSet {
             UserDefaults.standard.set(useDesktopMode, forKey: "useDesktopMode")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
+    @Published var useModernBottomBar = false {
+        didSet {
+            UserDefaults.standard.set(useModernBottomBar, forKey: "useModernBottomBar")
             NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
         }
     }
@@ -397,11 +410,16 @@ class BrowserSettings: ObservableObject {
             self.adBlockEnabled = true
         }
         
-        // Load selected ad block lists (default to Peter Lowe + AdAway)
+        // Load selected ad block lists (default to EasyList + EasyList Privacy)
         if let stored = UserDefaults.standard.array(forKey: "selectedAdBlockLists") as? [String] {
             self.selectedAdBlockLists = stored
         } else {
-            self.selectedAdBlockLists = [AdBlockList.peterLowe.rawValue, AdBlockList.adAway.rawValue]
+            self.selectedAdBlockLists = [
+                AdBlockList.easyList.rawValue,
+                AdBlockList.easyListPrivacy.rawValue,
+                AdBlockList.peterLowe.rawValue,
+                AdBlockList.adAway.rawValue
+            ]
         }
         
         // Auto-update on launch (default true)
