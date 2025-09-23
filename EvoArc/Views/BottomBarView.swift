@@ -373,48 +373,6 @@ struct BottomBarView: View {
                                 .scaledPadding(.vertical, 8)
                                 .frame(minHeight: UIScaleMetrics.maxDimension(baseURLBarHeight))
                                 .contentShape(Rectangle())  // Make entire URL bar tappable
-                                .gesture(
-                                    DragGesture(minimumDistance: 20)
-                                        .onChanged { value in
-                                            // Only activate gesture if not already active and not in text editing mode
-                                            if !tabManager.isGestureActive && !isURLBarFocused {
-                                                let verticalAmount = value.translation.height
-                                                let horizontalAmount = value.translation.width
-                                                
-                                                // Check if gesture is primarily vertical
-                                                if abs(verticalAmount) > abs(horizontalAmount) * 1.5 {
-                                                    tabManager.isGestureActive = true
-                                                    // Update gesture progress
-                                                    gestureProgress = min(1.0, abs(verticalAmount) / 100)
-                                                }
-                                            } else if tabManager.isGestureActive {
-                                                // Continue updating progress if gesture is active
-                                                gestureProgress = min(1.0, abs(value.translation.height) / 100)
-                                            }
-                                        }
-                                        .onEnded { value in
-                                            // Always deactivate gesture on end
-                                            defer {
-                                                tabManager.isGestureActive = false
-                                                withAnimation(.spring()) {
-                                                    gestureProgress = 0
-                                                }
-                                            }
-
-                                            // Only process gesture if not in text editing mode
-                                            if !isURLBarFocused {
-                                                let verticalAmount = value.translation.height
-                                                let horizontalAmount = value.translation.width
-                                                
-                                                // Check if gesture is primarily vertical and significant
-                                                if abs(verticalAmount) > abs(horizontalAmount) * 1.5 && verticalAmount < -50 {
-                                                    withAnimation(.spring()) {
-                                                        tabManager.toggleTabDrawer()
-                                                    }
-                                                }
-                                            }
-                                        }
-                                )
                                 .background {
                                     #if os(iOS)
                                     if #available(iOS 26.0, *) {
@@ -611,83 +569,101 @@ struct BottomBarView: View {
                             .scaledPadding(.horizontal, 12)
                             .scaledPadding(.vertical, 10)
                         // Add horizontal swipe gesture for tab switching
-                        .gesture(
+                        .simultaneousGesture(
                             DragGesture(minimumDistance: 20)
-                                .onEnded { value in
-                                    let horizontalAmount = value.translation.width
-                                    let verticalAmount = value.translation.height
-                                    
-                                    // Check if the gesture is primarily horizontal (to avoid conflicts with vertical gestures)
-                                    if abs(horizontalAmount) > abs(verticalAmount) * 1.5 && abs(horizontalAmount) > 50 {
-                                        if horizontalAmount > 0 {
-                                            // Swipe right - go to previous tab
-                                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
-                                               currentIndex > 0 {
-                                                withAnimation {
-                                                    swipeDirection = .right
-                                                    tabManager.selectTab(tabManager.tabs[currentIndex - 1])
-                                                }
-                                            }
-                                        } else {
-                                            // Swipe left - go to next tab
-                                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
-                                               currentIndex < tabManager.tabs.count - 1 {
-                                                withAnimation {
-                                                    swipeDirection = .left
-                                                    tabManager.selectTab(tabManager.tabs[currentIndex + 1])
-                                                }
-                                            }
-                                        }
+                                .onChanged { value in
+                                    // Only track horizontal gesture when not in text editing mode
+                                    if !isURLBarFocused {
+                                        let horizontalAmount = value.translation.width
+                                        let verticalAmount = value.translation.height
                                         
-                                        // Reset swipe direction after a delay
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                            swipeDirection = .none
+                                        // Check if gesture is primarily horizontal
+                                        if abs(horizontalAmount) > abs(verticalAmount) * 1.5 {
+                                            tabManager.isGestureActive = true
+                                        }
+                                    }
+                                }
+                                .onEnded { value in
+                                    defer { tabManager.isGestureActive = false }
+                                    
+                                    // Only process horizontal swipes when not in text editing mode
+                                    if !isURLBarFocused {
+                                        let horizontalAmount = value.translation.width
+                                        let verticalAmount = value.translation.height
+                                        
+                                        // Check if the gesture is primarily horizontal
+                                        if abs(horizontalAmount) > abs(verticalAmount) * 1.5 && abs(horizontalAmount) > 50 {
+                                            if horizontalAmount > 0 {
+                                                // Swipe right - go to previous tab
+                                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                                   currentIndex > 0 {
+                                                    withAnimation {
+                                                        swipeDirection = .right
+                                                        tabManager.selectTab(tabManager.tabs[currentIndex - 1])
+                                                    }
+                                                }
+                                            } else {
+                                                // Swipe left - go to next tab
+                                                if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
+                                                   currentIndex < tabManager.tabs.count - 1 {
+                                                    withAnimation {
+                                                        swipeDirection = .left
+                                                        tabManager.selectTab(tabManager.tabs[currentIndex + 1])
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Reset swipe direction after a delay
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                swipeDirection = .none
+                                            }
                                         }
                                     }
                                 }
                         )
-                        .gesture(
-    DragGesture(minimumDistance: 20)
-        .onChanged { value in
-            // Only activate gesture if not already active and not in text editing mode
-            if !tabManager.isGestureActive && !isURLBarFocused {
-                let verticalAmount = value.translation.height
-                let horizontalAmount = value.translation.width
-                
-                // Check if gesture is primarily vertical
-                if abs(verticalAmount) > abs(horizontalAmount) * 1.5 {
-                    tabManager.isGestureActive = true
-                    // Update gesture progress
-                    gestureProgress = min(1.0, abs(verticalAmount) / 100)
-                }
-            } else if tabManager.isGestureActive {
-                // Continue updating progress if gesture is active
-                gestureProgress = min(1.0, abs(value.translation.height) / 100)
-            }
-        }
-        .onEnded { value in
-            // Always deactivate gesture on end
-            defer {
-                tabManager.isGestureActive = false
-                withAnimation(.spring()) {
-                    gestureProgress = 0
-                }
-            }
+                        // Add vertical swipe gesture for tab drawer
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 20)
+                                .onChanged { value in
+                                    // Only activate gesture if not already active and not in text editing mode
+                                    if !tabManager.isGestureActive && !isURLBarFocused {
+                                        let verticalAmount = value.translation.height
+                                        let horizontalAmount = value.translation.width
+                                        
+                                        // Check if gesture is primarily vertical
+                                        if abs(verticalAmount) > abs(horizontalAmount) * 1.5 {
+                                            tabManager.isGestureActive = true
+                                            // Update gesture progress
+                                            gestureProgress = min(1.0, abs(verticalAmount) / 100)
+                                        }
+                                    } else if tabManager.isGestureActive {
+                                        // Continue updating progress if gesture is active
+                                        gestureProgress = min(1.0, abs(value.translation.height) / 100)
+                                    }
+                                }
+                                .onEnded { value in
+                                    // Always deactivate gesture on end
+                                    defer {
+                                        tabManager.isGestureActive = false
+                                        withAnimation(.spring()) {
+                                            gestureProgress = 0
+                                        }
+                                    }
 
-            // Only process gesture if not in text editing mode
-            if !isURLBarFocused {
-                let verticalAmount = value.translation.height
-                let horizontalAmount = value.translation.width
-                
-                // Check if gesture is primarily vertical and significant
-                if abs(verticalAmount) > abs(horizontalAmount) * 1.5 && verticalAmount < -50 {
-                    withAnimation(.spring()) {
-                        tabManager.toggleTabDrawer()
-                    }
-                }
-            }
-        }
-)
+                                    // Only process gesture if not in text editing mode
+                                    if !isURLBarFocused {
+                                        let verticalAmount = value.translation.height
+                                        let horizontalAmount = value.translation.width
+                                        
+                                        // Check if gesture is primarily vertical and significant
+                                        if abs(verticalAmount) > abs(horizontalAmount) * 1.5 && verticalAmount < -50 {
+                                            withAnimation(.spring()) {
+                                                tabManager.toggleTabDrawer()
+                                            }
+                                        }
+                                    }
+                                }
+                        )
                             // Add two-finger swipe down gesture for reader mode
                             .gesture(
                                 DragGesture(minimumDistance: 20)
