@@ -77,12 +77,17 @@ struct ContentView: View {
                         // Loading state during initialization
                         VStack {
                             Spacer()
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .padding()
-                            Text("Restoring tabs...")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
+                            HStack {
+                                Spacer()
+                                VStack(spacing: 16) {
+                                    ProgressView()
+                                        .scaleEffect(1.5)
+                                    Text("Restoring tabs...")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                            }
                             Spacer()
                         }
                     } else {
