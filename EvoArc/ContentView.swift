@@ -116,6 +116,7 @@ struct ContentView: View {
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
                             .ignoresSafeArea(.keyboard)
+                            .ignoresSafeArea(.container, edges: .bottom)
                             .padding(.bottom, keyboardVisible ? keyboardHeight : 0)
                             .animation(.easeOut(duration: 0.25), value: keyboardHeight)
                         }
@@ -380,12 +381,20 @@ struct ContentView: View {
             }
             #if os(iOS)
             .gesture(
-                DragGesture()
+                DragGesture(minimumDistance: 20)
                     .onEnded { value in
-                        // Swipe up from bottom to show tab drawer
-                        if value.translation.height < -100 {
-                            // Check if swipe started from bottom area
-                            tabManager.toggleTabDrawer()
+                        // Only process gesture if BottomBarView gesture is not active
+                        if !tabManager.isGestureActive {
+                            let threshold: CGFloat = -100
+                            let startY = value.startLocation.y
+                            let screenHeight = UIScreen.main.bounds.height
+                            
+                            // Check if gesture started in bottom 20% of screen
+                            if startY > screenHeight * 0.8 && value.translation.height < threshold {
+                                withAnimation(.spring()) {
+                                    tabManager.toggleTabDrawer()
+                                }
+                            }
                         }
                     }
             )

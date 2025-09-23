@@ -25,6 +25,7 @@ struct TabState: Codable {
 }
 
 class TabManager: ObservableObject {
+    @Published var isGestureActive: Bool = false
     @Published var tabs: [Tab] = []
     @Published var selectedTab: Tab?
     @Published var isTabDrawerVisible: Bool = false

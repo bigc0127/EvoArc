@@ -27,6 +27,7 @@ struct BottomBarView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var downloadManager = DownloadManager.shared
+    @State private var gestureProgress: CGFloat = 0
 
     private var suggestionsHeight: CGFloat {
         min(CGFloat(suggestionManager.suggestions.count) * 44, 220)
@@ -57,6 +58,32 @@ struct BottomBarView: View {
         Color(uiColor: .secondarySystemBackground)
         #else
         Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+    
+    // Background material that matches the bottom bar look and can fill to the bottom edge
+    @ViewBuilder
+    private var bottomFillBackground: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            ZStack {
+                Rectangle()
+                    .fill(settings.useModernBottomBar ? .regularMaterial : .ultraThinMaterial)
+                    .opacity(settings.useModernBottomBar ? 0.7 : 0.95)
+                GlassBackgroundView(style: colorScheme == .dark ? .dark : .light)
+                    .opacity(settings.useModernBottomBar ? 0.08 : 0.65)
+                    .blur(radius: settings.useModernBottomBar ? 0.1 : 1.2)
+            }
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white.opacity(settings.useModernBottomBar ? 0.08 : 0.15),
+                            lineWidth: settings.useModernBottomBar ? 0.2 : 0.3)
+            }
+        } else {
+            backgroundColor
+        }
+        #else
+        backgroundColor
         #endif
     }
 
@@ -647,7 +674,47 @@ struct BottomBarView: View {
                                 backgroundColor
                                 #endif
                             }
-                            .frame(height: baseURLBarHeight)
+.frame(height: baseURLBarHeight)
+                        }
+                        
+                        // Dedicated tab drawer gesture area with state management
+                        VStack(spacing: 0) {
+                            // Visual feedback indicator
+                            Rectangle()
+                                .fill(Color.accentColor.opacity(0.2))
+                                .frame(height: 2)
+                                .scaleEffect(x: gestureProgress, anchor: .leading)
+                                .opacity(gestureProgress > 0 ? 1 : 0)
+                            
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(height: UIScaleMetrics.scaledPadding(44))
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 20)
+                                        .onChanged { value in
+                                            tabManager.isGestureActive = true
+                                            gestureProgress = min(1.0, abs(value.translation.height) / 100)
+                                        }
+                                        .onEnded { value in
+                                            defer { 
+                                                tabManager.isGestureActive = false
+                                                withAnimation(.spring()) {
+                                                    gestureProgress = 0
+                                                }
+                                            }
+                                            if value.translation.height < -50 {
+                                                withAnimation(.spring()) {
+                                                    tabManager.toggleTabDrawer()
+                                                }
+                                            }
+                                        }
+                                )
+                        }
+                        // Fill the gap to the bottom with matching material without affecting layout
+                        .background {
+                            bottomFillBackground
+                                .ignoresSafeArea(.container, edges: .bottom)
                         }
                     }
                     .padding(.bottom, 8)
