@@ -113,10 +113,10 @@ struct ContentView: View {
                             BottomBarView(
                                 urlString: $urlString,
                                 isURLBarFocused: $isURLBarFocused,
-                                tabManager: tabManager,
-                                selectedTab: selected,
                                 showingSettings: $showingSettings,
-                                shouldNavigate: $shouldNavigate
+                                shouldNavigate: $shouldNavigate,
+                                selectedTab: selected,
+                                tabManager: tabManager
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
@@ -185,10 +185,10 @@ struct ContentView: View {
                                 BottomBarView(
                                     urlString: $urlString,
                                     isURLBarFocused: $isURLBarFocused,
-                                    tabManager: tabManager,
-                                    selectedTab: selected,
                                     showingSettings: $showingSettings,
-                                    shouldNavigate: $shouldNavigate
+                                    shouldNavigate: $shouldNavigate,
+                                    selectedTab: selected,
+                                    tabManager: tabManager
                                 )
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                                 .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
