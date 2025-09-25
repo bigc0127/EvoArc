@@ -5,16 +5,28 @@ struct Theme {
     static let appBackground = Color.appBackground
     static let cardBackground = Color.cardBackground
     
+    // Layout constants
+    struct Layout {
+        static let floatingBarCornerRadius: CGFloat = 16
+        static let floatingBarShadowRadius: CGFloat = 10
+        static let floatingBarShadowOpacity: Float = 0.1
+        static let floatingBarHorizontalPadding: CGFloat = 16
+        static let floatingBarVerticalPadding: CGFloat = 8
+    }
+    
     // Material styles
     struct Materials {
         #if os(iOS)
         static let bottomBar: Material = {
             if #available(iOS 26.0, *) {
-                return .ultraThinMaterial
+                return .regularMaterial
             } else {
                 return .regular
             }
         }()
+        
+        static let floatingBarOpacity: Double = 0.85
+        static let floatingBarBorderOpacity: Double = 0.1
         
         static let urlBar: Material = {
             if #available(iOS 26.0, *) {
