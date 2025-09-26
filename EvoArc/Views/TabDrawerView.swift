@@ -47,10 +47,10 @@ struct TabDrawerView: View {
                 drawerHandle
                 headerSection
                 tabsGrid
-                Spacer(minLength: 0)
+                // Spacer no longer needed
             }
-            .frame(maxHeight: geometry.size.height)
-            .edgesIgnoringSafeArea(.bottom)
+            .frame(height: geometry.size.height + geometry.safeAreaInsets.bottom)
+            .ignoresSafeArea(.container, edges: .bottom)
             .background(drawerBackground)
             .modifier(PlatformCornerRadius())
             .themeShadow()
