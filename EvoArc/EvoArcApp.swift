@@ -27,6 +27,11 @@ struct EvoArcApp: App {
                     }) {
                         FirstRunSetupView()
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: .firstRunCompleted)) { _ in
+                        // Close setup immediately when we get a completion signal
+                        showFirstRunSetup = false
+                        UserDefaults.standard.set(true, forKey: SetupCoordinator.firstRunKey)
+                    }
                 
                 DownloadProgressOverlay(isPresented: .constant(false))
             }
@@ -92,8 +97,9 @@ struct EvoArcApp: App {
     #endif
 }
 
-#if os(macOS)
 extension Notification.Name {
+    static let firstRunCompleted = Notification.Name("FirstRunCompleted")
+    #if os(macOS)
     static let newTab = Notification.Name("newTab")
+    #endif
 }
-#endif

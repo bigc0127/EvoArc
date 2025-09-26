@@ -143,6 +143,7 @@ struct FirstRunSetupView: View {
                         } else {
                             Button("Get Started") {
                                 coordinator.completeSetup()
+                                NotificationCenter.default.post(name: .firstRunCompleted, object: nil)
                                 dismiss()
                             }
                             .buttonStyle(.borderedProminent)
@@ -157,6 +158,7 @@ struct FirstRunSetupView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Skip") {
                         coordinator.completeSetup()
+                        NotificationCenter.default.post(name: .firstRunCompleted, object: nil)
                         dismiss()
                     }
                 }
@@ -479,24 +481,6 @@ struct DisplaySetupView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
-                // Bottom Bar Design
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Bottom Bar")
-                        .font(.headline)
-                    
-                    displayModeCard(
-                        title: "Navigation Bar",
-                        description: "Easy access to navigation controls and URL input",
-                        systemImage: "app.fill",
-                        isSelected: true
-                    ) {}
-                    
-                    Text("The bottom navigation bar provides quick access to browser controls and URL input.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                
                 // Display Mode Section
                 VStack(alignment: .leading, spacing: 15) {
                     Text("Display Mode")
@@ -542,12 +526,6 @@ struct DisplaySetupView: View {
                     
                     Divider()
                     
-                    Toggle("Show Navigation Buttons", isOn: $settings.showNavigationButtons)
-                        .tint(.accentColor)
-                    
-                    Text("Display back/forward buttons in the toolbar.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
                 .padding()
                 .background(
@@ -1763,6 +1741,7 @@ struct SetupCompletionView: View {
                 // Start Browsing Button
                 Button {
                     UserDefaults.standard.set(true, forKey: SetupCoordinator.firstRunKey)
+                    NotificationCenter.default.post(name: .firstRunCompleted, object: nil)
                     dismiss()
                 } label: {
                     Text("Start Browsing")

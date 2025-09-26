@@ -114,7 +114,7 @@ struct BottomBarView: View {
                         // Top controls row
                         HStack {
                             // Left group: Navigation
-                            if !isURLBarFocused && settings.showNavigationButtons {
+                            if !isURLBarFocused {
                                 navigationButtons
                             }
                             
@@ -147,7 +147,9 @@ struct BottomBarView: View {
                     .padding(.bottom, 8)
                 }
                 .padding(.bottom, 8)
-                .keyboardAware(manager: keyboardManager)
+                // Only lift the bar above the keyboard when the URL field is focused
+                .padding(.bottom, isURLBarFocused ? keyboardManager.keyboardHeight : 0)
+                .animation(.easeOut(duration: keyboardManager.keyboardAnimationDuration), value: keyboardManager.keyboardHeight)
             }
         }
         .simultaneousGesture(horizontalSwipeGesture)
@@ -462,19 +464,35 @@ struct BottomBarView: View {
                     
                     if abs(horizontalAmount) > abs(verticalAmount) * 1.5 && abs(horizontalAmount) > 50 {
                         if horizontalAmount > 0 {
-                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
-                               currentIndex > 0 {
-                                withAnimation {
-                                    swipeDirection = .right
-                                    tabManager.selectTab(tabManager.tabs[currentIndex - 1])
+                            // Swipe right: previous tab or create new tab
+                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }) {
+                                if currentIndex > 0 {
+                                    withAnimation {
+                                        swipeDirection = .right
+                                        tabManager.selectTab(tabManager.tabs[currentIndex - 1])
+                                    }
+                                } else {
+                                    // At first tab, create new one
+                                    withAnimation {
+                                        swipeDirection = .right
+                                        tabManager.createNewTab()
+                                    }
                                 }
                             }
                         } else {
-                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }),
-                               currentIndex < tabManager.tabs.count - 1 {
-                                withAnimation {
-                                    swipeDirection = .left
-                                    tabManager.selectTab(tabManager.tabs[currentIndex + 1])
+                            // Swipe left: next tab or create new tab
+                            if let currentIndex = tabManager.tabs.firstIndex(where: { $0.id == selectedTab.id }) {
+                                if currentIndex < tabManager.tabs.count - 1 {
+                                    withAnimation {
+                                        swipeDirection = .left
+                                        tabManager.selectTab(tabManager.tabs[currentIndex + 1])
+                                    }
+                                } else {
+                                    // At last tab, create new one
+                                    withAnimation {
+                                        swipeDirection = .left
+                                        tabManager.createNewTab()
+                                    }
                                 }
                             }
                         }

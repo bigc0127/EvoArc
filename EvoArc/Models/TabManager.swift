@@ -70,6 +70,11 @@ class TabManager: ObservableObject {
         tabs.append(newTab)
         selectedTab = newTab
         
+        // Record history for new tabs with URLs
+        if let url = url {
+            HistoryManager.shared.addEntry(url: url, title: newTab.title.isEmpty ? (url.host ?? url.absoluteString) : newTab.title)
+        }
+        
         // Save tab states when new tabs are created with URLs
         if url != nil {
             saveTabGroupsIfNeeded()
@@ -104,6 +109,11 @@ class TabManager: ObservableObject {
     func selectTab(_ tab: Tab) {
         selectedTab = tab
         isTabDrawerVisible = false
+        
+        // Record history when selecting a tab with a URL
+        if let url = tab.url {
+            HistoryManager.shared.addEntry(url: url, title: tab.title.isEmpty ? (url.host ?? url.absoluteString) : tab.title)
+        }
         
         // Trigger a change notification to update UI
         objectWillChange.send()

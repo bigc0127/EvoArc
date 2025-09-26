@@ -23,6 +23,7 @@ struct TabDrawerView: View {
     @State private var newGroupName = ""
     @State private var newGroupColor: TabGroupColor = .blue
     @State private var showingBookmarks = false
+    @State private var showingHistory = false
     
     // Constants for base sizes that will be dynamically scaled
     private let baseHandleHeight: CGFloat = 5
@@ -78,6 +79,12 @@ struct TabDrawerView: View {
                 .frame(minWidth: 820, minHeight: 600)
             #endif
         }
+        .sheet(isPresented: $showingHistory) {
+            HistoryView(tabManager: tabManager)
+            #if os(macOS)
+                .frame(minWidth: 820, minHeight: 600)
+            #endif
+        }
         .confirmationDialog(
             "Unpin Tab",
             isPresented: $tabManager.showUnpinConfirmation,
@@ -119,6 +126,16 @@ struct TabDrawerView: View {
             }
             
             Spacer()
+            
+            Button(action: {
+                showingHistory = true
+            }) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: UIScaleMetrics.iconSize(16)))
+                    .foregroundColor(.accentColor)
+                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+            }
+            .buttonStyle(PlainButtonStyle())
             
             Button(action: {
                 showingBookmarks = true

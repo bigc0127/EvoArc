@@ -28,6 +28,8 @@ struct SettingsView: View {
     /// Optional reference to the tab manager for creating new tabs
     var tabManager: TabManager?
     
+    @State private var showAdvancedJSAdblockWarning: Bool = false
+    
     private var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
         .navigationBarTrailing
@@ -157,8 +159,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                 Section {
                     Toggle("Auto-hide URL Bar", isOn: $settings.autoHideURLBar)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                    Toggle("Show Navigation Buttons", isOn: $settings.showNavigationButtons)
-                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 } header: {
                     Text("User Interface")
                 } footer: {
@@ -271,6 +271,31 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 // Ad Blocking Section
                 Section {
                     Toggle("Enable Ad Blocking", isOn: $settings.adBlockEnabled)
+                    
+                    // Advanced JS ad blocking toggle with warning
+                    Toggle("Block advanced JS-injected ads", isOn: Binding(
+                        get: { settings.adBlockAdvancedJS },
+                        set: { newValue in
+                            settings.adBlockAdvancedJS = newValue
+                            if newValue {
+                                // Advanced mode implies class obfuscation; disable separate toggle
+                                settings.adBlockObfuscatedClass = false
+                                showAdvancedJSAdblockWarning = true
+                            }
+                        }
+                    ))
+                    .tint(.red)
+                    
+                    // Aggressive obfuscated class blocking
+                    Toggle("Block elements with obfuscated class names", isOn: $settings.adBlockObfuscatedClass)
+                        .tint(.red)
+                        .disabled(settings.adBlockAdvancedJS)
+                        .help(settings.adBlockAdvancedJS ? "Included with Advanced blocking" : "Hides elements whose class names look auto-generated (e.g., 'gbqfwaabe'). May over-block on some sites.")
+                    
+                    // Cookie consent blocking
+                    Toggle("Block cookie consent banners", isOn: $settings.adBlockCookieBanners)
+                        .tint(.red)
+                        .help("Hides cookie consent popups, overlays, and banners. May hide legitimate site notices.")
                     
                     if settings.adBlockEnabled {
                         VStack(alignment: .leading, spacing: 6) {
@@ -427,6 +452,11 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
+            }
             .toolbar {
                 ToolbarItem(placement: toolbarPlacement) {
                     Button("Done") {

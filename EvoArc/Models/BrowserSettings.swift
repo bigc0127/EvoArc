@@ -137,13 +137,6 @@ class BrowserSettings: ObservableObject {
         }
     }
     
-    @Published var showNavigationButtons: Bool {
-        didSet {
-            UserDefaults.standard.set(showNavigationButtons, forKey: "showNavigationButtons")
-            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
-        }
-    }
-    
     // When enabled, external search URLs (e.g., from Spotlight or other apps)
     // will be redirected to the user's default search engine within EvoArc.
     @Published var redirectExternalSearches: Bool {
@@ -251,6 +244,30 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // Extra-aggressive JS ad blocking that may break some sites
+    @Published var adBlockAdvancedJS: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockAdvancedJS, forKey: "adBlockAdvancedJS")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
+    // Hide elements with likely obfuscated/random class names (very aggressive)
+    @Published var adBlockObfuscatedClass: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockObfuscatedClass, forKey: "adBlockObfuscatedClass")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
+    // Hide cookie consent banners/popups and related overlays
+    @Published var adBlockCookieBanners: Bool {
+        didSet {
+            UserDefaults.standard.set(adBlockCookieBanners, forKey: "adBlockCookieBanners")
+            NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
+        }
+    }
+    
     /// Shows download completion notifications
     @Published var showDownloadNotifications: Bool {
         didSet {
@@ -304,17 +321,6 @@ class BrowserSettings: ObservableObject {
             self.autoHideURLBar = true
         }
         
-        // Load show navigation buttons setting with platform-specific defaults
-        if UserDefaults.standard.object(forKey: "showNavigationButtons") != nil {
-            self.showNavigationButtons = UserDefaults.standard.bool(forKey: "showNavigationButtons")
-        } else {
-            #if os(iOS)
-            self.showNavigationButtons = false  // Default to hidden on iOS
-            #else
-            self.showNavigationButtons = true   // Default to visible on macOS
-            #endif
-        }
-        
         // Load redirect external searches toggle with default to false
         if UserDefaults.standard.object(forKey: "redirectExternalSearches") != nil {
             self.redirectExternalSearches = UserDefaults.standard.bool(forKey: "redirectExternalSearches")
@@ -335,6 +341,27 @@ class BrowserSettings: ObservableObject {
             self.adBlockScriptletEnabled = UserDefaults.standard.bool(forKey: "adBlockScriptletEnabled")
         } else {
             self.adBlockScriptletEnabled = true
+        }
+        
+        // Load advanced JS ad blocking (default off)
+        if UserDefaults.standard.object(forKey: "adBlockAdvancedJS") != nil {
+            self.adBlockAdvancedJS = UserDefaults.standard.bool(forKey: "adBlockAdvancedJS")
+        } else {
+            self.adBlockAdvancedJS = false
+        }
+        
+        // Load obfuscated class blocking (default off)
+        if UserDefaults.standard.object(forKey: "adBlockObfuscatedClass") != nil {
+            self.adBlockObfuscatedClass = UserDefaults.standard.bool(forKey: "adBlockObfuscatedClass")
+        } else {
+            self.adBlockObfuscatedClass = false
+        }
+        
+        // Load cookie banner blocking (default on)
+        if UserDefaults.standard.object(forKey: "adBlockCookieBanners") != nil {
+            self.adBlockCookieBanners = UserDefaults.standard.bool(forKey: "adBlockCookieBanners")
+        } else {
+            self.adBlockCookieBanners = true
         }
         
         // Load download notification setting (default on)

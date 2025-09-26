@@ -16,8 +16,14 @@ class ThumbnailManager: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
     
     private var thumbnailCache: [String: PlatformImage] = [:] {
-        willSet {
-            objectWillChange.send()
+        didSet {
+            if Thread.isMainThread {
+                objectWillChange.send()
+            } else {
+                DispatchQueue.main.async { [objectWillChange] in
+                    objectWillChange.send()
+                }
+            }
         }
     }
     
@@ -190,3 +196,4 @@ extension Notification.Name {
 }
 
 // Remove title extension since it's already defined in Tab class
+

@@ -118,12 +118,10 @@ struct ContentView: View {
                                 selectedTab: selected,
                                 tabManager: tabManager
                             )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+.transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
                             .ignoresSafeArea(.keyboard)
                             .ignoresSafeArea(.container, edges: .bottom)
-                            .padding(.bottom, keyboardVisible ? keyboardHeight : 0)
-                            .animation(.easeOut(duration: 0.25), value: keyboardHeight)
                         }
                     }
                 }
