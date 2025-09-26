@@ -42,14 +42,19 @@ struct TabDrawerView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            drawerHandle
-            headerSection
-            tabsGrid
-        }
-        .background(drawerBackground)
-        .modifier(PlatformCornerRadius())
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                drawerHandle
+                headerSection
+                tabsGrid
+                Spacer(minLength: 0)
+            }
+            .frame(maxHeight: geometry.size.height)
+            .edgesIgnoringSafeArea(.bottom)
+            .background(drawerBackground)
+            .modifier(PlatformCornerRadius())
             .themeShadow()
+        }
         .sheet(isPresented: $showingCreateGroupSheet) {
             NewTabGroupView(
                 name: $newGroupName,
@@ -239,7 +244,7 @@ struct TabDrawerView: View {
                     }
                 }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 0)
         }
     }
     
@@ -264,8 +269,8 @@ struct TabDrawerView: View {
     
     private var gridColumns: [GridItem] {
         [
-            GridItem(.flexible(), spacing: UIScaleMetrics.scaledPadding(baseSpacing)),
-            GridItem(.flexible(), spacing: UIScaleMetrics.scaledPadding(baseSpacing))
+            GridItem(.flexible(), spacing: 20),
+            GridItem(.flexible(), spacing: 20)
         ]
     }
     
@@ -383,6 +388,17 @@ struct PlatformCornerRadius: ViewModifier {
     }
 }
 
+struct TabCardStyleConfiguration {
+    static let cornerRadius: CGFloat = 20
+    static let contentPadding: CGFloat = 16
+    static let elementSpacing: CGFloat = 12
+    static let shadowRadius: CGFloat = 8
+    static let shadowOpacity: Float = 0.12
+    static let shadowOffset = CGSize(width: 0, height: 2)
+    static let borderWidth: CGFloat = 0.5
+    static let borderOpacity: CGFloat = 0.1
+}
+
 struct TabCardView: View {
     let tab: Tab
     let isSelected: Bool
@@ -465,7 +481,7 @@ struct TabCardView: View {
                         HStack {
                             Circle()
                                 .fill(group.color.color)
-                                .frame(width: 12, height: 12)
+                .frame(width: 400, height: 600)
                             Text(group.name)
                         }
                                     }
@@ -535,20 +551,33 @@ struct TabCardView: View {
     
     @ViewBuilder
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 8) {
-                headerRow
-                urlText
-                previewPlaceholder
+        ZStack(alignment: .bottom) {
+            // Thumbnail at the top
+            VStack(spacing: 0) {
+                TabThumbnailView(tab: tab)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 200) // Increased to 200pt for perfect portrait look
+                    .aspectRatio(3/4, contentMode: .fill) // Portrait aspect ratio
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 3)
+                    .padding(.horizontal, 6)
+                    .padding(.top, 6)
+                
+                Spacer(minLength: 48) // Space for favicon
             }
+            
+            // Favicon overlaid at the bottom
+            faviconBadge
+                .padding(.bottom, 12)
         }
-        .padding(12)
-        .background(cardBackground)
         .onTapGesture {
             if !isDragging {
                 onSelect()
             }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
+        .contentShape(Rectangle())
         .contextMenu {
             contextMenu
         }
@@ -609,6 +638,26 @@ struct TabCardView: View {
     }
 
 private extension TabCardView {
+    var faviconBadge: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .frame(width: 32, height: 32)
+            
+            if let url = tab.url?.host, let domain = url.split(separator: ".").dropLast().last {
+                Text(domain.prefix(1).uppercased())
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+            } else {
+                Image(systemName: "globe")
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+            }
+        }
+        .frame(height: 32)
+    }
+    
     var engineIndicatorBadge: some View {
         Text(tab.browserEngine == .webkit ? "S" : "C")
             .font(.system(size: UIScaleMetrics.iconSize(10), weight: .medium))
@@ -621,12 +670,29 @@ private extension TabCardView {
     }
     
     var cardBackground: some View {
-        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(12))
-            .fill(secondarySystemBackgroundColor)
-            .overlay(
-                RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(12))
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+        RoundedRectangle(cornerRadius: TabCardStyleConfiguration.cornerRadius)
+            .fill(Color(UIColor.systemBackground))
+            .shadow(
+                color: Color.black.opacity(Double(TabCardStyleConfiguration.shadowOpacity)),
+                radius: TabCardStyleConfiguration.shadowRadius,
+                x: TabCardStyleConfiguration.shadowOffset.width,
+                y: TabCardStyleConfiguration.shadowOffset.height
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: TabCardStyleConfiguration.cornerRadius)
+                    .stroke(Color.separator.opacity(TabCardStyleConfiguration.borderOpacity),
+                           lineWidth: TabCardStyleConfiguration.borderWidth)
+            )
+            .overlay(selectionIndicator)
+    }
+    
+    @ViewBuilder
+    private var selectionIndicator: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: TabCardStyleConfiguration.cornerRadius)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .allowsHitTesting(false)
+        }
     }
     
     var closeButtonOverlay: some View {
