@@ -640,8 +640,13 @@ struct TabCardView: View {
 private extension TabCardView {
     var faviconBadge: some View {
         ZStack {
+            // Main circle with engine-specific border
             Circle()
-                .fill(Color.white)
+                .fill(Color(.systemBackground))
+                .overlay(
+                    Circle()
+                        .strokeBorder(tab.browserEngine == .webkit ? Color.accentColor : .orange, lineWidth: 1.5)
+                )
                 .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                 .frame(width: 32, height: 32)
             

@@ -36,21 +36,21 @@ struct TabThumbnailView: View {
     
     var body: some View {
         ZStack {
-            if let img = image {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Color(UIColor.secondarySystemBackground)
-                ProgressView()
-            }
-        }
-        .clipped()
-        .background(
-            HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
-                .frame(width: 400, height: 600)
-                .opacity(0.001)
-        )
+                    if let img = image {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color(UIColor.secondarySystemBackground)
+                        ProgressView()
+                    }
+                }
+                .clipped()
+                .background(
+                    HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
+                        .frame(width: 400, height: 600)
+                        .opacity(0.001)
+                )
         .onReceive(NotificationCenter.default.publisher(for: .snapshotDidUpdate)) { note in
             guard let s = note.object as? String,
                   s == tab.url?.absoluteString,
