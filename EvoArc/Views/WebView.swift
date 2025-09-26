@@ -109,6 +109,21 @@ struct WebView: UIViewRepresentable {
         // Create the WebView with zero frame (SwiftUI will handle sizing)
         let webView = WKWebView(frame: .zero, configuration: configuration)
         
+        // Configure for optimal mobile site display
+        webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
+        webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = true
+        webView.scrollView.contentInset = .zero
+        
+        // Configure viewport
+        configuration.defaultWebpagePreferences.preferredContentMode = .mobile
+        
+        // Enable navigation gestures
+        webView.allowsBackForwardNavigationGestures = true
+        
+        // Configure for optimal mobile display
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
         // Apply content blocking (AdBlock)
         AdBlockManager.shared.applyContentBlocking(to: webView)
         
@@ -251,6 +266,13 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                // Ensure we're scrolled to the real top, accounting for adjusted content inset
+                let topInset = webView.scrollView.adjustedContentInset.top
+                let expectedTop = -topInset
+                if abs(webView.scrollView.contentOffset.y - expectedTop) > 0.5 {
+                    webView.scrollView.setContentOffset(CGPoint(x: 0, y: expectedTop), animated: false)
+                }
+                
                 // Force loading state to false when navigation finishes
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 1.0

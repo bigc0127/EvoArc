@@ -38,6 +38,9 @@ struct TabViewContainer: View {
                 .id(tab.id) // Important: This ensures each tab gets its own WebView
             }
         }
+        // Respect the top safe area so top content isn't clipped
+                    // Don't ignore any safe areas - let web content handle its own layout
+                    .edgesIgnoringSafeArea([])
         .onReceive(tabManager.$selectedTab) { _ in
             // Update URL bar when tab switches
             if let selectedTab = tabManager.selectedTab {

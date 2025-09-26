@@ -428,7 +428,6 @@ struct ContentView: View {
                 handleIncomingURL(incomingURL)
             }
         }
-        .ignoresSafeArea()
     }
     
     // MARK: - Helper Functions

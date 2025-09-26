@@ -145,6 +145,22 @@ struct ScrollAwareWebView: UIViewRepresentable {
         configuration.defaultWebpagePreferences = preferences
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        
+        // Configure for optimal mobile site display
+        webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
+        webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = true
+        webView.scrollView.contentInset = .zero
+        
+        // Configure viewport
+        configuration.defaultWebpagePreferences.preferredContentMode = .mobile
+        
+        // Enable navigation gestures
+        webView.allowsBackForwardNavigationGestures = true
+        
+        // Configure for optimal mobile display
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
         AdBlockManager.shared.applyContentBlocking(to: webView)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
@@ -280,6 +296,13 @@ struct ScrollAwareWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             Task { @MainActor in
+                // Ensure we're scrolled to the real top, accounting for adjusted content inset
+                let topInset = webView.scrollView.adjustedContentInset.top
+                let expectedTop = -topInset
+                if abs(webView.scrollView.contentOffset.y - expectedTop) > 0.5 {
+                    webView.scrollView.setContentOffset(CGPoint(x: 0, y: expectedTop), animated: false)
+                }
+                
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 1.0
                 parent.tab.stopLoadingTimeout()

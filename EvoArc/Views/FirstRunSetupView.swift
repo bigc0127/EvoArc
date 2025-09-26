@@ -479,32 +479,19 @@ struct DisplaySetupView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
-                // Bottom Bar Style
+                // Bottom Bar Design
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("Bottom Bar Style")
+                    Text("Bottom Bar")
                         .font(.headline)
                     
-                    HStack(spacing: 15) {
-                        displayModeCard(
-                            title: "Classic",
-                            description: "Traditional glass effect with stronger blur",
-                            systemImage: "app.fill",
-                            isSelected: !settings.useModernBottomBar
-                        ) {
-                            settings.useModernBottomBar = false
-                        }
-                        
-                        displayModeCard(
-                            title: "Safari Style",
-                            description: "Modern transparent look with minimal blur",
-                            systemImage: "safari.fill",
-                            isSelected: settings.useModernBottomBar
-                        ) {
-                            settings.useModernBottomBar = true
-                        }
-                    }
+                    displayModeCard(
+                        title: "Navigation Bar",
+                        description: "Easy access to navigation controls and URL input",
+                        systemImage: "app.fill",
+                        isSelected: true
+                    ) {}
                     
-                    Text("Choose how your bottom bar appears. This can be changed anytime in settings.")
+                    Text("The bottom navigation bar provides quick access to browser controls and URL input.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

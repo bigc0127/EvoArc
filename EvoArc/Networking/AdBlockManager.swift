@@ -175,7 +175,9 @@ final class AdBlockManager: ObservableObject {
     }
     
     func applyContentBlocking(to webView: WKWebView) {
-        guard BrowserSettings.shared.adBlockEnabled else { return }
+        guard BrowserSettings.shared.adBlockEnabled,
+              // Don't apply AdBlock to DuckDuckGo to avoid layout issues
+              webView.url?.host?.contains("duckduckgo.com") != true else { return }
         if let list = compiledRuleList {
             webView.configuration.userContentController.add(list)
         } else {
@@ -328,28 +330,46 @@ final class AdBlockManager: ObservableObject {
     
     private func installAntiAdScript(to webView: WKWebView) {
         // Enhanced base selectors targeting common ad patterns + the specific HTML structure from user's example
+        // More targeted selectors that avoid breaking legitimate site UI
         let baseSelectors = [
-            // Original selectors
-            "iframe[src*='doubleclick']", "iframe[src*='adservice']", "[id^='ad-']", "[id*='-ad']", "[class^='ad-']",
-            "[class*='-ad']", ".ad", ".ads", ".advert", ".advertisement", "[data-ad]", "[data-ad-client]",
-            "[data-ad-slot]", "[data-ad-provider]", "[data-google-query-id]", "[class*='sponsored']", "[id*='sponsor']",
-            "[class*='promo']", "[id*='promo']", "[class*='taboola']", "[class*='outbrain']",
-            // Enhanced targeting for dynamically inserted ads
-            "fxb.gbqfqwb", ".qbfwa", ".gbcfxawvaHsi", ".gbqfwao4", ".gbqfwao1", ".gbqfwao2",
-            "[class*='gbqf']", "[class*='gbcf']", "[czu*='avbrotvt']", "[class*='qbfwa']",
-            "[bid]", "[fxb-target='_dlank']", "[class*='gbqfyaw']",
-            // Additional aggressive patterns
-            "[class*='headline']", "[class*='clickbait']", "[class*='content-ad']", "[class*='native-ad']",
-            "[class*='article-ad']", "[data-testid*='ad']", "[id*='popup']", "[class*='popup']",
-            "[class*='modal-ad']", "[id*='overlay']", "[class*='overlay']", "[class*='banner']",
-            "[style*='position:fixed'][style*='z-index']", "[style*='position:absolute'][style*='top:0']",
-            // Social media ad patterns
-            "[data-pagelet*='FeedUnit']", "[data-pagelet*='AdUnit']", "[aria-label*='Sponsored']",
-            "[data-testid*='placementTracking']", "[data-ft*='ei']",
-            // Video ad patterns
-            "[class*='video-ad']", "[id*='video-ad']", "[class*='preroll']", "[class*='midroll']",
-            // Shopping/affiliate patterns
-            "[class*='affiliate']", "[class*='shopping']", "[class*='deals']", "[class*='offers']"
+            // IFrame-based ads
+            "iframe[src*='doubleclick.net']",
+            "iframe[src*='googlesyndication.com']",
+            "iframe[src*='adnxs.com']",
+            
+            // Standard ad containers
+            "[id^='div-gpt-ad']",
+            "[id^='google_ads_']",
+            "[id^='adunit']",
+            "div[class^='ad-container']",
+            "div[class^='ad-wrapper']",
+            "div[class^='advert-']",
+            
+            // Ad-tech specific attributes
+            "[data-ad-client]",
+            "[data-ad-slot]",
+            "[data-ad-unit]",
+            "[data-ad-network]",
+            "[data-ad-layout]",
+            "[data-google-query-id]",
+            
+            // Common ad network classes
+            ".taboola-container",
+            ".outbrain-container",
+            ".ad-unit-container",
+            ".sponsored-content",
+            ".sponsored-post",
+            
+            // Video ads
+            "[class*='video-ad-overlay']",
+            "[class*='pre-roll-ad']",
+            "[class*='mid-roll-ad']",
+            
+            // Specific ad tech classes (avoid general UI patterns)
+            "[class*='adsbox']",
+            "[class*='ad-placement']",
+            "[class*='ad-slot']",
+            "[class*='dfp-ad']"
         ]
         let merged = Array((Set(baseSelectors).union(Set(currentDynamicSelectors))).prefix(2500)) // Increased limit
         let arrayString: String
@@ -360,105 +380,62 @@ final class AdBlockManager: ObservableObject {
         }
         let js = """
         (function(){
-          // Enhanced ad blocking script with more aggressive detection
-          function hideSel(sel){ 
+          // Improved ad detection that preserves site functionality
+          function hideSel(sel) { 
             try { 
-              document.querySelectorAll(sel).forEach(function(n){ 
-                n.style.setProperty('display','none','important'); 
-                n.style.setProperty('visibility','hidden','important');
-                n.style.setProperty('opacity','0','important');
-                n.style.setProperty('height','0','important');
-                n.style.setProperty('width','0','important');
-                n.style.setProperty('overflow','hidden','important');
+              document.querySelectorAll(sel).forEach(function(n) {
+                // Check if element is likely part of site UI
+                if (n.closest('header, nav, .search-form, #search_form, .search-wrapper')) {
+                  return; // Skip UI elements
+                }
+                // Only hide if element matches known ad patterns
+                if (n.getAttribute('data-ad-client') || 
+                    n.getAttribute('data-ad-slot') || 
+                    n.getAttribute('data-ad-unit') || 
+                    n.id.includes('google_ads_') || 
+                    n.id.includes('div-gpt-ad')) {
+                  n.style.setProperty('display', 'none', 'important');
+                  n.style.setProperty('visibility', 'hidden', 'important');
+                  n.style.setProperty('opacity', '0', 'important');
+                }
               }); 
-            } catch(e){} 
-          }
-          
-          // Additional function to remove elements entirely (more aggressive)
-          function removeSel(sel){ 
-            try { 
-              document.querySelectorAll(sel).forEach(function(n){ n.remove(); }); 
-            } catch(e){} 
-          }
-          
-          // Specific targeting for the provided HTML structure
-          function removeSpecificAds() {
-            try {
-              // Target the specific structure from user's example
-              const adContainers = document.querySelectorAll('fxb.gbqfqwb, .gbqfqwb');
-              adContainers.forEach(function(container) {
-                if (container.textContent.includes('Elon Walked') || 
-                    container.textContent.includes('Kevin Sorbo') || 
-                    container.textContent.includes('Neurologists') || 
-                    container.textContent.includes('Joanna Gaines')) {
-                  container.remove();
-                }
-              });
-              
-              // Target by bid attributes (common in programmatic ads)
-              const bidElements = document.querySelectorAll('[bid]');
-              bidElements.forEach(function(elem) {
-                if (elem.closest('fxb') || elem.getAttribute('fxb-target') === '_dlank') {
-                  elem.remove();
-                }
-              });
-              
-              // Remove elements with suspicious class patterns
-              const suspiciousClasses = ['gbqfyaw-avbrotvt', 'gbqfyaw-asg', 'gbqfwao'];
-              suspiciousClasses.forEach(function(className) {
-                document.querySelectorAll('[class*="' + className + '"]').forEach(function(elem) {
-                  elem.remove();
-                });
-              });
-            } catch(e) {}
+            } catch(e) {} 
           }
           
           var sels = \\(arrayString);
           function runHiding() { 
-            for (var i=0; i<sels.length; i++) { 
+            for (var i = 0; i < sels.length; i++) { 
               hideSel(sels[i]); 
             }
-            // Also try to remove the most obvious ad elements
-            removeSel('fxb.gbqfqwb, [class*="gbqfqwb"], [czu*="avbrotvt"]');
-            removeSpecificAds();
           }
           
-          // Run immediately and on DOM changes
+          // Run on load and DOM changes
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', runHiding);
           } else { 
             runHiding(); 
           }
           
-          // Enhanced mutation observer with more frequent checking
+          // Watch for new ad insertions
           var mo = new MutationObserver(function(mutations) {
-            var shouldRun = false;
             mutations.forEach(function(mutation) {
               if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                 for (var i = 0; i < mutation.addedNodes.length; i++) {
                   var node = mutation.addedNodes[i];
-                  if (node.nodeType === 1) { // Element node
-                    var className = node.className || '';
-                    var id = node.id || '';
-                    // Check if added node looks like an ad
-                    if (className.includes('ad') || className.includes('gbqf') || 
-                        className.includes('sponsored') || id.includes('ad') ||
-                        node.hasAttribute('bid') || node.hasAttribute('data-ad')) {
-                      shouldRun = true;
-                      break;
-                    }
+                  if (node.nodeType === 1 && ( // Element node
+                    node.hasAttribute('data-ad-client') ||
+                    node.hasAttribute('data-ad-slot') ||
+                    node.id.includes('google_ads_') ||
+                    node.id.includes('div-gpt-ad')
+                  )) {
+                    runHiding();
+                    break;
                   }
                 }
               }
             });
-            if (shouldRun) {
-              setTimeout(runHiding, 50); // Small delay to ensure DOM is stable
-            }
           });
-          mo.observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id', 'bid']});
-          
-          // Periodic cleanup every 2 seconds for persistent ads
-          setInterval(runHiding, 2000);
+          mo.observe(document.documentElement, {childList: true, subtree: true});
         })();
         """
         let scriptSource = js.replacingOccurrences(of: "\\(arrayString)", with: arrayString)

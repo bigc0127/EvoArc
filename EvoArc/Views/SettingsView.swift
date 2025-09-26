@@ -159,12 +159,10 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     Toggle("Show Navigation Buttons", isOn: $settings.showNavigationButtons)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                    Toggle("Safari-style Bottom Bar", isOn: $settings.useModernBottomBar)
-                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 } header: {
                     Text("User Interface")
                 } footer: {
-                    Text("Auto-hide hides the URL bar when scrolling down. Navigation buttons can be hidden to save space with large text sizes. Safari-style gives the bottom bar a modern glass appearance.")
+                    Text("Auto-hide hides the URL bar when scrolling down. Navigation buttons can be hidden to save space with large text sizes.")
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }

@@ -39,6 +39,8 @@ struct BrowserEngineView: View {
                 .id("webkit-\(tab.id)")  // Force recreation when switching
             }
         }
+        // Keep top safe area; allow horizontal/optional bottom expansion managed by parent
+        .ignoresSafeArea(edges: [.horizontal])
         .onReceive(tab.$browserEngine) { _ in
             // When tab's engine changes, reload the current page
             Task { @MainActor in

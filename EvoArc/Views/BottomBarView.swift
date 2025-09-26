@@ -79,34 +79,13 @@ struct BottomBarView: View {
     
     @ViewBuilder
     private var bottomFillBackground: some View {
-        #if os(iOS)
-        if #available(iOS 26.0, *) {
-            RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-                .fill(.ultraThinMaterial)
-                .opacity(0.95)
-                .shadow(color: .black.opacity(0.1), radius: bottomBarShadowRadius, x: 0, y: 4)
-                .overlay {
-                    RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-                        .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
-                }
-        } else {
-            RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.1), radius: bottomBarShadowRadius, x: 0, y: 4)
-                .overlay {
-                    RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-                        .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
-                }
-        }
-        #else
         RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-            .fill(backgroundColor)
+            .fill(Color(.systemBackground))
             .shadow(color: .black.opacity(0.1), radius: bottomBarShadowRadius, x: 0, y: 4)
             .overlay {
                 RoundedRectangle(cornerRadius: bottomBarCornerRadius)
                     .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
             }
-        #endif
     }
     
     // MARK: - Main View

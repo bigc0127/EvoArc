@@ -122,12 +122,6 @@ class BrowserSettings: ObservableObject {
         }
     }
     
-    @Published var useModernBottomBar = false {
-        didSet {
-            UserDefaults.standard.set(useModernBottomBar, forKey: "useModernBottomBar")
-            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
-        }
-    }
     
     @Published var homepage: String {
         didSet {
