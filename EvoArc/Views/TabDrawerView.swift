@@ -639,28 +639,29 @@ struct TabCardView: View {
 
 private extension TabCardView {
     var faviconBadge: some View {
-        ZStack {
-            // Main circle with engine-specific border
+        // Compute the fallback initial exactly like the current implementation
+        let letter: String = {
+            guard let host = tab.url?.host else { return " " }
+            let parts = host.split(separator: ".")
+            let core = parts.dropLast().last ?? parts.last ?? Substring(host)
+            return String(core.prefix(1)).uppercased()
+        }()
+
+        return ZStack {
+            // Background circle with engine-specific border (unchanged)
             Circle()
-                .fill(Color(.systemBackground))
+                .fill(Color(UIColor.systemBackground))
                 .overlay(
                     Circle()
-                        .strokeBorder(tab.browserEngine == .webkit ? Color.accentColor : .orange, lineWidth: 1.5)
+                        .strokeBorder(tab.browserEngine == .webkit ? Color.accentColor : .orange,
+                                      lineWidth: 1.5)
                 )
                 .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                 .frame(width: 32, height: 32)
-            
-            if let url = tab.url?.host, let domain = url.split(separator: ".").dropLast().last {
-                Text(domain.prefix(1).uppercased())
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.primary)
-            } else {
-                Image(systemName: "globe")
-                    .font(.system(size: 14))
-                    .foregroundColor(.primary)
-            }
+
+            // New favicon view with fallback initial
+            FaviconBadgeView(url: tab.url, fallbackLetter: letter, size: 20)
         }
-        .frame(height: 32)
     }
     
     var engineIndicatorBadge: some View {
