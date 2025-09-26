@@ -139,6 +139,7 @@ struct TabDrawerView: View {
                     .font(.system(size: UIScaleMetrics.iconSize(16)))
                     .foregroundColor(.accentColor)
                     .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -148,7 +149,8 @@ struct TabDrawerView: View {
                 Image(systemName: "bookmark.fill")
                     .font(.system(size: UIScaleMetrics.iconSize(16)))
                     .foregroundColor(.accentColor)
-.frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -159,6 +161,7 @@ struct TabDrawerView: View {
                     .font(.system(size: UIScaleMetrics.iconSize(18)))
                     .foregroundColor(.accentColor)
                     .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -169,6 +172,7 @@ struct TabDrawerView: View {
                     .font(.system(size: UIScaleMetrics.iconSize(20)))
                     .foregroundColor(.accentColor)
                     .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -338,7 +342,8 @@ struct TabGroupSectionView<TabCard: View>: View {
                     Image(systemName: group.isCollapsed ? "chevron.right" : "chevron.down")
                         .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.secondary)
-.frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
                 
@@ -349,6 +354,7 @@ struct TabGroupSectionView<TabCard: View>: View {
                         .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.red)
                         .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
             }
