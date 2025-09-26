@@ -33,6 +33,10 @@ struct TabViewContainer: View {
                     autoHideEnabled: autoHideEnabled,
                     tabManager: tabManager
                 )
+                .onAppear {
+                    // Trigger URL load when WebView appears
+                    tab.handleInitialLoad()
+                }
                 .opacity(tabManager.selectedTab?.id == tab.id ? 1 : 0)
                 .allowsHitTesting(tabManager.selectedTab?.id == tab.id)
                 .id(tab.id) // Important: This ensures each tab gets its own WebView

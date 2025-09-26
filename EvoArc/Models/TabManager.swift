@@ -81,6 +81,15 @@ class TabManager: ObservableObject {
         }
     }
     
+    /// Create a tab from restored state without triggering homepage navigation or selection changes
+    func createRestoredTab(title: String, url: URL?, isPinned: Bool = false, groupID: UUID? = nil, engine: BrowserEngine? = nil) -> Tab {
+        let tab = Tab(url: url, browserEngine: engine ?? BrowserSettings.shared.browserEngine, isPinned: isPinned, groupID: groupID)
+        tab.title = title
+        // Do not change selectedTab here; caller manages selection if needed
+        tabs.append(tab)
+        return tab
+    }
+    
     func closeTab(_ tab: Tab) {
         if let index = tabs.firstIndex(where: { $0.id == tab.id }) {
             // Clean up WebView reference
@@ -199,13 +208,11 @@ class TabManager: ObservableObject {
     
     private func restorePinnedTabs() {
         let pinnedTabEntities = pinnedTabManager.pinnedTabs
+            .sorted { $0.pinnedOrder < $1.pinnedOrder }
         
         for entity in pinnedTabEntities {
-            if let url = entity.url {
-                let tab = Tab(url: url, isPinned: true)
-                tab.title = entity.title
-                tabs.append(tab)
-            }
+            let url = entity.url
+            _ = createRestoredTab(title: entity.title, url: url, isPinned: true, groupID: nil)
         }
         
         // Select the first tab if available
@@ -240,6 +247,39 @@ class TabManager: ObservableObject {
                 return false // Maintain existing order for same type
             }
         }
+    }
+    
+    private func repositionGroupedTabs() {
+        // First, ensure pinned tabs are at the front
+        repositionPinnedTabs()
+        
+        // Then, sort non-pinned tabs by group membership
+        let nonPinnedTabs = tabs.filter { !$0.isPinned }
+        let sortedNonPinned = nonPinnedTabs.sorted { tab1, tab2 in
+            // First, compare group presence
+            switch (tab1.groupID != nil, tab2.groupID != nil) {
+            case (true, false):
+                return true
+            case (false, true):
+                return false
+            case (true, true):
+                // Both have groups, sort by group creation date
+                guard let group1 = tabGroups.first(where: { $0.id == tab1.groupID }),
+                      let group2 = tabGroups.first(where: { $0.id == tab2.groupID }) else {
+                    return false
+                }
+                return group1.createdAt < group2.createdAt
+            case (false, false):
+                // Both ungrouped, maintain original order
+                return false
+            }
+        }
+        
+        // Reconstruct the tabs array with pinned tabs followed by sorted non-pinned tabs
+        let pinnedTabs = tabs.filter { $0.isPinned }
+        tabs = pinnedTabs + sortedNonPinned
+        
+        print("🔄 Repositioned tabs: \(pinnedTabs.count) pinned + \(sortedNonPinned.count) grouped/ungrouped")
     }
     
     // MARK: - Tab Group Methods
@@ -390,26 +430,36 @@ class TabManager: ObservableObject {
     
     private func loadTabGroups() {
         if BrowserSettings.shared.persistTabGroups {
-            // Load tab groups
+            // Load tab groups first
             if let data = UserDefaults.standard.data(forKey: "savedTabGroups"),
                let decoded = try? JSONDecoder().decode([TabGroup].self, from: data) {
-                tabGroups = decoded
+                // Sort tab groups by creation date to maintain consistent order
+                tabGroups = decoded.sorted { $0.createdAt < $1.createdAt }
             }
+            print("📂 Loaded \(tabGroups.count) tab groups")
         }
     }
     
     func restoreTabGroupAssignments() {
         if BrowserSettings.shared.persistTabGroups {
-            // Try to load comprehensive tab states first (new format)
+            // First ensure we have all necessary groups loaded
+            loadTabGroups()
+            
+            // Load comprehensive tab states first (new format)
             if let data = UserDefaults.standard.data(forKey: "savedTabStates"),
                let tabStates = try? JSONDecoder().decode([String: TabState].self, from: data) {
                 
+                print("📂 Restoring \(tabStates.count) tab states")
                 restoreFromTabStates(tabStates)
                 
             } else {
                 // Fallback to old format for backward compatibility
+                print("⚠️ Using legacy format for tab group restoration")
                 restoreFromLegacyFormat()
             }
+            
+            // After restoration, ensure tabs are properly ordered within their groups
+            repositionGroupedTabs()
         }
     }
     
@@ -424,6 +474,7 @@ class TabManager: ObservableObject {
                    let groupID = UUID(uuidString: groupIDString),
                    tabGroups.contains(where: { $0.id == groupID }) {
                     tab.groupID = groupID
+                    print("🔄 Restored group assignment for tab: \(tab.title) -> \(groupID)")
                 }
                 
                 // Restore browser engine
@@ -435,8 +486,6 @@ class TabManager: ObservableObject {
                 if let title = tabState.title, !title.isEmpty {
                     tab.title = title
                 }
-                
-                print("🔄 Restored tab state: \(tab.title) [\(tab.browserEngine.displayName)]")
             }
         }
         
@@ -459,14 +508,8 @@ class TabManager: ObservableObject {
             // Create new tab from saved state
             if let url = URL(string: urlString) {
                 let browserEngine = BrowserEngine(rawValue: tabState.browserEngine) ?? .webkit
-                let newTab = Tab(url: url, browserEngine: browserEngine, groupID: groupID)
-                
-                // Restore title if available
-                if let title = tabState.title, !title.isEmpty {
-                    newTab.title = title
-                }
-                
-                tabs.append(newTab)
+                let title = (tabState.title?.isEmpty == false) ? tabState.title! : "New Tab"
+                let newTab = createRestoredTab(title: title, url: url, isPinned: false, groupID: groupID, engine: browserEngine)
                 print("🆕 Recreated grouped tab from saved state: \(newTab.title) [\(newTab.browserEngine.displayName)]")
             }
         }
@@ -481,6 +524,9 @@ class TabManager: ObservableObject {
         // Load tab-to-group assignments (legacy format)
         if let data = UserDefaults.standard.data(forKey: "savedTabGroupAssignments"),
            let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            
+            let validGroups = tabGroups.map { $0.id }
+            print("📂 Found \(validGroups.count) valid groups for legacy restoration")
             
             // First, restore assignments for existing tabs
             for tab in tabs {
@@ -500,7 +546,7 @@ class TabManager: ObservableObject {
                 
                 // Apply the group assignment if found and group still exists
                 if let groupID = groupID,
-                   tabGroups.contains(where: { $0.id == groupID }) {
+                   validGroups.contains(groupID) {
                     tab.groupID = groupID
                     print("🔄 Restored tab group assignment (legacy): \(tab.title) -> Group ID: \(groupID)")
                 }
@@ -522,9 +568,7 @@ class TabManager: ObservableObject {
                 
                 // Create new tab for this URL (with default browser engine)
                 if let url = URL(string: urlString) {
-                    let newTab = Tab(url: url)
-                    newTab.groupID = groupID
-                    tabs.append(newTab)
+                    let newTab = createRestoredTab(title: "New Tab", url: url, isPinned: false, groupID: groupID)
                     print("🆕 Recreated grouped tab from legacy format: \(newTab.title)")
                 }
             }
