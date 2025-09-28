@@ -13,6 +13,18 @@ import UIKit
 import AppKit
 #endif
 
+/// A view modifier to handle platform-specific corner radius
+struct PlatformCornerRadius: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.cornerRadius(20, corners: [.topLeft, .topRight])
+        #else
+        content.cornerRadius(20)
+        #endif
+    }
+}
+
+/// The main tab drawer view that displays tabs in a scrollable grid
 struct TabDrawerView: View {
     @ObservedObject var tabManager: TabManager
     @StateObject private var settings = BrowserSettings.shared
@@ -183,7 +195,7 @@ struct TabDrawerView: View {
     @ViewBuilder
     private var tabsGrid: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: PlatformMetrics.scaledPadding(20))
+            LazyVStack(spacing: PlatformMetrics.scaledPadding(20)) {
                 // Pinned tabs section
                 let pinnedTabs = tabManager.tabs.filter { $0.isPinned }
                 if !pinnedTabs.isEmpty {
@@ -293,16 +305,6 @@ struct TabDrawerView: View {
         }
         #else
         systemBackgroundColor
-        #endif
-    }
-}
-
-struct PlatformCornerRadius: ViewModifier {
-    func body(content: Content) -> some View {
-        #if os(iOS)
-        content.cornerRadius(20, corners: [.topLeft, .topRight])
-        #else
-        content.cornerRadius(20)
         #endif
     }
 }
