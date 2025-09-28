@@ -361,7 +361,7 @@ struct TabGroupSectionView<TabCard: View>: View {
             .padding(.horizontal, 15)
             
             if !group.isCollapsed {
-                LazyVGrid(columns: gridColumns, spacing: PlatformMetrics.scaledPadding(baseSpacing))
+                LazyVGrid(columns: gridColumns, spacing: PlatformMetrics.scaledPadding(baseSpacing)) {
                     ForEach(tabs) { tab in
                         tabCardView(tab)
                     }
