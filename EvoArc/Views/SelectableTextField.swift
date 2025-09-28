@@ -24,7 +24,6 @@ struct SelectableTextField: PlatformViewRepresentable {
     
 #if os(iOS)
     func makeUIView(context: Context) -> PlatformTextField {
-    func makeUIView(context: Context) -> UITextField {
         let textField = UITextField()
         textField.delegate = context.coordinator
         textField.font = .preferredFont(forTextStyle: .body)
@@ -47,7 +46,7 @@ struct SelectableTextField: PlatformViewRepresentable {
         return textField
     }
     
-    func updateUIView(_ uiView: UITextField, context: Context) {
+    func updateUIView(_ uiView: PlatformTextField, context: Context) {
         uiView.text = text
         
         // Handle focus changes
@@ -73,21 +72,21 @@ struct SelectableTextField: PlatformViewRepresentable {
             self.parent = textField
         }
         
-        @objc func textFieldDidChange(_ textField: UITextField) {
+        @objc func textFieldDidChange(_ textField: PlatformTextField) {
             parent.text = textField.text ?? ""
         }
         
-        func textFieldDidBeginEditing(_ textField: UITextField) {
+        func textFieldDidBeginEditing(_ textField: PlatformTextField) {
             parent.isEditing = true
             // Select all text when editing begins
             textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
         }
         
-        func textFieldDidEndEditing(_ textField: UITextField) {
+        func textFieldDidEndEditing(_ textField: PlatformTextField) {
             parent.isEditing = false
         }
         
-        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        func textFieldShouldReturn(_ textField: PlatformTextField) -> Bool {
             parent.onSubmit()
             return true
         }
