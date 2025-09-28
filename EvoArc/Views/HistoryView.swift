@@ -20,23 +20,33 @@ struct HistoryView: View {
                 .searchable(text: $searchText, prompt: "Search history")
                 .navigationTitle("History")
                 .toolbar {
+                    #if os(iOS)
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            dismiss()
-                        }
+                        Button("Done") { dismiss() }
                     }
-                    
                     ToolbarItem(placement: .navigationBarLeading) {
                         Menu {
-                            Button(role: .destructive, action: {
-                                historyManager.clearHistory()
-                            }) {
+                            Button(role: .destructive, action: { historyManager.clearHistory() }) {
                                 Label("Clear History", systemImage: "trash")
                             }
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
                         }
                     }
+                    #else
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                    ToolbarItem(placement: .automatic) {
+                        Menu {
+                            Button(role: .destructive, action: { historyManager.clearHistory() }) {
+                                Label("Clear History", systemImage: "trash")
+                            }
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                        }
+                    }
+                    #endif
                 }
         }
         #if os(iOS)
