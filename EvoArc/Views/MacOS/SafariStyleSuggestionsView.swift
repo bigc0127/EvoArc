@@ -36,7 +36,7 @@ struct SafariStyleSuggestionsView: View {
             // Search Suggestions (clean Safari-style, no branding)
             if !query.isEmpty && !searchSuggestionManager.suggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(searchSuggestionManager.suggestions.indices, id: \\.self) { index in
+                    ForEach(searchSuggestionManager.suggestions.indices, id: \.self) { index in
                         let suggestion = searchSuggestionManager.suggestions[index]
                         Button(action: { onSuggestionTap(suggestion.text) }) {
                             HStack(spacing: 12) {

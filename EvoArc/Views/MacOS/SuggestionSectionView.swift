@@ -22,7 +22,7 @@ struct SuggestionSectionView: View {
                 .padding(.top, 8)
             
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(0..<suggestions.count, id: \\.self) { index in
+                ForEach(0..<suggestions.count, id: \.self) { index in
                     let suggestion = suggestions[index]
                     Button(action: suggestion.action) {
                         HStack(spacing: 12) {
