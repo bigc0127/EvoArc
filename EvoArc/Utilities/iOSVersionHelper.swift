@@ -2,14 +2,13 @@
 //  iOSVersionHelper.swift
 //  EvoArc
 //
-//  iOS version detection utility for selecting appropriate DoH implementation
+//  iOS version detection utility
 //
 
 /**
  * # iOSVersionHelper
  * 
- * Utility class to detect iOS version and determine which DNS over HTTPS (DoH)
- * implementation approach should be used for optimal compatibility and performance.
+ * Utility class to detect iOS/macOS version for feature gating and compatibility checks.
  * 
  * ## Architecture Overview
  * 
@@ -19,24 +18,7 @@
  * - **Feature Detection**: Determining available APIs based on iOS version
  * - **Strategy Pattern**: Selecting implementation strategy based on capabilities
  * 
- * ### DoH Implementation Strategy Selection:
- * - **iOS 17+**: Use network proxy server approach for system-wide DNS control
- * - **iOS 14-16**: Use URLSession protocol interception for app-specific DNS
- * - **iOS 13 and below**: Fallback to system DNS (no DoH support)
  * 
- * ## Usage Examples:
- * ```swift
- * if iOSVersionHelper.supportsNetworkProxyDoH {
- *     // Use proxy server approach (iOS 17+)
- *     let proxyConfig = DoHProxyManager()
- * } else if iOSVersionHelper.supportsURLProtocolDoH {
- *     // Use URL protocol approach (iOS 14-16)
- *     let urlConfig = DoHURLSessionConfig()
- * } else {
- *     // Fall back to system DNS
- *     print("DoH not supported on this iOS version")
- * }
- * ```
  */
 
 import Foundation
@@ -47,7 +29,7 @@ import UIKit
 import AppKit
 #endif
 
-/// Utility for iOS version detection and DoH feature availability
+/// Utility for iOS version detection
 public class iOSVersionHelper {
     
     // MARK: - Version Detection
@@ -73,42 +55,16 @@ public class iOSVersionHelper {
         return "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
     }
     
-    // MARK: - DoH Feature Support Detection
     
-    /// Whether the device supports network proxy-based DoH (iOS 17+)
-    /// 
-    /// Network proxy approach provides system-wide DNS control and is the
-    /// preferred method for DoH implementation on supported devices.
-    public static var supportsNetworkProxyDoH: Bool {
-        return currentMajorVersion >= 17
-    }
     
-    /// Whether the device supports URLSession protocol-based DoH (iOS 14+)
-    /// 
-    /// URLSession protocol approach provides app-specific DNS control and
-    /// serves as a fallback for devices that don't support the proxy approach.
-    public static var supportsURLProtocolDoH: Bool {
-        return currentMajorVersion >= 14
-    }
     
-    /// Whether the device supports any form of DoH implementation
-    /// 
-    /// Returns true if the device can use either proxy-based or URLSession-based DoH.
-    public static var supportsDoH: Bool {
-        return supportsURLProtocolDoH || supportsNetworkProxyDoH
-    }
     
-    /// Whether WKWebView supports modern configuration options
-    /// 
-    /// Some WKWebView configuration features require iOS 15+
+    /// Whether WKWebView supports modern configuration options (iOS 15+)
     public static var supportsModernWebViewConfig: Bool {
         return currentMajorVersion >= 15
     }
     
-    // MARK: - Recommended DoH Strategy
     
-    /// The recommended DoH implementation strategy for the current device
-    public enum DoHStrategy {
         /// Use network proxy server approach (iOS 17+)
         case networkProxy
         /// Use URLSession protocol interception (iOS 14-16)
@@ -145,7 +101,6 @@ public class iOSVersionHelper {
     /// characteristics to recommend the best DoH approach.
     /// 
     /// - Returns: The recommended DoH strategy
-    public static var recommendedDoHStrategy: DoHStrategy {
         if supportsNetworkProxyDoH {
             return .networkProxy
         } else if supportsURLProtocolDoH {
@@ -299,10 +254,8 @@ public class iOSVersionHelper {
     }
 }
 
-// MARK: - DoH Configuration Factory
 
 /// Factory class for creating appropriate DoH configuration based on iOS version
-public class DoHConfigurationFactory {
     
     /// Creates the appropriate DoH configuration for the current iOS version
     /// 
@@ -310,7 +263,6 @@ public class DoHConfigurationFactory {
     /// based on the current iOS version and returns a configured instance.
     /// 
     /// - Returns: DoH configuration object or nil if DoH is not supported
-    public static func createDoHConfiguration() -> AnyObject? {
         switch iOSVersionHelper.recommendedDoHStrategy {
         case .networkProxy:
             // Return proxy server configuration for iOS 17+
@@ -334,32 +286,14 @@ public class DoHConfigurationFactory {
     /// DoH implementation for the current iOS version.
     /// 
     /// - Returns: Configured WKWebViewConfiguration
-    public static func createWebViewConfiguration() -> WKWebViewConfiguration {
-        switch iOSVersionHelper.recommendedDoHStrategy {
         case .networkProxy:
             // Use proxy server configuration
-            if #available(iOS 17.0, *) {
-                let proxyManager = DoHProxyManager()
-                return proxyManager.createWKWebViewConfiguration()
-            } else {
-                let fallbackManager = DoHProxyManagerFallback()
-                return fallbackManager.createWKWebViewConfiguration()
             }
-        case .urlProtocol:
             // Use URLSession configuration
-            let urlConfig = DoHURLSessionConfig()
-            return urlConfig.createWKWebViewConfiguration()
-        case .systemDNS:
-            // Standard configuration without DoH
-            print("⚠️ DoH not supported on iOS \(iOSVersionHelper.versionString), using system DNS")
+            // Standard configuration
             return WKWebViewConfiguration()
         }
     }
-}
-
-// MARK: - Usage Example (for documentation)
-
-/*
  Example usage of iOS version detection and DoH configuration:
  
  ```swift

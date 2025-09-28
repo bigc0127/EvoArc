@@ -476,12 +476,8 @@ struct WebView: NSViewRepresentable {
     }
     
     func makeNSView(context: Context) -> WKWebView {
-        // Create DoH-enabled WebKit configuration using the version-aware factory
-        // This automatically selects the best DoH approach based on iOS version:
-        // - iOS 17+: Network proxy approach (not yet implemented)
-        // - iOS 14-16: URLSession protocol interception
-        // - iOS 13-: Standard configuration without DoH
-        let configuration = DoHConfigurationFactory.createWebViewConfiguration()
+        // Create standard WebKit configuration
+        let configuration = WKWebViewConfiguration()
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
