@@ -15,9 +15,6 @@ struct SelectableTextField {
 
 #if os(iOS)
 extension SelectableTextField: UIViewRepresentable {
-#else
-extension SelectableTextField: NSViewRepresentable {
-#endif
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
@@ -91,7 +88,13 @@ extension SelectableTextField: NSViewRepresentable {
             return true
         }
     }
+}
 #else
+extension SelectableTextField: NSViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
     func makeNSView(context: Context) -> NSTextField {
         let textField = NSTextField()
         textField.delegate = context.coordinator
@@ -158,5 +161,5 @@ extension SelectableTextField: NSViewRepresentable {
             return false
         }
     }
-#endif
 }
+#endif
