@@ -300,7 +300,6 @@ struct TabDrawerView: View {
     /* Removed legacy UI */
 }
 
-
 struct PlatformCornerRadius: ViewModifier {
     func body(content: Content) -> some View {
         #if os(iOS)
@@ -310,8 +309,6 @@ struct PlatformCornerRadius: ViewModifier {
         #endif
     }
 }
-
-struct TabCardView: View {
     let tab: Tab
     let isSelected: Bool
     let onSelect: () -> Void
