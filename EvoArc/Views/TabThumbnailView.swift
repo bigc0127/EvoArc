@@ -1,3 +1,10 @@
+//
+//  TabThumbnailView.swift
+//  EvoArc
+//
+//  Created on 2025-09-28.
+//
+
 import SwiftUI
 import WebKit
 import CryptoKit
@@ -42,6 +49,14 @@ struct TabThumbnailView: View {
     let tab: Tab
     @State private var image: PlatformImage?
     
+    private var systemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.secondarySystemBackground)
+        #else
+        Color(NSColor.windowBackgroundColor)
+        #endif
+    }
+    
     var body: some View {
         ZStack {
             if let img = image {
@@ -55,11 +70,7 @@ struct TabThumbnailView: View {
                     .scaledToFill()
                 #endif
             } else {
-                #if os(iOS)
-                Color(UIColor.secondarySystemBackground)
-                #else
-                Color(NSColor.windowBackgroundColor)
-                #endif
+                systemBackgroundColor
                 ProgressView()
             }
         }
@@ -162,8 +173,16 @@ struct TabThumbnailView_Previews: View {
     @StateObject private var thumbnailManager = ThumbnailManager.shared
     @State private var shouldUpdate = false
     
+    private var systemBackgroundColor: Color {
+        #if os(iOS)
+        Color(UIColor.systemBackground)
+        #else
+        Color(NSColor.windowBackgroundColor)
+        #endif
+    }
+    
     var body: some View {
-GeometryReader { geo in
+        GeometryReader { geo in
             ZStack {
                 // Browser indicator in top right
                 VStack {
@@ -207,13 +226,7 @@ GeometryReader { geo in
                     // Safari-style placeholder
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-.fill(
-                                #if os(iOS)
-                                Color(UIColor.systemBackground)
-                                #else
-                                Color(NSColor.windowBackgroundColor)
-                                #endif
-                            )
+                            .fill(systemBackgroundColor)
                             .frame(width: geo.size.width - 16, height: (geo.size.width - 16) * 1.33)
                             .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                             .overlay(
