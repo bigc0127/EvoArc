@@ -2,19 +2,13 @@ import SwiftUI
 
 #if os(iOS)
 import UIKit
-#else
-import AppKit
-#endif
 
-struct SelectableTextField {
+struct SelectableTextField: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String
     @Binding var isEditing: Bool
     var onSubmit: () -> Void
-}
-
-#if os(iOS)
-extension SelectableTextField: UIViewRepresentable {
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
@@ -90,7 +84,14 @@ extension SelectableTextField: UIViewRepresentable {
     }
 }
 #else
-extension SelectableTextField: NSViewRepresentable {
+import AppKit
+
+struct SelectableTextField: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    @Binding var isEditing: Bool
+    var onSubmit: () -> Void
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
