@@ -5,24 +5,10 @@
 //  iOS/macOS version detection utility
 //
 
-/**
- * # iOSVersionHelper
- * 
- * Utility class to detect iOS/macOS version for feature gating and compatibility checks.
- * 
- * ## Architecture Overview
- * 
- * ### For New Swift Developers:
- * - **Static Methods**: Class methods that don't require instantiation
- * - **Version Comparison**: Using operating system version checking
- * - **Feature Detection**: Determining available APIs based on iOS version
- * - **Strategy Pattern**: Selecting implementation strategy based on capabilities
- * 
- * 
- */
-
 import Foundation
 import WebKit
+import SystemConfiguration
+
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -32,12 +18,7 @@ import AppKit
 /// Utility for iOS/macOS version detection
 public class iOSVersionHelper {
     
-    // MARK: - Version Detection
-    
-    /// Whether WKWebView supports modern configuration options (iOS/macOS 15+)
-    public static var supportsModernWebViewConfig: Bool {
-        return currentMajorVersion >= 15
-    }
+    // MARK: - Version Properties
     
     /// Current OS major version (e.g., 17 for iOS/macOS 17.x)
     public static var currentMajorVersion: Int {
@@ -60,65 +41,15 @@ public class iOSVersionHelper {
         return "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
     }
     
-    
-    
-    
-    
-    /// Whether WKWebView supports modern configuration options (iOS 15+)
+    /// Whether WKWebView supports modern configuration options (iOS/macOS 15+)
     public static var supportsModernWebViewConfig: Bool {
         return currentMajorVersion >= 15
     }
     
+    // MARK: - Version Detection Methods
     
-        /// Use network proxy server approach (iOS 17+)
-        case networkProxy
-        /// Use URLSession protocol interception (iOS 14-16)
-        case urlProtocol
-        /// DoH not supported, use system DNS
-        case systemDNS
-        
-        /// Human-readable description of the strategy
-        var description: String {
-            switch self {
-            case .networkProxy:
-                return "Network Proxy (iOS 17+)"
-            case .urlProtocol:
-                return "URLSession Protocol (iOS 14-16)"
-            case .systemDNS:
-                return "System DNS (iOS 13 and below)"
-            }
-        }
-        
-        /// Whether this strategy provides DoH functionality
-        var providesDoH: Bool {
-            switch self {
-            case .networkProxy, .urlProtocol:
-                return true
-            case .systemDNS:
-                return false
-            }
-        }
-    }
-    
-    /// Returns the recommended DoH strategy for the current iOS version
-    /// 
-    /// This method considers both feature availability and performance
-    /// characteristics to recommend the best DoH approach.
-    /// 
-    /// - Returns: The recommended DoH strategy
-        if supportsNetworkProxyDoH {
-            return .networkProxy
-        } else if supportsURLProtocolDoH {
-            return .urlProtocol
-        } else {
-            return .systemDNS
-        }
-    }
-    
-    // MARK: - Version Comparison Utilities
-    
-    /// Checks if the current iOS version is at least the specified version
-    /// 
+    /// Checks if the current OS version is at least the specified version
+    ///
     /// - Parameters:
     ///   - major: Major version to compare against
     ///   - minor: Minor version to compare against (default: 0)
@@ -140,8 +71,8 @@ public class iOSVersionHelper {
         return false
     }
     
-    /// Checks if the current iOS version is exactly the specified version
-    /// 
+    /// Checks if the current OS version is exactly the specified version
+    ///
     /// - Parameters:
     ///   - major: Major version to compare against
     ///   - minor: Minor version to compare against (default: 0)
@@ -154,8 +85,8 @@ public class iOSVersionHelper {
                current.patchVersion == patch
     }
     
-    /// Checks if the current iOS version is below the specified version
-    /// 
+    /// Checks if the current OS version is below the specified version
+    ///
     /// - Parameters:
     ///   - major: Major version to compare against
     ///   - minor: Minor version to compare against (default: 0)
@@ -165,33 +96,16 @@ public class iOSVersionHelper {
         return !isVersion(atLeast: major, minor: minor, patch: patch)
     }
     
-    // MARK: - Debug Information
-    
-    /// Generates a comprehensive debug report about iOS version and DoH support
-    /// 
-    /// This method is useful for troubleshooting DoH configuration issues
-    /// and understanding why a particular strategy was selected.
-    /// 
-    /// - Returns: Debug information string
+    /// Generates a basic debug report about version and feature support
     public static func debugReport() -> String {
-        let strategy = recommendedDoHStrategy
-        
         return """
-        iOS Version Debug Report
-        ========================
-        iOS Version: \(versionString)
+        Version Debug Report
+        ===================
+        OS Version: \(versionString)
         Major: \(currentMajorVersion), Minor: \(currentMinorVersion), Patch: \(currentPatchVersion)
         
-        DoH Support:
-        - Network Proxy DoH: \(supportsNetworkProxyDoH ? "✅" : "❌") (iOS 17+)
-        - URLSession DoH: \(supportsURLProtocolDoH ? "✅" : "❌") (iOS 14+)
-        - Any DoH: \(supportsDoH ? "✅" : "❌")
-        
-        Other Features:
+        Features:
         - Modern WebView Config: \(supportsModernWebViewConfig ? "✅" : "❌") (iOS 15+)
-        
-        Recommended Strategy: \(strategy.description)
-        Provides DoH: \(strategy.providesDoH ? "✅" : "❌")
         """
     }
     
@@ -258,50 +172,3 @@ public class iOSVersionHelper {
         """
     }
 }
-        case .systemDNS:
-            // No DoH configuration needed/supported
-            return nil
-        }
-    }
-    
-    /// Creates a WKWebViewConfiguration with the appropriate DoH setup
-    /// 
-    /// This method automatically configures WKWebView to use the best available
-    /// DoH implementation for the current iOS version.
-    /// 
-    /// - Returns: Configured WKWebViewConfiguration
-        case .networkProxy:
-            // Use proxy server configuration
-            }
-            // Use URLSession configuration
-            // Standard configuration
-            return WKWebViewConfiguration()
-        }
-    }
- Example usage of iOS version detection and DoH configuration:
- 
- ```swift
- import UIKit
- import WebKit
- 
- class BrowserViewController: UIViewController {
-     
-     override func viewDidLoad() {
-         super.viewDidLoad()
-         
-         // Check iOS version and DoH support
-         print(iOSVersionHelper.debugReport())
-         
-         // Create appropriate DoH-enabled WebView
-         let webViewConfig = DoHConfigurationFactory.createWebViewConfiguration()
-         let webView = WKWebView(frame: view.bounds, configuration: webViewConfig)
-         view.addSubview(webView)
-         
-         // Load a website with DoH-enabled DNS resolution
-         if let url = URL(string: "https://example.com") {
-             webView.load(URLRequest(url: url))
-         }
-     }
- }
- ```
- */

@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
 /// Utility class to manage UI scaling factors and calculations for accessibility support
 class PlatformMetrics {
     /// Maximum allowed scale factor to prevent UI elements from becoming too large
