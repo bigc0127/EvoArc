@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PlatformSupport
 
 struct TabGroupSectionView<TabCard: View>: View {
     @ObservedObject var group: TabGroup

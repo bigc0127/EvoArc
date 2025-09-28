@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PlatformSupport
 
 struct TabCardView: View {
     let tab: Tab

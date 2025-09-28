@@ -2,7 +2,7 @@
 //  iOSVersionHelper.swift
 //  EvoArc
 //
-//  iOS version detection utility
+//  iOS/macOS version detection utility
 //
 
 /**
@@ -29,27 +29,32 @@ import UIKit
 import AppKit
 #endif
 
-/// Utility for iOS version detection
+/// Utility for iOS/macOS version detection
 public class iOSVersionHelper {
     
     // MARK: - Version Detection
     
-    /// Current iOS major version (e.g., 17 for iOS 17.x)
+    /// Whether WKWebView supports modern configuration options (iOS/macOS 15+)
+    public static var supportsModernWebViewConfig: Bool {
+        return currentMajorVersion >= 15
+    }
+    
+    /// Current OS major version (e.g., 17 for iOS/macOS 17.x)
     public static var currentMajorVersion: Int {
         return ProcessInfo.processInfo.operatingSystemVersion.majorVersion
     }
     
-    /// Current iOS minor version (e.g., 2 for iOS 17.2)
+    /// Current OS minor version (e.g., 2 for version 17.2)
     public static var currentMinorVersion: Int {
         return ProcessInfo.processInfo.operatingSystemVersion.minorVersion
     }
     
-    /// Current iOS patch version (e.g., 1 for iOS 17.2.1)
+    /// Current OS patch version (e.g., 1 for version 17.2.1)
     public static var currentPatchVersion: Int {
         return ProcessInfo.processInfo.operatingSystemVersion.patchVersion
     }
     
-    /// Full iOS version string for debugging (e.g., "17.2.1")
+    /// Full OS version string for debugging (e.g., "17.2.1")
     public static var versionString: String {
         let version = ProcessInfo.processInfo.operatingSystemVersion
         return "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
@@ -253,27 +258,6 @@ public class iOSVersionHelper {
         """
     }
 }
-
-
-/// Factory class for creating appropriate DoH configuration based on iOS version
-    
-    /// Creates the appropriate DoH configuration for the current iOS version
-    /// 
-    /// This factory method automatically selects the best DoH implementation
-    /// based on the current iOS version and returns a configured instance.
-    /// 
-    /// - Returns: DoH configuration object or nil if DoH is not supported
-        switch iOSVersionHelper.recommendedDoHStrategy {
-        case .networkProxy:
-            // Return proxy server configuration for iOS 17+
-            if #available(iOS 17.0, *) {
-                return DoHProxyManager()
-            } else {
-                return DoHProxyManagerFallback()
-            }
-        case .urlProtocol:
-            // Return URLSession configuration for iOS 14-16
-            return DoHURLSessionConfig()
         case .systemDNS:
             // No DoH configuration needed/supported
             return nil

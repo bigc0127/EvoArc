@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PlatformSupport
 #if os(iOS)
 import UIKit
 #else
