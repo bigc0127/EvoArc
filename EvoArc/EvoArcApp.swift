@@ -86,7 +86,7 @@ struct EvoArcApp: App {
                 // If it's a local file, create a file:// URL
                 if url.scheme == nil || url.scheme == "file" {
                     tabManager.createNewTab(url: url)
-                } else if let urlString = try? String(contentsOf: url),
+                } else if let urlString = try? String(contentsOf: url, encoding: .utf8),
                           let webURL = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines)) {
                     // If it's a .url file or text file containing a URL, open that URL
                     tabManager.createNewTab(url: webURL)
