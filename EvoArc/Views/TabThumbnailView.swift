@@ -2,6 +2,13 @@ import SwiftUI
 import WebKit
 import CryptoKit
 import ObjectiveC.runtime
+#if os(iOS)
+import UIKit
+public typealias PlatformImage = UIImage
+#else
+import AppKit
+public typealias PlatformImage = NSImage
+#endif
 
 private var NavKey: UInt8 = 0
 
@@ -19,38 +26,58 @@ private func fileURL(for url: URL) -> URL {
         .appendingPathComponent(digest(url) + ".png")
 }
 
-private func loadDisk(for url: URL) -> UIImage? {
+private func loadDisk(for url: URL) -> PlatformImage? {
     guard let data = try? Data(contentsOf: fileURL(for: url)) else { return nil }
+    #if os(iOS)
     return UIImage(data: data)
+    #else
+    return NSImage(data: data)
+    #endif
 }
 
-private func saveDisk(_ img: UIImage, for url: URL) {
+private func saveDisk(_ img: PlatformImage, for url: URL) {
+    #if os(iOS)
     guard let data = img.pngData() else { return }
+    #else
+    guard let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let data = rep.representation(using: .png, properties: [:]) else { return }
+    #endif
     try? data.write(to: fileURL(for: url), options: .atomic)
     NotificationCenter.default.post(name: .snapshotDidUpdate, object: url.absoluteString)
 }
 
 struct TabThumbnailView: View {
     let tab: Tab
-    @State private var image: UIImage?
+    @State private var image: PlatformImage?
     
     var body: some View {
         ZStack {
-                    if let img = image {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Color(UIColor.secondarySystemBackground)
-                        ProgressView()
-                    }
-                }
-                .clipped()
-                .background(
-                    HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
-                        .frame(width: 400, height: 600)
-                        .opacity(0.001)
-                )
+            if let img = image {
+                #if os(iOS)
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                #else
+                Image(nsImage: img)
+                    .resizable()
+                    .scaledToFill()
+                #endif
+            } else {
+                #if os(iOS)
+                Color(UIColor.secondarySystemBackground)
+                #else
+                Color(NSColor.windowBackgroundColor)
+                #endif
+                ProgressView()
+            }
+        }
+        .clipped()
+        #if os(iOS)
+        .background(
+            HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
+                .frame(width: 400, height: 600)
+                .opacity(0.001)
+        )
+        #endif
         .onReceive(NotificationCenter.default.publisher(for: .snapshotDidUpdate)) { note in
             guard let s = note.object as? String,
                   s == tab.url?.absoluteString,
@@ -61,6 +88,7 @@ struct TabThumbnailView: View {
     }
 }
 
+#if os(iOS)
 private struct HiddenLoader: UIViewRepresentable {
     let urlString: String
     let onSnapshot: (UIImage) -> Void
@@ -103,7 +131,7 @@ private struct HiddenLoader: UIViewRepresentable {
         }
     }
     
-    private func snapshot(from wv: WKWebView) async -> UIImage? {
+    private func snapshot(from wv: WKWebView) async -> PlatformImage? {
         await withCheckedContinuation { c in
             let cfg = WKSnapshotConfiguration()
             cfg.rect = CGRect(origin: .zero, size: .init(width: 400, height: 600))
@@ -134,6 +162,7 @@ private struct HiddenLoader: UIViewRepresentable {
         func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) { finish(e) }
     }
 }
+#endif
 
 struct TabThumbnailView_Previews: View {
     let tab: Tab
