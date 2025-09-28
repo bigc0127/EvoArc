@@ -2,14 +2,6 @@ import SwiftUI
 import WebKit
 import Combine
 
-#if os(iOS)
-import UIKit
-public typealias PlatformImage = UIImage
-#else
-import AppKit
-public typealias PlatformImage = NSImage
-#endif
-
 class ThumbnailManager: ObservableObject {
     static let shared = ThumbnailManager()
     

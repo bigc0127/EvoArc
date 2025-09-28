@@ -2,13 +2,6 @@ import SwiftUI
 import WebKit
 import CryptoKit
 import ObjectiveC.runtime
-#if os(iOS)
-import UIKit
-public typealias PlatformImage = UIImage
-#else
-import AppKit
-public typealias PlatformImage = NSImage
-#endif
 
 private var NavKey: UInt8 = 0
 
