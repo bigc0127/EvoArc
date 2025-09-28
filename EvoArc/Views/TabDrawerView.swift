@@ -108,7 +108,7 @@ struct TabDrawerView: View {
     
     @ViewBuilder
     private var drawerHandle: some View {
-        RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(2.5))
+        RoundedRectangle(cornerRadius: PlatformMetrics.scaledPadding(2.5))
             .fill(Color.secondaryLabel)
             .scaledFrame(width: baseHandleWidth, height: baseHandleHeight)
             .scaledPadding(.top, 8)
@@ -136,9 +136,9 @@ struct TabDrawerView: View {
                 showingHistory = true
             }) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: UIScaleMetrics.iconSize(16)))
+                    .font(.system(size: PlatformMetrics.iconSize(16)))
                     .foregroundColor(.accentColor)
-                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                     .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
@@ -147,9 +147,9 @@ struct TabDrawerView: View {
                 showingBookmarks = true
             }) {
                 Image(systemName: "bookmark.fill")
-                    .font(.system(size: UIScaleMetrics.iconSize(16)))
+                    .font(.system(size: PlatformMetrics.iconSize(16)))
                     .foregroundColor(.accentColor)
-                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                     .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
@@ -158,9 +158,9 @@ struct TabDrawerView: View {
                 showingCreateGroupSheet = true
             }) {
                 Image(systemName: "folder.badge.plus")
-                    .font(.system(size: UIScaleMetrics.iconSize(18)))
+                    .font(.system(size: PlatformMetrics.iconSize(18)))
                     .foregroundColor(.accentColor)
-                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                     .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
@@ -169,9 +169,9 @@ struct TabDrawerView: View {
                 tabManager.createNewTab()
             }) {
                 Image(systemName: "plus")
-                    .font(.system(size: UIScaleMetrics.iconSize(20)))
+                    .font(.system(size: PlatformMetrics.iconSize(20)))
                     .foregroundColor(.accentColor)
-                    .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                    .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                     .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
@@ -183,7 +183,7 @@ struct TabDrawerView: View {
     @ViewBuilder
     private var tabsGrid: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: UIScaleMetrics.scaledPadding(20)) {
+            LazyVStack(spacing: PlatformMetrics.scaledPadding(20))
                 // Pinned tabs section
                 let pinnedTabs = tabManager.tabs.filter { $0.isPinned }
                 if !pinnedTabs.isEmpty {
@@ -340,9 +340,9 @@ struct TabGroupSectionView<TabCard: View>: View {
                     }
                 }) {
                     Image(systemName: group.isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
+                        .font(.system(size: PlatformMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.secondary)
-                        .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -351,9 +351,9 @@ struct TabGroupSectionView<TabCard: View>: View {
                     showingDeleteConfirmation = true
                 }) {
                     Image(systemName: "trash")
-                        .font(.system(size: UIScaleMetrics.iconSize(baseIconSize)))
+                        .font(.system(size: PlatformMetrics.iconSize(baseIconSize)))
                         .foregroundColor(.red)
-                        .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .frame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -361,7 +361,7 @@ struct TabGroupSectionView<TabCard: View>: View {
             .padding(.horizontal, 15)
             
             if !group.isCollapsed {
-                LazyVGrid(columns: gridColumns, spacing: UIScaleMetrics.scaledPadding(baseSpacing)) {
+                LazyVGrid(columns: gridColumns, spacing: PlatformMetrics.scaledPadding(baseSpacing))
                     ForEach(tabs) { tab in
                         tabCardView(tab)
                     }
@@ -594,18 +594,18 @@ struct TabCardView: View {
         HStack(spacing: 8) {
             if tab.isPinned {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: UIScaleMetrics.iconSize(12)))
+                    .font(.system(size: PlatformMetrics.iconSize(12)))
                     .foregroundColor(.accentColor)
                     .scaledFrame(width: baseHeaderIconSize, height: baseHeaderIconSize)
             } else {
                 Image(systemName: "globe")
-                    .font(.system(size: UIScaleMetrics.iconSize(14)))
+                    .font(.system(size: PlatformMetrics.iconSize(14)))
                     .foregroundColor(.secondary)
                     .scaledFrame(width: baseHeaderIconSize, height: baseHeaderIconSize)
             }
             
             Text(tab.title)
-                .font(.system(size: UIScaleMetrics.iconSize(14), weight: .medium))
+                .font(.system(size: PlatformMetrics.iconSize(14), weight: .medium))
                 .lineLimit(1)
                 .foregroundColor(.primary)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -620,7 +620,7 @@ struct TabCardView: View {
     private var urlText: some View {
         if let url = tab.url {
             Text(url.host ?? url.absoluteString)
-                .font(.system(size: UIScaleMetrics.iconSize(12)))
+                .font(.system(size: PlatformMetrics.iconSize(12)))
                 .foregroundColor(.secondaryLabel)
                 .lineLimit(1)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -634,12 +634,12 @@ struct TabCardView: View {
                 .frame(width: geo.size.width, height: geo.size.width * 9/16)
                 .clipped()
                 .background(
-                    RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(8))
+                    RoundedRectangle(cornerRadius: PlatformMetrics.scaledPadding(8))
                         .fill(Color.gray.opacity(0.1))
                 )
-                .clipShape(RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(8)))
+                .clipShape(RoundedRectangle(cornerRadius: PlatformMetrics.scaledPadding(8)))
         }
-        .frame(height: UIScaleMetrics.maxDimension(basePreviewHeight))
+        .frame(height: PlatformMetrics.maxDimension(basePreviewHeight))
     }
     }
 
@@ -672,7 +672,7 @@ private extension TabCardView {
     
     var engineIndicatorBadge: some View {
         Text(tab.browserEngine == .webkit ? "S" : "C")
-            .font(.system(size: UIScaleMetrics.iconSize(10), weight: .medium))
+            .font(.system(size: PlatformMetrics.iconSize(10), weight: .medium))
             .foregroundColor(.white)
             .scaledFrame(width: 20, height: 20)
             .background(
@@ -683,7 +683,7 @@ private extension TabCardView {
     
     var cardBackground: some View {
         RoundedRectangle(cornerRadius: TabCardStyleConfiguration.cornerRadius)
-            .fill(Color(UIColor.systemBackground))
+            .fill(systemBackgroundColor)
             .shadow(
                 color: Color.black.opacity(Double(TabCardStyleConfiguration.shadowOpacity)),
                 radius: TabCardStyleConfiguration.shadowRadius,
@@ -712,9 +712,9 @@ private extension TabCardView {
             if abs(dragOffset) < 10 {
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: UIScaleMetrics.iconSize(20)))
+                        .font(.system(size: PlatformMetrics.iconSize(20)))
                         .foregroundColor(.secondary)
-                        .scaledFrame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                        .scaledFrame(width: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false), height: PlatformMetrics.buttonSize(baseSize: 44, hasLabel: false))
                         .background(Circle().fill(systemBackgroundColor))
                 }
                 .offset(x: 5, y: -5)
