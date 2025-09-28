@@ -1,16 +1,28 @@
 import SwiftUI
-import UIKit
 
-struct SelectableTextField: UIViewRepresentable {
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
+
+struct SelectableTextField {
     @Binding var text: String
     var placeholder: String
     @Binding var isEditing: Bool
     var onSubmit: () -> Void
-    
+}
+
+#if os(iOS)
+extension SelectableTextField: UIViewRepresentable {
+#else
+extension SelectableTextField: NSViewRepresentable {
+#endif
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
+#if os(iOS)
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField()
         textField.delegate = context.coordinator
@@ -79,4 +91,72 @@ struct SelectableTextField: UIViewRepresentable {
             return true
         }
     }
+#else
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = NSTextField()
+        textField.delegate = context.coordinator
+        textField.font = .systemFont(ofSize: NSFont.systemFontSize)
+        textField.placeholderString = placeholder
+        textField.bezelStyle = .roundedBezel
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Set content hugging and compression resistance
+        textField.setContentHuggingPriority(.defaultLow - 1, for: .horizontal)
+        textField.setContentCompressionResistancePriority(.required, for: .horizontal)
+        
+        return textField
+    }
+    
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        nsView.stringValue = text
+        
+        // Handle focus changes
+        if isEditing {
+            if !nsView.window?.firstResponder.isEqual(nsView) ?? true {
+                nsView.window?.makeFirstResponder(nsView)
+                // Select all text after becoming first responder
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    nsView.selectAll(nil)
+                }
+            }
+        } else {
+            if nsView.window?.firstResponder.isEqual(nsView) ?? false {
+                nsView.window?.makeFirstResponder(nil)
+            }
+        }
+    }
+    
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: SelectableTextField
+        
+        init(_ textField: SelectableTextField) {
+            self.parent = textField
+        }
+        
+        func controlTextDidChange(_ notification: Notification) {
+            guard let textField = notification.object as? NSTextField else { return }
+            parent.text = textField.stringValue
+        }
+        
+        func controlTextDidBeginEditing(_ notification: Notification) {
+            parent.isEditing = true
+            // Select all text when editing begins
+            if let textField = notification.object as? NSTextField {
+                textField.selectAll(nil)
+            }
+        }
+        
+        func controlTextDidEndEditing(_ notification: Notification) {
+            parent.isEditing = false
+        }
+        
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            return false
+        }
+    }
+#endif
 }
