@@ -13,19 +13,23 @@ struct EngineModeBorder: ViewModifier {
     }
     
     func body(content: Content) -> some View {
-        content
+        #if os(iOS)
+        return content
             .overlay(
                 Circle()
                     .stroke(engineColor, lineWidth: 1)
             )
-            .background(
-                #if os(iOS)
-                Color(UIColor.systemBackground).opacity(0.8)
-                #else
-                Color(NSColor.windowBackgroundColor).opacity(0.8)
-                #endif
-            )
+            .background(Color(UIColor.systemBackground).opacity(0.8))
             .shadow(color: .black.opacity(0.1), radius: 1)
+        #else
+        return content
+            .overlay(
+                Circle()
+                    .stroke(engineColor, lineWidth: 1)
+            )
+            .background(Color(NSColor.windowBackgroundColor).opacity(0.8))
+            .shadow(color: .black.opacity(0.1), radius: 1)
+        #endif
     }
 }
 
