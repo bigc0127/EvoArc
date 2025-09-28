@@ -207,7 +207,13 @@ GeometryReader { geo in
                     // Safari-style placeholder
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.windowBackgroundColor))
+.fill(
+                                #if os(iOS)
+                                Color(UIColor.systemBackground)
+                                #else
+                                Color(NSColor.windowBackgroundColor)
+                                #endif
+                            )
                             .frame(width: geo.size.width - 16, height: (geo.size.width - 16) * 1.33)
                             .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                             .overlay(
