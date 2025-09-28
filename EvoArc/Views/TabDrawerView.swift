@@ -798,9 +798,7 @@ private extension TabCardView {
     func handleResetGroupCreation() {
         newGroupName = ""
         newGroupColor = .blue
-
-}
-
+    }
 }
 
 #if os(iOS)
