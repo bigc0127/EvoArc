@@ -13,7 +13,7 @@ struct MacOSBottomBarView: View {
     @Binding var urlString: String
     @Binding var isURLBarFocused: Bool
     @ObservedObject var tabManager: TabManager
-    @ObservedObject var selectedTab: Tab
+    var selectedTab: Tab
     @Binding var showingSettings: Bool
     @Binding var shouldNavigate: Bool
     @StateObject private var settings = BrowserSettings.shared
@@ -86,16 +86,7 @@ struct MacOSBottomBarView: View {
                     
                     TextField("Search or enter address", text: $urlEditingText)
                         .textFieldStyle(PlainTextFieldStyle())
-                        .onReceive(selectedTab.$url) { newURL in
-                            if !isURLBarFocused {
-                                // Only show URL if explicitly enabled
-                                if selectedTab.showURLInBar {
-                                    urlEditingText = newURL?.absoluteString ?? ""
-                                } else {
-                                    urlEditingText = ""
-                                }
-                            }
-                        }
+                        // URL updates happen through property updates, not Combine
                         .onTapGesture {
                             if !isTextFieldFocused {
                                 // When user taps URL bar, enable URL display

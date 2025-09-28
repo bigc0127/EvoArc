@@ -18,7 +18,7 @@ struct EngineModeBorder: ViewModifier {
                 Circle()
                     .stroke(engineColor, lineWidth: 1)
             )
-            .background(Color(.systemBackground).opacity(0.8))
+            .background(Color(PlatformColor.windowBackgroundColor).opacity(0.8))
             .shadow(color: .black.opacity(0.1), radius: 1)
     }
 }
