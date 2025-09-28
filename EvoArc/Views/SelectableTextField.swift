@@ -2,8 +2,17 @@ import SwiftUI
 
 #if os(iOS)
 import UIKit
+typealias PlatformViewRepresentable = UIViewRepresentable
+typealias PlatformTextField = UITextField
+typealias PlatformTextFieldDelegate = UITextFieldDelegate
+#else
+import AppKit
+typealias PlatformViewRepresentable = NSViewRepresentable
+typealias PlatformTextField = NSTextField
+typealias PlatformTextFieldDelegate = NSTextFieldDelegate
+#endif
 
-struct SelectableTextField: UIViewRepresentable {
+struct SelectableTextField: PlatformViewRepresentable {
     @Binding var text: String
     var placeholder: String
     @Binding var isEditing: Bool
@@ -14,6 +23,7 @@ struct SelectableTextField: UIViewRepresentable {
     }
     
 #if os(iOS)
+    func makeUIView(context: Context) -> PlatformTextField {
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField()
         textField.delegate = context.coordinator
@@ -56,7 +66,7 @@ struct SelectableTextField: UIViewRepresentable {
         }
     }
     
-    class Coordinator: NSObject, UITextFieldDelegate {
+    class Coordinator: NSObject, PlatformTextFieldDelegate {
         var parent: SelectableTextField
         
         init(_ textField: SelectableTextField) {
@@ -82,21 +92,8 @@ struct SelectableTextField: UIViewRepresentable {
             return true
         }
     }
-}
 #else
-import AppKit
-
-struct SelectableTextField: NSViewRepresentable {
-    @Binding var text: String
-    var placeholder: String
-    @Binding var isEditing: Bool
-    var onSubmit: () -> Void
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    func makeNSView(context: Context) -> NSTextField {
+    func makeNSView(context: Context) -> PlatformTextField {
         let textField = NSTextField()
         textField.delegate = context.coordinator
         textField.font = .systemFont(ofSize: NSFont.systemFontSize)
@@ -130,7 +127,7 @@ struct SelectableTextField: NSViewRepresentable {
         }
     }
     
-    class Coordinator: NSObject, NSTextFieldDelegate {
+    class Coordinator: NSObject, PlatformTextFieldDelegate {
         var parent: SelectableTextField
         
         init(_ textField: SelectableTextField) {
@@ -162,5 +159,5 @@ struct SelectableTextField: NSViewRepresentable {
             return false
         }
     }
-}
 #endif
+}
