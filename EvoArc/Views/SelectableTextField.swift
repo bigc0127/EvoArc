@@ -112,16 +112,20 @@ struct SelectableTextField: PlatformViewRepresentable {
         
         // Handle focus changes
         if isEditing {
-            if !nsView.window?.firstResponder.isEqual(nsView) ?? true {
-                nsView.window?.makeFirstResponder(nsView)
+            if let window = nsView.window,
+               let firstResponder = window.firstResponder,
+               !firstResponder.isEqual(nsView) {
+                window.makeFirstResponder(nsView)
                 // Select all text after becoming first responder
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     nsView.selectAll(nil)
                 }
             }
         } else {
-            if nsView.window?.firstResponder.isEqual(nsView) ?? false {
-                nsView.window?.makeFirstResponder(nil)
+            if let window = nsView.window,
+               let firstResponder = window.firstResponder,
+               firstResponder.isEqual(nsView) {
+                window.makeFirstResponder(nil)
             }
         }
     }
