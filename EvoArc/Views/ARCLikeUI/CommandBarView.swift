@@ -2,7 +2,7 @@
 //  CommandBarView.swift
 //  EvoArc
 //
-//  Aura-inspired command bar for search and navigation
+//  ARC Like UI command bar for search and navigation
 //
 
 import SwiftUI

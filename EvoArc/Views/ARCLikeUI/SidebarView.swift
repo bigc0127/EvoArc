@@ -2,7 +2,7 @@
 //  SidebarView.swift
 //  EvoArc
 //
-//  Aura-inspired sidebar with tab management
+//  ARC Like UI sidebar with tab management
 //
 
 import SwiftUI

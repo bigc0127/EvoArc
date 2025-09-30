@@ -19,7 +19,7 @@ struct ContentView: View {
     @StateObject private var tabManager = TabManager()
     @StateObject private var settings = BrowserSettings.shared
     @StateObject private var perplexityManager = PerplexityManager.shared
-    @StateObject private var uiViewModel = UIViewModel() // Aura UI state
+    @StateObject private var uiViewModel = UIViewModel() // ARC Like UI state
     
     // State Variables
     @State private var urlString: String = ""
@@ -51,12 +51,12 @@ struct ContentView: View {
                 // iPhone UI - keep original design
                 iphoneLayout(geometry: geometry)
             } else {
-                // iPad UI - use Aura design
-                auraLayout(geometry: geometry)
+                // iPad UI - use ARC Like UI design
+                arcLikeLayout(geometry: geometry)
             }
             #else
-            // macOS - use Aura design
-            auraLayout(geometry: geometry)
+            // macOS - use ARC Like UI design
+            arcLikeLayout(geometry: geometry)
             #endif
         }
     }
@@ -315,10 +315,10 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Aura Layout (iPad & macOS)
+    // MARK: - ARC Like Layout (iPad & macOS)
     
     @ViewBuilder
-    private func auraLayout(geometry: GeometryProxy) -> some View {
+    private func arcLikeLayout(geometry: GeometryProxy) -> some View {
         ZStack {
             // Background gradient
             LinearGradient(

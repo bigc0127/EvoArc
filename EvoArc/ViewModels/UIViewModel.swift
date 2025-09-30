@@ -2,7 +2,7 @@
 //  UIViewModel.swift
 //  EvoArc
 //
-//  UI state management for Aura-style interface
+//  UI state management for ARC Like UI interface
 //
 
 import SwiftUI

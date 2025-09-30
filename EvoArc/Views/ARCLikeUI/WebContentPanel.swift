@@ -2,7 +2,7 @@
 //  WebContentPanel.swift
 //  EvoArc
 //
-//  Aura-styled web content panel wrapping existing browser functionality
+//  ARC Like UI web content panel wrapping existing browser functionality
 //
 
 import SwiftUI
@@ -45,7 +45,7 @@ struct WebContentPanel: View {
                             shouldNavigate: $shouldNavigate,
                             urlBarVisible: $urlBarVisible,
                             onNavigate: onNavigate,
-                            autoHideEnabled: false // Let Aura UI handle this
+                            autoHideEnabled: false // Let ARC Like UI handle this
                         )
                         .cornerRadius(10)
                         .clipped()

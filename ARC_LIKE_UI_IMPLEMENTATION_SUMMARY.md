@@ -1,14 +1,14 @@
-# EvoArc Aura UI Integration - Implementation Summary
+# EvoArc ARC Like UI Integration - Implementation Summary
 
 ## Overview
 
-Successfully integrated Aura Browser's modern UI design into EvoArc for macOS and iPad platforms while preserving all existing functionality and keeping the iPhone UI unchanged.
+Successfully integrated ARC Browser's modern UI design into EvoArc for macOS and iPad platforms while preserving all existing functionality and keeping the iPhone UI unchanged.
 
 ## ✅ Completed Features
 
 ### Phase 1-5: Core UI Implementation
 - **New Components Created:**
-  - `SidebarView.swift` - Aura-style sidebar with tab management
+  - `SidebarView.swift` - ARC-style sidebar with tab management
   - `CommandBarView.swift` - Overlay command bar with search suggestions
   - `WebContentPanel.swift` - Gradient background wrapper for web content
   - `TabRowView` - Individual tab display component
@@ -17,8 +17,8 @@ Successfully integrated Aura Browser's modern UI design into EvoArc for macOS an
 
 - **Platform Detection:**
   - iPhone: Original UI (unchanged)
-  - iPad: New Aura layout
-  - macOS: New Aura layout
+  - iPad: New ARC Like layout
+  - macOS: New ARC Like layout
 
 - **Integration Points:**
   - Fully integrated with existing `TabManager`
@@ -65,7 +65,7 @@ Successfully integrated Aura Browser's modern UI design into EvoArc for macOS an
 ```
 EvoArc/
 ├── Views/
-│   └── AuraUI/
+│   └── ARCLikeUI/
 │       ├── SidebarView.swift           (390 lines)
 │       ├── CommandBarView.swift        (210 lines)
 │       └── WebContentPanel.swift       (180 lines)
@@ -78,7 +78,7 @@ EvoArc/
 ## 🔧 Modified Files
 
 ### Major Changes:
-- `ContentView.swift` - Added platform detection and `auraLayout()` function
+- `ContentView.swift` - Added platform detection and `arcLikeLayout()` function
 - `SettingsView.swift` - Added "Sidebar & Layout" section
 - `EvoArcApp.swift` - Added iOS-only guards for SetupCoordinator
 
@@ -184,7 +184,7 @@ EvoArc/
 
 ## 🚀 Future Enhancements (Optional)
 
-1. **Multi-space Support:** Restore Aura's spaces feature with different gradients
+1. **Multi-space Support:** Restore ARC's spaces feature with different gradients
 2. **Theme Customization:** Allow users to pick gradient colors
 3. **Sidebar Sections:** Collapsible sections for pinned/groups/other tabs
 4. **Command Bar History:** Recent searches and commands
@@ -207,7 +207,7 @@ EvoArc/
 ✅ iPhone UI completely unchanged  
 ✅ Settings persist across launches  
 ✅ Smooth animations (60 FPS)  
-✅ No code duplication from Aura  
+✅ No code duplication from ARC  
 ✅ Clean separation of concerns  
 ✅ Proper platform guards throughout  
 

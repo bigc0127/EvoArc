@@ -2,7 +2,7 @@
 //  ColorHexExtension.swift
 //  EvoArc
 //
-//  Created for Aura-style UI integration
+//  Created for ARC Like UI integration
 //
 
 import SwiftUI

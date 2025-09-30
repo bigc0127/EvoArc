@@ -208,7 +208,7 @@ class BrowserSettings: ObservableObject {
     #endif
     
     #if os(iOS)
-    // Navigation button position for iPad Aura UI
+    // Navigation button position for iPad ARC Like UI
     @Published var navigationButtonPosition: NavigationButtonPosition {
         didSet {
             UserDefaults.standard.set(navigationButtonPosition.rawValue, forKey: "navigationButtonPosition")
