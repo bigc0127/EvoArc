@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+#if os(iOS)
 // Model for managing setup pages
 struct SetupPage: Identifiable {
     let id = UUID()
@@ -1850,3 +1851,4 @@ struct LottieView: View {
 #Preview {
     FirstRunSetupView()
 }
+#endif

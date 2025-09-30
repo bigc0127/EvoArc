@@ -29,22 +29,9 @@
 		C8F6D9202E6A00280001783A /* EvoArcUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EvoArcUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C8F6D9282E6A00280001783A /* Exceptions for "EvoArc" folder in "EvoArc" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = C8F6D9012E6A00220001783A /* EvoArc */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C8F6D9042E6A00220001783A /* EvoArc */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C8F6D9282E6A00280001783A /* Exceptions for "EvoArc" folder in "EvoArc" target */,
-			);
 			path = EvoArc;
 			sourceTree = "<group>";
 		};
@@ -301,8 +288,8 @@
 					"$(PROJECT_DIR)/EvoArc/Frameworks",
 				);
 				"GCC_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = EvoArc/Info.plist;
+				"GENERATE_INFOPLIST_FILE[sdk=iphone*]" = YES;
+				"INFOPLIST_FILE[sdk=macosx*]" = "EvoArc/Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = EvoArc;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This browser needs access to camera for web pages that request it.";
@@ -365,8 +352,8 @@
 					"$(PROJECT_DIR)/EvoArc/Frameworks",
 				);
 				"GCC_TREAT_WARNINGS_AS_ERRORS[sdk=macosx*]" = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = EvoArc/Info.plist;
+				"GENERATE_INFOPLIST_FILE[sdk=iphone*]" = YES;
+				"INFOPLIST_FILE[sdk=macosx*]" = "EvoArc/Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = EvoArc;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This browser needs access to camera for web pages that request it.";

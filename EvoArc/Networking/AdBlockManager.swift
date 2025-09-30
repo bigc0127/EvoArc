@@ -73,7 +73,7 @@ final class AdBlockManager: ObservableObject {
     @Published private(set) var isUpdating: Bool = false
     
     // MARK: - Storage
-    private let store = WKContentRuleListStore.default()
+    private var store: WKContentRuleListStore? = WKContentRuleListStore.default()
     private let ruleIdentifier = "EvoArc-AdBlock"
     private var compiledRuleList: WKContentRuleList?
     private var cancellables = Set<AnyCancellable>()
@@ -276,11 +276,25 @@ final class AdBlockManager: ObservableObject {
     }
     
     private func compileAndInstallRules(json: String) async throws {
+        guard let store = self.store else {
+            print("⚠️ AdBlock: WKContentRuleListStore is nil")
+            throw URLError(.unknown)
+        }
+        
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            store?.compileContentRuleList(forIdentifier: ruleIdentifier, encodedContentRuleList: json) { [weak self] list, error in
-                if let error = error { continuation.resume(throwing: error); return }
-                guard let list = list else { continuation.resume(throwing: URLError(.cannotParseResponse)); return }
+            store.compileContentRuleList(forIdentifier: ruleIdentifier, encodedContentRuleList: json) { [weak self] list, error in
+                if let error = error { 
+                    print("❌ AdBlock compilation error: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let list = list else { 
+                    print("❌ AdBlock: No rule list returned")
+                    continuation.resume(throwing: URLError(.cannotParseResponse))
+                    return
+                }
                 self?.compiledRuleList = list
+                print("✅ AdBlock: Rules compiled successfully")
                 continuation.resume()
             }
         }
@@ -289,8 +303,9 @@ final class AdBlockManager: ObservableObject {
     private func removeRuleList() async {
         compiledRuleList = nil
         activeRuleCount = 0
+        guard let store = self.store else { return }
         try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            store?.removeContentRuleList(forIdentifier: ruleIdentifier) { _ in continuation.resume() }
+            store.removeContentRuleList(forIdentifier: ruleIdentifier) { _ in continuation.resume() }
         }
     }
     // MARK: - EasyList parsing (subset)

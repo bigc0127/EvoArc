@@ -80,11 +80,11 @@ struct BottomBarView: View {
     @ViewBuilder
     private var bottomFillBackground: some View {
         RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-            .fill(Color(.systemBackground))
+            .fill(backgroundColor)
             .shadow(color: .black.opacity(0.1), radius: bottomBarShadowRadius, x: 0, y: 4)
             .overlay {
                 RoundedRectangle(cornerRadius: bottomBarCornerRadius)
-                    .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
             }
     }
     
@@ -173,7 +173,7 @@ struct BottomBarView: View {
                 onSuggestionTapped: handleSuggestion,
                 onDismiss: { suggestionManager.clearSuggestions() }
             )
-            .background(Color(.systemBackground))
+            .background(backgroundColor)
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.1), radius: 8)
         }
@@ -649,6 +649,7 @@ struct BottomBarView: View {
     }
     
     private func presentShareSheet(for url: URL) {
+        #if os(iOS)
         let items: [Any] = [url]
         let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -665,5 +666,12 @@ struct BottomBarView: View {
             }
             rootViewController.present(activityVC, animated: true)
         }
+        #else
+        // macOS sharing support can be added here if needed
+        let sharingPicker = NSSharingServicePicker(items: [url])
+        if let keyWindow = NSApp.keyWindow {
+            sharingPicker.show(relativeTo: .zero, of: keyWindow.contentView!, preferredEdge: .minY)
+        }
+        #endif
     }
 }

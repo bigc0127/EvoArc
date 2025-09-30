@@ -13,6 +13,7 @@ struct SettingsView: View {
     @ObservedObject private var perplexityManager = PerplexityManager.shared
     @ObservedObject private var adBlockManager = AdBlockManager.shared
     @ObservedObject private var downloadManager = DownloadManager.shared
+    @StateObject private var uiViewModel = UIViewModel()
     
     // Constants for base sizes that will be dynamically scaled
     private let baseIconSize: CGFloat = 16
@@ -53,20 +54,21 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            .scaledPadding(.horizontal, baseFormPadding)
-            .scaledPadding(.vertical, 16)
-            .background(Color.appBackground)
+            .padding(.horizontal, baseFormPadding)
+            .padding(.vertical, 16)
+            .background(Color(nsColor: .windowBackgroundColor))
             
             Divider()
             
             // Settings content in a scrollable view
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    macOSSettingsContent
+                Form {
+                    // Reuse the iOS settings content
+                    settingsContent
                 }
-                .scaledPadding(baseFormPadding)
+                .padding(baseFormPadding)
             }
-            .background(Color.modalBackground)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(width: 600, height: 500)
         .task {
@@ -75,6 +77,31 @@ struct SettingsView: View {
         #else
         NavigationView {
             Form {
+                settingsContent
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
+            }
+            .toolbar {
+                ToolbarItem(placement: toolbarPlacement) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .task {
+            homepageText = settings.homepage
+        }
+        #endif
+    }
+    
+    @ViewBuilder
+    private var settingsContent: some View {
                 // General Section
                 Section {
                     HStack {
@@ -155,7 +182,8 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
                 
-                // User Interface Section
+                // User Interface Section (iPhone only)
+                #if os(iOS)
                 Section {
                     Toggle("Auto-hide URL Bar", isOn: $settings.autoHideURLBar)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -166,6 +194,75 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
+                #endif
+                
+                // Sidebar & Layout Section (iPad & macOS only)
+                #if !os(iOS) || targetEnvironment(macCatalyst)
+                Section {
+                    Picker("Sidebar Position", selection: $uiViewModel.sidebarPosition) {
+                        Text("Left").tag("left")
+                        Text("Right").tag("right")
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Sidebar Width")
+                            Spacer()
+                            Text("\(Int(uiViewModel.sidebarWidth))")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                        }
+                        Slider(value: $uiViewModel.sidebarWidth, in: 200...400, step: 10)
+                    }
+                    
+                    Toggle("Auto-hide Sidebar", isOn: $uiViewModel.autoHideSidebar)
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                    
+                    #if os(iOS)
+                    // iPad-specific: Navigation button position when sidebar is hidden
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        Divider()
+                            .padding(.vertical, 8)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Navigation Buttons Position")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            Text("When sidebar is hidden")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Picker("Navigation Buttons", selection: $settings.navigationButtonPosition) {
+                                ForEach(NavigationButtonPosition.allCases) { position in
+                                    Text(position.displayName).tag(position)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                    }
+                    #endif
+                } header: {
+                    Text("Sidebar & Layout")
+                } footer: {
+                    #if os(iOS)
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        Text("Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. When sidebar is hidden, back/forward navigation buttons appear at your chosen corner position.")
+                            .font(.caption)
+                            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                    } else {
+                        Text("Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. Auto-hide reveals sidebar on hover.")
+                            .font(.caption)
+                            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                    }
+                    #else
+                    Text("Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. Auto-hide reveals sidebar on hover.")
+                        .font(.caption)
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                    #endif
+                }
+                #endif
                 
                 // Tab Management Section
                 Section {
@@ -188,12 +285,12 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                                         .frame(width: 12, height: 12)
                                     
                                     Text(group.name)
-                                        .font(.system(size: UIScaleMetrics.iconSize(15)))
+                                        .font(.system(size: 15))
                                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                                     
                                     let tabCount = tabManager.getTabsInGroup(group).count
                                     Text("(\(tabCount) \(tabCount == 1 ? "tab" : "tabs"))")
-                                        .font(.system(size: UIScaleMetrics.iconSize(13)))
+                                        .font(.system(size: 13))
                                         .foregroundColor(.secondary)
                                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                                     
@@ -203,9 +300,9 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                                         tabManager.deleteTabGroup(group, moveTabsToNoGroup: true)
                                     }) {
                                         Image(systemName: "trash")
-                                            .font(.system(size: UIScaleMetrics.iconSize(14)))
+                                            .font(.system(size: 14))
                                             .foregroundColor(.red)
-                                            .frame(width: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false), height: UIScaleMetrics.buttonSize(baseSize: 44, hasLabel: false))
+                                            .frame(width: 44, height: 44)
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
@@ -449,26 +546,6 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 } header: {
                     Text("About")
                 }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
-            }
-            .toolbar {
-                ToolbarItem(placement: toolbarPlacement) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .task {
-            homepageText = settings.homepage
-        }
-        #endif
     }
     
     private var currentModeDescription: String {

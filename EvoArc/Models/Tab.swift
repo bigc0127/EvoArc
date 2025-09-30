@@ -15,8 +15,22 @@ class Tab: ObservableObject, Identifiable {
     var thumbnailUpdateTimer: Timer?
     @Published var title: String = "New Tab"
     @Published var isLoading: Bool = false
-    @Published var canGoBack: Bool = false
-    @Published var canGoForward: Bool = false
+    @Published var canGoBack: Bool = false {
+        didSet {
+            // Force immediate objectWillChange notification
+            if canGoBack != oldValue {
+                objectWillChange.send()
+            }
+        }
+    }
+    @Published var canGoForward: Bool = false {
+        didSet {
+            // Force immediate objectWillChange notification
+            if canGoForward != oldValue {
+                objectWillChange.send()
+            }
+        }
+    }
     @Published var estimatedProgress: Double = 0.0
     @Published var browserEngine: BrowserEngine = .webkit
     @Published var isPinned: Bool = false

@@ -106,20 +106,23 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.customUserAgent = chromeUserAgent
         
-        // Store reference to webView in tab for control
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Set tab.webView BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         // Set coordinator's webView reference
         context.coordinator.webView = webView
         
+        print("🔵 Chromium iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Add observers for loading state
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.title), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.canGoBack), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.canGoForward), options: .new, context: nil)
+        
+        // Set coordinator's webView reference
+        context.coordinator.webView = webView
         
         // Load initial URL if available
         if let url = tab.url {
@@ -188,8 +191,10 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 Chromium iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 Chromium iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -199,6 +204,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 Chromium iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 Chromium iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
@@ -211,6 +218,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ Chromium iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 Chromium iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
@@ -430,14 +439,14 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
         webView.allowsMagnification = true
         webView.allowsLinkPreview = true
         
-        // Store reference to webView in tab for control
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Set tab.webView BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         // Set coordinator's webView reference
         context.coordinator.webView = webView
         
+        print("🔵 Chromium macOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Add observers for loading state
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
@@ -512,8 +521,10 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 Chromium macOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 Chromium macOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -523,6 +534,8 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔄 Chromium macOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 Chromium macOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
@@ -535,6 +548,8 @@ struct ChromiumWebViewRepresentable: NSViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("✅ Chromium macOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 Chromium macOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url

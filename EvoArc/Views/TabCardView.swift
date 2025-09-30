@@ -259,7 +259,11 @@ private extension TabCardView {
         return ZStack {
             // Background circle with engine-specific border (unchanged)
             Circle()
+                #if os(iOS)
                 .fill(Color(UIColor.systemBackground))
+                #else
+                .fill(Color(NSColor.windowBackgroundColor))
+                #endif
                 .overlay(
                     Circle()
                         .strokeBorder(tab.browserEngine == .webkit ? Color.accentColor : .orange,

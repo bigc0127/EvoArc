@@ -9,9 +9,39 @@ import AppKit
 
 class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
     private weak var tab: Tab?
+    private var navigationObservers: [NSKeyValueObservation] = []
     
     init(tab: Tab) {
         self.tab = tab
+    }
+    
+    func setupNavigationObservers(for webView: WKWebView) {
+        // Clean up any existing observers
+        navigationObservers.removeAll()
+        
+        // Observe canGoBack
+        let backObserver = webView.observe(\.canGoBack, options: [.new]) { [weak self] webView, _ in
+            let canGoBack = webView.canGoBack
+            DispatchQueue.main.async {
+                self?.tab?.canGoBack = canGoBack
+            }
+        }
+        navigationObservers.append(backObserver)
+        
+        // Observe canGoForward
+        let forwardObserver = webView.observe(\.canGoForward, options: [.new]) { [weak self] webView, _ in
+            let canGoForward = webView.canGoForward
+            DispatchQueue.main.async {
+                self?.tab?.canGoForward = canGoForward
+            }
+        }
+        navigationObservers.append(forwardObserver)
+        
+        // Set initial values
+        Task { @MainActor in
+            self.tab?.canGoBack = webView.canGoBack
+            self.tab?.canGoForward = webView.canGoForward
+        }
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -76,6 +106,9 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
                 if url != BrowserSettings.shared.homepageURL {
                     tab?.showURLInBar = true
                 }
+                // Update navigation state immediately
+                tab?.canGoBack = webView.canGoBack
+                tab?.canGoForward = webView.canGoForward
             }
         }
         return .allow

@@ -19,6 +19,7 @@ struct ContentView: View {
     @StateObject private var tabManager = TabManager()
     @StateObject private var settings = BrowserSettings.shared
     @StateObject private var perplexityManager = PerplexityManager.shared
+    @StateObject private var uiViewModel = UIViewModel() // Aura UI state
     
     // State Variables
     @State private var urlString: String = ""
@@ -32,399 +33,468 @@ struct ContentView: View {
     @State private var showDefaultBrowserTip: Bool = false
     @State private var keyboardHeight: CGFloat = 0
     @State private var keyboardVisible: Bool = false
+    @State private var canGoBack: Bool = false
+    @State private var canGoForward: Bool = false
     
     // App Storage
     @AppStorage("hasShownDefaultBrowserPrompt") private var hasShownDefaultBrowserPrompt: Bool = false
     
     // Environment Values
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
     // MARK: - Main View
     var body: some View {
         GeometryReader { geometry in
             #if os(iOS)
-            // Set up keyboard observers
-            let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                    keyboardHeight = keyboardFrame.height
-                    keyboardVisible = true
-                }
+            // Check if we're on iPhone or iPad
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                // iPhone UI - keep original design
+                iphoneLayout(geometry: geometry)
+            } else {
+                // iPad UI - use Aura design
+                auraLayout(geometry: geometry)
             }
-            let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                keyboardHeight = 0
-                keyboardVisible = false
-            }
+            #else
+            // macOS - use Aura design
+            auraLayout(geometry: geometry)
             #endif
-            ZStack {
-                #if os(iOS)
-                // MARK: - iOS Layout
-                // URL bar at bottom with tab drawer overlay
-                VStack(spacing: 0) {
-                    // Web content area
-                    if !tabManager.tabs.isEmpty && tabManager.isInitialized {
-                        TabViewContainer(
-                            tabManager: tabManager,
-                            urlString: $urlString,
-                            shouldNavigate: $shouldNavigate,
-                            urlBarVisible: $urlBarVisible,
-                            onNavigate: { url in
-                                urlString = url.absoluteString
-                            },
-                            autoHideEnabled: settings.autoHideURLBar
-                        )
-                        .ignoresSafeArea(edges: .horizontal)
-                        .ignoresSafeArea(edges: urlBarVisible ? [] : .bottom) // Expand to bottom when URL bar is hidden
-                    } else if !tabManager.isInitialized {
-                        // Loading state during initialization
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                VStack(spacing: 16) {
-                                    ProgressView()
-                                        .scaleEffect(1.5)
-                                    Text("Restoring tabs...")
-                                        .font(.headline)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                            }
-                            Spacer()
-                        }
-                    } else {
-                        // Empty state
-                        VStack {
-                            Spacer()
-                            Image(systemName: "globe")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray)
-                            Text("No tab selected")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                            Spacer()
-                        }
-                    }
-                }
-                
-                // Bottom URL bar
-                if urlBarVisible || !settings.autoHideURLBar {
+        }
+    }
+    
+    // MARK: - iPhone Layout (Original)
+    
+    @ViewBuilder
+    private func iphoneLayout(geometry: GeometryProxy) -> some View {
+        // Set up keyboard observers
+        #if os(iOS)
+        let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                keyboardHeight = keyboardFrame.height
+                keyboardVisible = true
+            }
+        }
+        let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+            keyboardHeight = 0
+            keyboardVisible = false
+        }
+        #endif
+        
+        ZStack {
+            VStack(spacing: 0) {
+                // Web content area
+                if !tabManager.tabs.isEmpty && tabManager.isInitialized {
+                    TabViewContainer(
+                        tabManager: tabManager,
+                        urlString: $urlString,
+                        shouldNavigate: $shouldNavigate,
+                        urlBarVisible: $urlBarVisible,
+                        onNavigate: { url in
+                            urlString = url.absoluteString
+                        },
+                        autoHideEnabled: settings.autoHideURLBar
+                    )
+                    .ignoresSafeArea(edges: .horizontal)
+                    .ignoresSafeArea(edges: urlBarVisible ? [] : .bottom)
+                } else if !tabManager.isInitialized {
                     VStack {
                         Spacer()
-                        if let selected = tabManager.selectedTab {
-                            BottomBarView(
-                                urlString: $urlString,
-                                isURLBarFocused: $isURLBarFocused,
-                                showingSettings: $showingSettings,
-                                shouldNavigate: $shouldNavigate,
-                                selectedTab: selected,
-                                tabManager: tabManager
-                            )
-.transition(.move(edge: .bottom).combined(with: .opacity))
-                            .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
-                            .ignoresSafeArea(.keyboard)
-                            .ignoresSafeArea(.container, edges: .bottom)
-                        }
-                    }
-                }
-                #else
-                // MARK: - macOS Layout
-                // Tab drawer on side, URL bar at bottom
-                HStack(spacing: 0) {
-                    // Side tab drawer (left or right based on setting)
-                    if settings.tabDrawerPosition == .left && tabManager.isTabDrawerVisible {
-                        MacOSTabDrawerView(tabManager: tabManager)
-                            .frame(width: 300)
-                            .transition(.move(edge: .leading))
-                    }
-                    
-                    // Main content area
-                    VStack(spacing: 0) {
-                        // Web content area
-                        if !tabManager.tabs.isEmpty && tabManager.isInitialized {
-                            TabViewContainer(
-                                tabManager: tabManager,
-                                urlString: $urlString,
-                                shouldNavigate: $shouldNavigate,
-                                urlBarVisible: $urlBarVisible,
-                                onNavigate: { url in
-                                    urlString = url.absoluteString
-                                },
-                                autoHideEnabled: settings.autoHideURLBar
-                            )
-                            .ignoresSafeArea(edges: urlBarVisible || !settings.autoHideURLBar ? [] : .bottom) // Expand to bottom when URL bar is hidden
-                        } else if !tabManager.isInitialized {
-                            // Loading state during initialization
-                            VStack {
-                                Spacer()
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 16) {
                                 ProgressView()
                                     .scaleEffect(1.5)
-                                    .padding()
                                 Text("Restoring tabs...")
                                     .font(.headline)
                                     .foregroundColor(.secondary)
-                                Spacer()
                             }
-                        } else {
-                            // Empty state
-                            VStack {
-                                Spacer()
-                                Image(systemName: "globe")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.gray)
-                                Text("No tab selected")
-                                    .font(.headline)
-                                    .foregroundColor(.gray)
-                                Spacer()
-                            }
+                            Spacer()
                         }
-                        
-                        // Bottom URL bar and controls - conditionally included in layout
-                        if urlBarVisible || !settings.autoHideURLBar {
-                            if let selected = tabManager.selectedTab {
-                                BottomBarView(
-                                    urlString: $urlString,
-                                    isURLBarFocused: $isURLBarFocused,
-                                    showingSettings: $showingSettings,
-                                    shouldNavigate: $shouldNavigate,
-                                    selectedTab: selected,
-                                    tabManager: tabManager
-                                )
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                                .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
-                            }
-                        }
+                        Spacer()
                     }
-                    
-                    // Side tab drawer (right side)
-                    if settings.tabDrawerPosition == .right && tabManager.isTabDrawerVisible {
-                        MacOSTabDrawerView(tabManager: tabManager)
-                            .frame(width: 300)
-                            .transition(.move(edge: .trailing))
-                    }
-                }
-                #endif
-                
-                // Tab drawer overlay (iOS only)
-                #if os(iOS)
-                if tabManager.isTabDrawerVisible {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                        .onTapGesture { tabManager.hideTabDrawer() }
-                    
+                } else {
                     VStack {
                         Spacer()
-                        TabDrawerView(tabManager: tabManager)
-                            .frame(maxHeight: geometry.size.height * 0.7)
-                            .transition(.move(edge: .bottom))
-                            .offset(y: dragOffset.height > 0 ? dragOffset.height : 0)
-                            .gesture(
-                                DragGesture()
-                                    .onChanged { value in
-                                        if value.translation.height > 0 {
-                                            dragOffset = value.translation
-                                        }
-                                    }
-                                    .onEnded { value in
-                                        if value.translation.height > 100 {
-                                            tabManager.hideTabDrawer()
-                                        }
-                                        dragOffset = .zero
-                                    }
-                            )
+                        Image(systemName: "globe")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("No tab selected")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        Spacer()
                     }
                 }
+            }
+            
+            // Bottom URL bar
+            if urlBarVisible || !settings.autoHideURLBar {
+                VStack {
+                    Spacer()
+                    if let selected = tabManager.selectedTab {
+                        BottomBarView(
+                            urlString: $urlString,
+                            isURLBarFocused: $isURLBarFocused,
+                            showingSettings: $showingSettings,
+                            shouldNavigate: $shouldNavigate,
+                            selectedTab: selected,
+                            tabManager: tabManager
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
+                        .ignoresSafeArea(.keyboard)
+                        .ignoresSafeArea(.container, edges: .bottom)
+                    }
+                }
+            }
+            
+            // Tab drawer overlay
+            if tabManager.isTabDrawerVisible {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture { tabManager.hideTabDrawer() }
                 
-                // Invisible area at bottom to show URL bar when touched (iOS only)
-                if settings.autoHideURLBar && !urlBarVisible {
-                    VStack {
+                VStack {
+                    Spacer()
+                    TabDrawerView(tabManager: tabManager)
+                        .frame(maxHeight: geometry.size.height * 0.7)
+                        .transition(.move(edge: .bottom))
+                        .offset(y: dragOffset.height > 0 ? dragOffset.height : 0)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    if value.translation.height > 0 {
+                                        dragOffset = value.translation
+                                    }
+                                }
+                                .onEnded { value in
+                                    if value.translation.height > 100 {
+                                        tabManager.hideTabDrawer()
+                                    }
+                                    dragOffset = .zero
+                                }
+                        )
+                }
+            }
+            
+            // Invisible area at bottom to show URL bar when touched
+            if settings.autoHideURLBar && !urlBarVisible {
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(height: 80)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                urlBarVisible = true
+                            }
+                        }
+                        .gesture(
+                            DragGesture()
+                                .onEnded { value in
+                                    if value.translation.height < -20 {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            urlBarVisible = true
+                                        }
+                                    }
+                                }
+                        )
+                }
+            }
+            
+            // iOS first-run default browser tooltip overlay
+            if showDefaultBrowserTip {
+                Color.black.opacity(0.45)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                
+                VStack {
+                    Spacer()
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "safari")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                            Text("Make EvoArc your default browser")
+                                .font(.headline)
+                        }
+                        Text("Open iOS Settings to set EvoArc as your Default Browser App. This lets links from other apps open here automatically.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 10) {
+                            Button(action: {
+                                #if os(iOS)
+                                openAppSettings()
+                                #endif
+                                hasShownDefaultBrowserPrompt = true
+                                withAnimation { showDefaultBrowserTip = false }
+                            }) {
+                                HStack {
+                                    Image(systemName: "gear")
+                                    Text("Open Settings")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            
+                            Button(action: {
+                                hasShownDefaultBrowserPrompt = true
+                                withAnimation { showDefaultBrowserTip = false }
+                            }) {
+                                Text("Not now")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            #if os(iOS)
+                            .fill(Color(UIColor.systemBackground))
+                            #else
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            #endif
+                            .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onAppear {
+            setupInitialURL()
+            AdBlockManager.shared.refreshOnLaunchIfNeeded()
+            if !hasShownDefaultBrowserPrompt {
+                // Show one-time tip to set default browser on first run
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    withAnimation(.spring()) {
+                        showDefaultBrowserTip = true
+                    }
+                }
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    // Only process gesture if BottomBarView gesture is not active
+                    if !tabManager.isGestureActive {
+                        let threshold: CGFloat = -100
+                        let startY = value.startLocation.y
+                        #if os(iOS)
+                        let screenHeight = UIScreen.main.bounds.height
+                        #else
+                        let screenHeight = geometry.size.height
+                        #endif
+                        
+                        // Check if gesture started in bottom 20% of screen
+                        if startY > screenHeight * 0.8 && value.translation.height < threshold {
+                            withAnimation(.spring()) {
+                                tabManager.toggleTabDrawer()
+                            }
+                        }
+                    }
+                }
+        )
+        .sheet(isPresented: $showingSettings) {
+            SettingsView(tabManager: tabManager)
+        }
+        .sheet(item: $perplexityManager.currentRequest) { request in
+            PerplexityModalView(request: request, onDismiss: {
+                perplexityManager.dismissModal()
+            })
+        }
+        .onChange(of: tabManager.selectedTab?.id) {
+            // Update URL bar when switching tabs
+            setupInitialURL()
+        }
+        .onOpenURL { incomingURL in
+            handleIncomingURL(incomingURL)
+        }
+    }
+    
+    // MARK: - Aura Layout (iPad & macOS)
+    
+    @ViewBuilder
+    private func auraLayout(geometry: GeometryProxy) -> some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: uiViewModel.backgroundGradient,
+                startPoint: .bottomLeading,
+                endPoint: .topTrailing
+            )
+            .overlay {
+                if colorScheme == .dark {
+                    Color.black.opacity(0.5)
+                }
+            }
+            .ignoresSafeArea()
+            
+            // Main layout
+            HStack(spacing: 0) {
+                // Sidebar (left)
+                if uiViewModel.sidebarPosition == "left" && uiViewModel.showSidebar {
+                    SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
+                        .padding(.leading, 10)
+                        .padding(.vertical, 5)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                
+                // Web content panel
+                WebContentPanel(
+                    tabManager: tabManager,
+                    uiViewModel: uiViewModel,
+                    urlString: $urlString,
+                    shouldNavigate: $shouldNavigate,
+                    urlBarVisible: $urlBarVisible,
+                    onNavigate: { url in
+                        urlString = url.absoluteString
+                    }
+                )
+                .padding(.top, 5)
+                .padding(.bottom, 5)
+                .padding(.leading, uiViewModel.sidebarPosition == "right" || !uiViewModel.showSidebar ? 5 : 0)
+                .padding(.trailing, uiViewModel.sidebarPosition == "left" || !uiViewModel.showSidebar ? 5 : 0)
+                .gesture(
+                    DragGesture(minimumDistance: 30)
+                        .onEnded { value in
+                            // Swipe navigation when sidebar is hidden
+                            if !uiViewModel.showSidebar {
+                                let horizontalSwipe = value.translation.width
+                                let verticalSwipe = abs(value.translation.height)
+                                
+                                // Only handle horizontal swipes (not vertical)
+                                if abs(horizontalSwipe) > verticalSwipe * 2 {
+                                    if horizontalSwipe > 80 {
+                                        // Swipe right - go back
+                                        tabManager.selectedTab?.webView?.goBack()
+                                    } else if horizontalSwipe < -80 {
+                                        // Swipe left - go forward
+                                        tabManager.selectedTab?.webView?.goForward()
+                                    }
+                                }
+                            }
+                        }
+                )
+                
+                // Sidebar (right)
+                if uiViewModel.sidebarPosition == "right" && uiViewModel.showSidebar {
+                    SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
+                        .padding(.trailing, 10)
+                        .padding(.vertical, 5)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: uiViewModel.showSidebar)
+            .animation(.easeInOut(duration: 0.3), value: uiViewModel.sidebarPosition)
+            .overlay {
+                if uiViewModel.showCommandBar {
+                    Color.white.opacity(0.001)
+                        .onTapGesture {
+                            uiViewModel.showCommandBar = false
+                            uiViewModel.commandBarText = ""
+                            uiViewModel.searchSuggestions = []
+                        }
+                }
+            }
+            
+            // Command bar overlay
+            if uiViewModel.showCommandBar {
+                CommandBarView(tabManager: tabManager, uiViewModel: uiViewModel, geo: geometry)
+            }
+            
+            // Sidebar toggle button (top corner) - iPad/macOS
+            if !uiViewModel.showSidebar {
+                VStack {
+                    HStack {
+                        if uiViewModel.sidebarPosition == "left" {
+                            // Button on left when sidebar is on left
+                            sidebarToggleButton
+                            Spacer()
+                        } else {
+                            // Button on right when sidebar is on right
+                            Spacer()
+                            sidebarToggleButton
+                        }
+                    }
+                    .padding(.horizontal, 15)
+                    .padding(.top, 15)
+                    Spacer()
+                }
+            }
+            
+            // Navigation buttons (iPad only) - positioned based on settings
+            #if os(iOS)
+            if !uiViewModel.showSidebar && UIDevice.current.userInterfaceIdiom == .pad {
+                navigationButtonsOverlay
+            }
+            #endif
+            
+            // Hover area for sidebar reveal (wider area for better detection)
+            if !uiViewModel.showSidebar {
+                HStack {
+                    if uiViewModel.sidebarPosition == "left" {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: 50) // Wider for easier hover detection
+                            .contentShape(Rectangle())
+                            .onHover { hovering in
+                                if hovering {
+                                    withAnimation(.easeInOut) {
+                                        uiViewModel.showSidebar = true
+                                    }
+                                }
+                            }
+                        Spacer()
+                    } else {
                         Spacer()
                         Rectangle()
                             .fill(Color.clear)
-                            .frame(height: 80)
+                            .frame(width: 50) // Wider for easier hover detection
                             .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    urlBarVisible = true
+                            .onHover { hovering in
+                                if hovering {
+                                    withAnimation(.easeInOut) {
+                                        uiViewModel.showSidebar = true
+                                    }
                                 }
                             }
-                            .gesture(
-                                DragGesture()
-                                    .onEnded { value in
-                                        if value.translation.height < -20 {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                urlBarVisible = true
-                                            }
-                                        }
-                                    }
-                            )
                     }
                 }
-                #endif
-                
-                // macOS hover area for tab drawer
-                #if os(macOS)
-                if !tabManager.isTabDrawerVisible {
-                    HStack {
-                        if settings.tabDrawerPosition == .left {
-                            Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: 20)
-                                .contentShape(Rectangle())
-                                .overlay(
-                                    GeometryReader { geo in
-                                        VStack(spacing: 0) {
-                                            Rectangle()
-                                                .fill(Color.clear)
-                                                .frame(width: 20, height: geo.size.height * 0.8)
-                                                .contentShape(Rectangle())
-                                                .onHover { hovering in
-                                                    if hovering { tabManager.toggleTabDrawer() }
-                                                }
-                                            Spacer(minLength: geo.size.height * 0.2)
-                                        }
-                                    }
-                                )
-                            Spacer()
-                        } else {
-                            Spacer()
-                            Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: 20)
-                                .contentShape(Rectangle())
-                                .overlay(
-                                    GeometryReader { geo in
-                                        VStack(spacing: 0) {
-                                            Rectangle()
-                                                .fill(Color.clear)
-                                                .frame(width: 20, height: geo.size.height * 0.8)
-                                                .contentShape(Rectangle())
-                                                .onHover { hovering in
-                                                    if hovering { tabManager.toggleTabDrawer() }
-                                                }
-                                            Spacer(minLength: geo.size.height * 0.2)
-                                        }
-                                    }
-                                )
-                        }
-                    }
-                }
-                #endif
-                
-                // iOS first-run default browser tooltip overlay
-                #if os(iOS)
-                if showDefaultBrowserTip {
-                    Color.black.opacity(0.45)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                    
-                    VStack {
-                        Spacer()
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "safari")
-                                    .font(.system(size: 22, weight: .semibold))
-                                    .foregroundColor(.accentColor)
-                                Text("Make EvoArc your default browser")
-                                    .font(.headline)
-                            }
-                            Text("Open iOS Settings to set EvoArc as your Default Browser App. This lets links from other apps open here automatically.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            HStack(spacing: 10) {
-                                Button(action: {
-                                    openAppSettings()
-                                    hasShownDefaultBrowserPrompt = true
-                                    withAnimation { showDefaultBrowserTip = false }
-                                }) {
-                                    HStack {
-                                        Image(systemName: "gear")
-                                        Text("Open Settings")
-                                            .fontWeight(.semibold)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                
-                                Button(action: {
-                                    hasShownDefaultBrowserPrompt = true
-                                    withAnimation { showDefaultBrowserTip = false }
-                                }) {
-                                    Text("Not now")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: UIScaleMetrics.scaledPadding(14), style: .continuous)
-                                .fill(Color(UIColor.systemBackground))
-                                .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
-                        )
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                #endif
             }
-            .onAppear {
-                setupInitialURL()
-                AdBlockManager.shared.refreshOnLaunchIfNeeded()
-                #if os(iOS)
-                if !hasShownDefaultBrowserPrompt {
-                    // Show one-time tip to set default browser on first run
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        withAnimation(.spring()) {
-                            showDefaultBrowserTip = true
-                        }
-                    }
-                }
-                #endif
+        }
+        .onAppear {
+            setupInitialURL()
+            AdBlockManager.shared.refreshOnLaunchIfNeeded()
+        }
+        #if os(macOS)
+        .onKeyPress(.escape) {
+            if uiViewModel.showCommandBar {
+                uiViewModel.showCommandBar = false
+                uiViewModel.commandBarText = ""
+                uiViewModel.searchSuggestions = []
+                return .handled
             }
-            #if os(iOS)
-            .gesture(
-                DragGesture(minimumDistance: 20)
-                    .onEnded { value in
-                        // Only process gesture if BottomBarView gesture is not active
-                        if !tabManager.isGestureActive {
-                            let threshold: CGFloat = -100
-                            let startY = value.startLocation.y
-                            let screenHeight = UIScreen.main.bounds.height
-                            
-                            // Check if gesture started in bottom 20% of screen
-                            if startY > screenHeight * 0.8 && value.translation.height < threshold {
-                                withAnimation(.spring()) {
-                                    tabManager.toggleTabDrawer()
-                                }
-                            }
-                        }
-                    }
-            )
-            #endif
-            #if os(macOS)
-            .onReceive(NotificationCenter.default.publisher(for: .toggleTabDrawer)) { _ in
-                tabManager.toggleTabDrawer()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .newTab)) { _ in
-                tabManager.createNewTab()
-            }
-            #endif
-            .sheet(isPresented: $showingSettings) {
-                SettingsView(tabManager: tabManager)
-            }
-            .sheet(item: $perplexityManager.currentRequest) { request in
-                PerplexityModalView(request: request, onDismiss: {
-                    perplexityManager.dismissModal()
-                })
-            }
-            .onChange(of: tabManager.selectedTab?.id) {
-                // Update URL bar when switching tabs
-                setupInitialURL()
-            }
-            .onOpenURL { incomingURL in
-                handleIncomingURL(incomingURL)
-            }
+            return .ignored
+        }
+        #endif
+        .sheet(isPresented: $uiViewModel.showSettings) {
+            SettingsView(tabManager: tabManager)
+        }
+        .sheet(item: $perplexityManager.currentRequest) { request in
+            PerplexityModalView(request: request, onDismiss: {
+                perplexityManager.dismissModal()
+            })
+        }
+        .onChange(of: tabManager.selectedTab?.id) {
+            // Update URL bar when switching tabs
+            setupInitialURL()
+        }
+        .onOpenURL { incomingURL in
+            handleIncomingURL(incomingURL)
         }
     }
     
@@ -528,6 +598,184 @@ struct ContentView: View {
         
         return nil
     }
+    
+    // MARK: - Sidebar Toggle Button
+    
+    private var sidebarToggleButton: some View {
+        Button(action: {
+            withAnimation(.easeInOut) {
+                uiViewModel.showSidebar = true
+            }
+        }) {
+            ZStack {
+                // Frosted glass background with gradient tint
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 44, height: 44)
+                    .overlay {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "8041E6").opacity(0.3),
+                                        Color(hex: "A0F2FC").opacity(0.3)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(0.4), lineWidth: 1.5)
+                    }
+                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                
+                // Icon with darker color for visibility on light backgrounds
+                Image(systemName: uiViewModel.sidebarPosition == "left" ? "sidebar.left" : "sidebar.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.75), Color.black.opacity(0.65)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: .white.opacity(0.5), radius: 1, x: 0, y: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Navigation Buttons (iPad)
+    
+    #if os(iOS)
+    @ViewBuilder
+    private var navigationButtonsOverlay: some View {
+        let position = settings.navigationButtonPosition
+        
+        VStack {
+            if position == .topLeft || position == .topRight {
+                HStack(spacing: 12) {
+                    if position == .topLeft {
+                        navigationButtonStack
+                        Spacer()
+                    } else {
+                        Spacer()
+                        navigationButtonStack
+                    }
+                }
+                .padding(.horizontal, 15)
+                .padding(.top, 80) // Below sidebar toggle
+                Spacer()
+            } else {
+                Spacer()
+                HStack(spacing: 12) {
+                    if position == .bottomLeft {
+                        navigationButtonStack
+                        Spacer()
+                    } else {
+                        Spacer()
+                        navigationButtonStack
+                    }
+                }
+                .padding(.horizontal, 15)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+    
+    private var navigationButtonStack: some View {
+        HStack(spacing: 8) {
+            if let selectedTab = tabManager.selectedTab {
+                let _ = print("🟫 ContentView: Rendering nav buttons canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
+                // Back button
+                navigationButton(
+                    systemImage: "chevron.left",
+                    action: { 
+                        print("🟢 Back button tapped")
+                        selectedTab.webView?.goBack() 
+                    },
+                    isEnabled: canGoBack
+                )
+                
+                // Forward button
+                navigationButton(
+                    systemImage: "chevron.right",
+                    action: { 
+                        print("🟢 Forward button tapped")
+                        selectedTab.webView?.goForward() 
+                    },
+                    isEnabled: canGoForward
+                )
+            }
+        }
+        .onReceive(tabManager.$selectedTab) { selectedTab in
+            // Update state whenever selectedTab changes
+            canGoBack = selectedTab?.canGoBack ?? false
+            canGoForward = selectedTab?.canGoForward ?? false
+            print("💬 onReceive selectedTab: canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
+        }
+        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
+            // Poll for changes every 0.1 seconds as a workaround
+            let newCanGoBack = tabManager.selectedTab?.canGoBack ?? false
+            let newCanGoForward = tabManager.selectedTab?.canGoForward ?? false
+            if newCanGoBack != canGoBack || newCanGoForward != canGoForward {
+                canGoBack = newCanGoBack
+                canGoForward = newCanGoForward
+                print("💬 Timer update: canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
+            }
+        }
+    }
+    
+    private func navigationButton(systemImage: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
+        Button(action: action) {
+            ZStack {
+                // Frosted glass background with gradient tint
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 44, height: 44)
+                    .overlay {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "8041E6").opacity(isEnabled ? 0.3 : 0.1),
+                                        Color(hex: "A0F2FC").opacity(isEnabled ? 0.3 : 0.1)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(isEnabled ? 0.4 : 0.2), lineWidth: 1.5)
+                    }
+                    .shadow(color: .black.opacity(isEnabled ? 0.15 : 0.05), radius: 12, x: 0, y: 4)
+                    .shadow(color: .black.opacity(isEnabled ? 0.1 : 0.03), radius: 4, x: 0, y: 2)
+                
+                // Icon with darker color for visibility on light backgrounds
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color.black.opacity(isEnabled ? 0.75 : 0.3),
+                                Color.black.opacity(isEnabled ? 0.65 : 0.25)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: .white.opacity(isEnabled ? 0.5 : 0.2), radius: 1, x: 0, y: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+    #endif
 }
 
 // MARK: - macOS Extensions

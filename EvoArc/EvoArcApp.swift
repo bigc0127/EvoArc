@@ -11,7 +11,9 @@ import UniformTypeIdentifiers
 @main
 struct EvoArcApp: App {
     @StateObject private var tabManager = TabManager()
+    #if os(iOS)
     @State private var showFirstRunSetup = !UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
+    #endif
     
     var body: some Scene {
         WindowGroup {
@@ -21,6 +23,7 @@ struct EvoArcApp: App {
                         // Handle URLs opened from other apps
                         handleIncomingURL(url)
                     }
+                    #if os(iOS)
                     .sheet(isPresented: $showFirstRunSetup, onDismiss: {
                         // Recompute in case user dismissed without completing
                         showFirstRunSetup = !UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
@@ -32,6 +35,7 @@ struct EvoArcApp: App {
                         showFirstRunSetup = false
                         UserDefaults.standard.set(true, forKey: SetupCoordinator.firstRunKey)
                     }
+                    #endif
                 
                 DownloadProgressOverlay(isPresented: .constant(false))
             }

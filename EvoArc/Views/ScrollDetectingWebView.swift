@@ -168,11 +168,12 @@ struct ScrollAwareWebView: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Set tab.webView BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         context.coordinator.webView = webView
+        print("🔵 iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         context.coordinator.setupObservers()
         
         if let url = tab.url {
@@ -254,8 +255,10 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -280,6 +283,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 parent.tab.isLoading = true
                 parent.tab.estimatedProgress = 0.0
@@ -295,6 +299,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 // Ensure we're scrolled to the real top, accounting for adjusted content inset
                 let topInset = webView.scrollView.adjustedContentInset.top
@@ -494,11 +499,12 @@ struct ScrollAwareWebView: NSViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Set tab.webView BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         context.coordinator.webView = webView
+        print("🔵 macOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         context.coordinator.setupObservers()
         context.coordinator.setupScrollObserver()
         context.coordinator.setupRightClickGesture()
@@ -612,8 +618,10 @@ struct ScrollAwareWebView: NSViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 macOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 macOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -624,6 +632,7 @@ struct ScrollAwareWebView: NSViewRepresentable {
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             print("🔄 macOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 macOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 parent.tab.isLoading = true
                 parent.tab.estimatedProgress = 0.0
@@ -639,6 +648,7 @@ struct ScrollAwareWebView: NSViewRepresentable {
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ macOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 macOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 1.0

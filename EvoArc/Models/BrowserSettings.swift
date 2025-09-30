@@ -78,6 +78,27 @@ enum TabDrawerPosition: String, CaseIterable {
 }
 #endif
 
+#if os(iOS)
+// Navigation button position for iPad when sidebar is hidden
+enum NavigationButtonPosition: String, CaseIterable, Identifiable {
+    case topLeft = "topLeft"
+    case topRight = "topRight"
+    case bottomLeft = "bottomLeft"
+    case bottomRight = "bottomRight"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .topLeft: return "Top Left"
+        case .topRight: return "Top Right"
+        case .bottomLeft: return "Bottom Left"
+        case .bottomRight: return "Bottom Right"
+        }
+    }
+}
+#endif
+
 // Ad blocking subscription options
 enum AdBlockList: String, CaseIterable, Identifiable {
     case easyList
@@ -181,6 +202,16 @@ class BrowserSettings: ObservableObject {
     @Published var tabDrawerPosition: TabDrawerPosition {
         didSet {
             UserDefaults.standard.set(tabDrawerPosition.rawValue, forKey: "tabDrawerPosition")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    #endif
+    
+    #if os(iOS)
+    // Navigation button position for iPad Aura UI
+    @Published var navigationButtonPosition: NavigationButtonPosition {
+        didSet {
+            UserDefaults.standard.set(navigationButtonPosition.rawValue, forKey: "navigationButtonPosition")
             NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
         }
     }
@@ -400,6 +431,16 @@ class BrowserSettings: ObservableObject {
             self.tabDrawerPosition = position
         } else {
             self.tabDrawerPosition = .left
+        }
+        #endif
+        
+        #if os(iOS)
+        // Load navigation button position for iPad (default to bottom right)
+        if let positionString = UserDefaults.standard.string(forKey: "navigationButtonPosition"),
+           let position = NavigationButtonPosition(rawValue: positionString) {
+            self.navigationButtonPosition = position
+        } else {
+            self.navigationButtonPosition = .bottomRight
         }
         #endif
         

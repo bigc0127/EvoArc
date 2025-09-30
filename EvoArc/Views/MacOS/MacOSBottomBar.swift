@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WebKit
 
 #if os(macOS)
 

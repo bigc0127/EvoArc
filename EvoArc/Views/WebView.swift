@@ -144,15 +144,14 @@ struct WebView: UIViewRepresentable {
         readerSwipe.numberOfTouchesRequired = 2
         webView.addGestureRecognizer(readerSwipe)
         
-        // Establish bidirectional reference between tab and web view
-        // This allows the tab to control the web view and vice versa
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Establish tab.webView reference BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         // Give coordinator access to web view for delegate method implementation
         context.coordinator.webView = webView
         
+        print("🔵 iOS WebView: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Set up Key-Value Observing (KVO) for automatic UI updates
         // These observers automatically update the tab state when WebView properties change
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
@@ -235,8 +234,10 @@ struct WebView: UIViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -246,6 +247,7 @@ struct WebView: UIViewRepresentable {
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 iOS WebView: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             // We only update the UI state when navigation actually starts
             Task { @MainActor in
                 // Force loading state to true when navigation starts
@@ -265,6 +267,7 @@ struct WebView: UIViewRepresentable {
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 iOS WebView: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 // Ensure we're scrolled to the real top, accounting for adjusted content inset
                 let topInset = webView.scrollView.adjustedContentInset.top
@@ -487,14 +490,14 @@ struct WebView: NSViewRepresentable {
         // Set custom user agent based on settings
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
-        // Store reference to webView in the tab
-        DispatchQueue.main.async {
-            tab.webView = webView
-        }
+        // CRITICAL: Set tab.webView BEFORE setting up observers
+        // This ensures observers can update the tab state immediately
+        tab.webView = webView
         
         // Set coordinator's webView reference
         context.coordinator.webView = webView
         
+        print("🔵 macOS WebView: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Add observers for loading state
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
@@ -576,8 +579,10 @@ struct WebView: NSViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
+                    print("🔙 macOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
+                    print("🔜 macOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -587,6 +592,7 @@ struct WebView: NSViewRepresentable {
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             print("🔄 macOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 macOS WebView: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             // Force loading state to true when navigation starts
             parent.tab.isLoading = true
             parent.tab.estimatedProgress = 0.0
@@ -604,6 +610,7 @@ struct WebView: NSViewRepresentable {
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ macOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            print("🔍 macOS WebView: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             // Force loading state to false when navigation finishes
             parent.tab.isLoading = false
             parent.tab.estimatedProgress = 1.0
