@@ -45,7 +45,7 @@ struct WebContentPanel: View {
                             shouldNavigate: $shouldNavigate,
                             urlBarVisible: $urlBarVisible,
                             onNavigate: onNavigate,
-                            autoHideEnabled: false // Let ARC Like UI handle this
+                            autoHideEnabled: false // Handled by the sidebar UI
                         )
                         .cornerRadius(10)
                         .clipped()
