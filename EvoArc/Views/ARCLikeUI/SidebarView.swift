@@ -97,7 +97,10 @@ struct SidebarView: View {
         HStack {
             Spacer()
             
-            Button(action: { uiViewModel.showSidebar.toggle() }) {
+            Button(action: { 
+                uiViewModel.isSidebarFloating = false // When manually closing, clear floating mode
+                uiViewModel.showSidebar.toggle() 
+            }) {
                 buttonBackground(id: "sidebarToggle", systemImage: "sidebar.left")
             }
             
@@ -113,7 +116,13 @@ struct SidebarView: View {
             }
             .disabled(!canGoForward)
             
-            Button(action: { tabManager.selectedTab?.webView?.reload() }) {
+            Button {
+                guard let webView = tabManager.selectedTab?.webView else { return }
+                if webView.isLoading {
+                    webView.stopLoading()
+                }
+                webView.reload()
+            } label: {
                 buttonBackground(id: "reload", systemImage: "arrow.clockwise")
             }
         }

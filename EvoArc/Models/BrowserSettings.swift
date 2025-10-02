@@ -188,6 +188,14 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // Hide navigation buttons when sidebar is hidden on iPad
+    @Published var hideNavigationButtonsOnIPad: Bool {
+        didSet {
+            UserDefaults.standard.set(hideNavigationButtonsOnIPad, forKey: "hideNavigationButtonsOnIPad")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     // Confirmation for closing pinned tabs
     @Published var confirmClosingPinnedTabs: Bool {
         didSet {
@@ -396,6 +404,13 @@ class BrowserSettings: ObservableObject {
             self.navigationButtonPosition = position
         } else {
             self.navigationButtonPosition = .bottomRight
+        }
+        
+        // Load hide navigation buttons on iPad setting (default false)
+        if UserDefaults.standard.object(forKey: "hideNavigationButtonsOnIPad") != nil {
+            self.hideNavigationButtonsOnIPad = UserDefaults.standard.bool(forKey: "hideNavigationButtonsOnIPad")
+        } else {
+            self.hideNavigationButtonsOnIPad = false
         }
         
         // Load confirm closing pinned tabs setting with default to true

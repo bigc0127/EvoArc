@@ -32,6 +32,28 @@ struct SettingsView: View {
     }
     
     var body: some View {
+        NavigationView {
+            Form {
+                settingsContent
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
+            }
+            .toolbar {
+                ToolbarItem(placement: toolbarPlacement) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .task {
+            homepageText = settings.homepage
+        }
     }
     
     @ViewBuilder
@@ -154,21 +176,26 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         Divider()
                             .padding(.vertical, 8)
                         
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Navigation Buttons Position")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                            Text("When sidebar is hidden")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Picker("Navigation Buttons", selection: $settings.navigationButtonPosition) {
-                                ForEach(NavigationButtonPosition.allCases) { position in
-                                    Text(position.displayName).tag(position)
+                        Toggle("Hide navigation buttons when sidebar is hidden", isOn: $settings.hideNavigationButtonsOnIPad)
+                            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                        
+                        if !settings.hideNavigationButtonsOnIPad {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Navigation Buttons Position")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Text("When sidebar is hidden")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Picker("Navigation Buttons", selection: $settings.navigationButtonPosition) {
+                                    ForEach(NavigationButtonPosition.allCases) { position in
+                                        Text(position.displayName).tag(position)
+                                    }
                                 }
+                                .pickerStyle(.segmented)
                             }
-                            .pickerStyle(.segmented)
                         }
                     }
                 } header: {
@@ -280,10 +307,47 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                             .buttonStyle(.plain)
                         }
                     }
+                    
+                    // Custom search engine
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Custom")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Button(action: { settings.defaultSearchEngine = .custom }) {
+                            HStack {
+                                Text(SearchEngine.custom.displayName)
+                                Spacer()
+                                Image(systemName: settings.defaultSearchEngine == .custom ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(settings.defaultSearchEngine == .custom ? .accentColor : .secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if settings.defaultSearchEngine == .custom {
+                            VStack(alignment: .leading, spacing: 6) {
+                                TextField("Template (use {query})", text: $settings.customSearchTemplate)
+                                    .textFieldStyle(.roundedBorder)
+                                    .autocorrectionDisabled(true)
+                                    .textInputAutocapitalization(.never)
+                                
+                                if let err = settings.customSearchTemplateErrorMessage {
+                                    Text(err)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                } else if let example = settings.exampleCustomSearchURL() {
+                                    Text("Example: \(example.absoluteString)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
                 } header: {
                     Text("Search Engine")
                 } footer: {
-                    Text("Choose your default search engine. Private engines don't track your search history.")
+                    Text("Choose your default search engine. Private engines don't track your search history. For custom engines, use {query} as placeholder for search terms.")
                         .font(.caption)
                 }
                 

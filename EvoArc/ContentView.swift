@@ -314,8 +314,8 @@ struct ContentView: View {
             
             // Main layout
             HStack(spacing: 0) {
-                // Sidebar (left)
-                if uiViewModel.sidebarPosition == "left" && uiViewModel.showSidebar {
+                // Sidebar (left) - only render inline when NOT floating
+                if uiViewModel.sidebarPosition == "left" && uiViewModel.showSidebar && !uiViewModel.isSidebarFloating {
                     SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
                         .padding(.leading, 10)
                         .padding(.vertical, 5)
@@ -359,8 +359,8 @@ struct ContentView: View {
                         }
                 )
                 
-                // Sidebar (right)
-                if uiViewModel.sidebarPosition == "right" && uiViewModel.showSidebar {
+                // Sidebar (right) - only render inline when NOT floating
+                if uiViewModel.sidebarPosition == "right" && uiViewModel.showSidebar && !uiViewModel.isSidebarFloating {
                     SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
                         .padding(.trailing, 10)
                         .padding(.vertical, 5)
@@ -406,11 +406,12 @@ struct ContentView: View {
             }
             
             // Navigation buttons (iPad only) - positioned based on settings
-            if !uiViewModel.showSidebar && UIDevice.current.userInterfaceIdiom == .pad {
+            if !uiViewModel.showSidebar && UIDevice.current.userInterfaceIdiom == .pad && !settings.hideNavigationButtonsOnIPad {
                 navigationButtonsOverlay
             }
             
             // Hover area for sidebar reveal (wider area for better detection)
+            // On iPad: triggers floating sidebar. On Mac: triggers inline sidebar.
             if !uiViewModel.showSidebar {
                 HStack {
                     if uiViewModel.sidebarPosition == "left" {
@@ -421,6 +422,12 @@ struct ContentView: View {
                             .onHover { hovering in
                                 if hovering {
                                     withAnimation(.easeInOut) {
+                                        // iPad: use floating mode; others: use docked mode
+                                        if UIDevice.current.userInterfaceIdiom == .pad {
+                                            uiViewModel.isSidebarFloating = true
+                                        } else {
+                                            uiViewModel.isSidebarFloating = false
+                                        }
                                         uiViewModel.showSidebar = true
                                     }
                                 }
@@ -435,7 +442,80 @@ struct ContentView: View {
                             .onHover { hovering in
                                 if hovering {
                                     withAnimation(.easeInOut) {
+                                        // iPad: use floating mode; others: use docked mode
+                                        if UIDevice.current.userInterfaceIdiom == .pad {
+                                            uiViewModel.isSidebarFloating = true
+                                        } else {
+                                            uiViewModel.isSidebarFloating = false
+                                        }
                                         uiViewModel.showSidebar = true
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+            
+            // Floating sidebar overlay (iPad only)
+            if uiViewModel.showSidebar && uiViewModel.isSidebarFloating && UIDevice.current.userInterfaceIdiom == .pad {
+                // Semi-transparent backdrop
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture {
+                        withAnimation(.easeInOut) {
+                            uiViewModel.showSidebar = false
+                            uiViewModel.isSidebarFloating = false
+                        }
+                    }
+                
+                // Floating sidebar panel
+                HStack(spacing: 0) {
+                    if uiViewModel.sidebarPosition == "left" {
+                        // Left-aligned floating sidebar
+                        SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
+                            .frame(width: uiViewModel.sidebarWidth)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                            .padding(.leading, 10)
+                            .padding(.vertical, 10)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                            .onHover { hovering in
+                                // Keep sidebar visible while hovering over it
+                                if !hovering {
+                                    // Small delay before hiding to prevent flickering
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        withAnimation(.easeInOut) {
+                                            uiViewModel.showSidebar = false
+                                            uiViewModel.isSidebarFloating = false
+                                        }
+                                    }
+                                }
+                            }
+                        
+                        Spacer()
+                    } else {
+                        // Right-aligned floating sidebar
+                        Spacer()
+                        
+                        SidebarView(tabManager: tabManager, uiViewModel: uiViewModel)
+                            .frame(width: uiViewModel.sidebarWidth)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                            .padding(.trailing, 10)
+                            .padding(.vertical, 10)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                            .onHover { hovering in
+                                // Keep sidebar visible while hovering over it
+                                if !hovering {
+                                    // Small delay before hiding to prevent flickering
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        withAnimation(.easeInOut) {
+                                            uiViewModel.showSidebar = false
+                                            uiViewModel.isSidebarFloating = false
+                                        }
                                     }
                                 }
                             }
@@ -568,6 +648,7 @@ struct ContentView: View {
     private var sidebarToggleButton: some View {
         Button(action: {
             withAnimation(.easeInOut) {
+                uiViewModel.isSidebarFloating = false // Manual toggle uses docked mode
                 uiViewModel.showSidebar = true
             }
         }) {

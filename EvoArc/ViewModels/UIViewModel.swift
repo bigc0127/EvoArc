@@ -20,6 +20,9 @@ class UIViewModel: ObservableObject {
     @AppStorage("sidebarPosition") var sidebarPosition: String = "left" // "left" or "right"
     @AppStorage("autoHideSidebar") var autoHideSidebar: Bool = false
     
+    // Floating sidebar state (iPad only - for hover-triggered overlay mode)
+    @Published var isSidebarFloating: Bool = false
+    
     var sidebarWidth: CGFloat {
         get { CGFloat(_sidebarWidth) }
         set { _sidebarWidth = Double(newValue) }
