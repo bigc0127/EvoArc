@@ -3,16 +3,23 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
     <key>uploadBitcode</key>
     <false/>
     <key>uploadSymbols</key>
     <true/>
     <key>compileBitcode</key>
-    <true/>
+    <false/>
     <key>destination</key>
     <string>upload</string>
     <key>signingStyle</key>
     <string>automatic</string>
+    <key>teamID</key>
+    <string>69LLXLJW63</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.ConnorNeedling.EvoArcBrowser</key>
+        <string></string>
+    </dict>
 </dict>
 </plist>
