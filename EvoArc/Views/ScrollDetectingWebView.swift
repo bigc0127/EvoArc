@@ -164,7 +164,15 @@ struct ScrollAwareWebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.scrollView.delegate = context.coordinator
-        webView.allowsBackForwardNavigationGestures = true
+        
+        // Enable swipe gestures for back/forward navigation
+        // On iPad, disable built-in gestures since we handle them manually in ContentView
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            webView.allowsBackForwardNavigationGestures = false
+        } else {
+            webView.allowsBackForwardNavigationGestures = true
+        }
+        
         webView.customUserAgent = BrowserSettings.shared.userAgentString
         
         // CRITICAL: Set tab.webView BEFORE setting up observers

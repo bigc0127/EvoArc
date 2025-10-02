@@ -129,7 +129,12 @@ struct WebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator          // Handle UI events (alerts, etc.)
         
         // Enable swipe gestures for back/forward navigation (iOS standard behavior)
-        webView.allowsBackForwardNavigationGestures = true
+        // On iPad, disable built-in gestures since we handle them manually in ContentView
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            webView.allowsBackForwardNavigationGestures = false
+        } else {
+            webView.allowsBackForwardNavigationGestures = true
+        }
         
         // Apply user agent string based on user's desktop/mobile preference
         // This determines whether websites show mobile or desktop versions

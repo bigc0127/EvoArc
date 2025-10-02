@@ -337,7 +337,7 @@ struct ContentView: View {
                 .padding(.bottom, 5)
                 .padding(.leading, uiViewModel.sidebarPosition == "right" || !uiViewModel.showSidebar ? 5 : 0)
                 .padding(.trailing, uiViewModel.sidebarPosition == "left" || !uiViewModel.showSidebar ? 5 : 0)
-                .gesture(
+                .highPriorityGesture(
                     DragGesture(minimumDistance: 30)
                         .onEnded { value in
                             // Swipe navigation when sidebar is hidden
@@ -691,6 +691,7 @@ struct ContentView: View {
             }
         }
         .buttonStyle(.plain)
+        .zIndex(100) // Ensure button is above hover detection areas
     }
     
     // MARK: - Navigation Buttons (iPad)
