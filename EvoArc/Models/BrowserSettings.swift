@@ -8,9 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
-#if os(iOS)
 import UIKit
-#endif
 
 // Browser engine available on all platforms
 enum BrowserEngine: String, CaseIterable {
@@ -64,21 +62,6 @@ enum SearchEngine: String, CaseIterable, Identifiable {
     }
 }
 
-#if os(macOS)
-enum TabDrawerPosition: String, CaseIterable {
-    case left = "left"
-    case right = "right"
-    
-    var displayName: String {
-        switch self {
-        case .left: return "Left"
-        case .right: return "Right"
-        }
-    }
-}
-#endif
-
-#if os(iOS)
 // Navigation button position for iPad when sidebar is hidden
 enum NavigationButtonPosition: String, CaseIterable, Identifiable {
     case topLeft = "topLeft"
@@ -97,7 +80,6 @@ enum NavigationButtonPosition: String, CaseIterable, Identifiable {
         }
     }
 }
-#endif
 
 // Ad blocking subscription options
 enum AdBlockList: String, CaseIterable, Identifiable {
@@ -198,16 +180,6 @@ class BrowserSettings: ObservableObject {
         }
     }
     
-    #if os(macOS)
-    @Published var tabDrawerPosition: TabDrawerPosition {
-        didSet {
-            UserDefaults.standard.set(tabDrawerPosition.rawValue, forKey: "tabDrawerPosition")
-            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
-        }
-    }
-    #endif
-    
-    #if os(iOS)
     // Navigation button position for iPad ARC Like UI
     @Published var navigationButtonPosition: NavigationButtonPosition {
         didSet {
@@ -215,7 +187,6 @@ class BrowserSettings: ObservableObject {
             NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
         }
     }
-    #endif
     
     // Confirmation for closing pinned tabs
     @Published var confirmClosingPinnedTabs: Bool {
@@ -319,17 +290,12 @@ class BrowserSettings: ObservableObject {
         // Set default based on device type
         let defaultDesktopMode: Bool
         
-        #if os(iOS)
         // Check if it's an iPad
         if UIDevice.current.userInterfaceIdiom == .pad {
             defaultDesktopMode = true  // iPad defaults to desktop
         } else {
             defaultDesktopMode = false // iPhone defaults to mobile
         }
-        #else
-        // macOS always defaults to desktop
-        defaultDesktopMode = true
-        #endif
         
         // Use stored value if available, otherwise use device default
         if UserDefaults.standard.object(forKey: "useDesktopMode") != nil {
@@ -424,17 +390,6 @@ class BrowserSettings: ObservableObject {
             self.customSearchTemplate = "https://example.com/search?q={query}"
         }
         
-        #if os(macOS)
-        // Load tab drawer position setting with default to left
-        if let positionString = UserDefaults.standard.string(forKey: "tabDrawerPosition"),
-           let position = TabDrawerPosition(rawValue: positionString) {
-            self.tabDrawerPosition = position
-        } else {
-            self.tabDrawerPosition = .left
-        }
-        #endif
-        
-        #if os(iOS)
         // Load navigation button position for iPad (default to bottom right)
         if let positionString = UserDefaults.standard.string(forKey: "navigationButtonPosition"),
            let position = NavigationButtonPosition(rawValue: positionString) {
@@ -442,7 +397,6 @@ class BrowserSettings: ObservableObject {
         } else {
             self.navigationButtonPosition = .bottomRight
         }
-        #endif
         
         // Load confirm closing pinned tabs setting with default to true
         if UserDefaults.standard.object(forKey: "confirmClosingPinnedTabs") != nil {

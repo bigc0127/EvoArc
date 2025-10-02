@@ -6,21 +6,12 @@
 //
 
 import SwiftUI
-
-#if os(iOS)
 import UIKit
-#else
-import AppKit
-#endif
 
 /// A view modifier to handle platform-specific corner radius
 struct PlatformCornerRadius: ViewModifier {
     func body(content: Content) -> some View {
-        #if os(iOS)
         content.cornerRadius(20, corners: [.topLeft, .topRight])
-        #else
-        content.cornerRadius(20)
-        #endif
     }
 }
 
@@ -86,21 +77,12 @@ struct TabDrawerView: View {
                     newGroupColor = .blue
                 }
             )
-            #if os(macOS)
-            .frame(minWidth: 420, minHeight: 360)
-            #endif
         }
         .sheet(isPresented: $showingBookmarks) {
             BookmarksView(tabManager: tabManager)
-            #if os(macOS)
-                .frame(minWidth: 820, minHeight: 600)
-            #endif
         }
         .sheet(isPresented: $showingHistory) {
             HistoryView(tabManager: tabManager)
-            #if os(macOS)
-                .frame(minWidth: 820, minHeight: 600)
-            #endif
         }
         .confirmationDialog(
             "Unpin Tab",

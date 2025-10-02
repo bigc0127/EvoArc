@@ -7,11 +7,7 @@
 
 import SwiftUI
 import WebKit
-#if os(iOS)
 import UIKit
-#else
-import AppKit
-#endif
 import Combine
 
 struct ContentView: View {
@@ -45,7 +41,6 @@ struct ContentView: View {
     // MARK: - Main View
     var body: some View {
         GeometryReader { geometry in
-            #if os(iOS)
             // Check if we're on iPhone or iPad
             if UIDevice.current.userInterfaceIdiom == .phone {
                 // iPhone UI - keep original design
@@ -54,10 +49,6 @@ struct ContentView: View {
                 // iPad UI - use ARC Like UI design
                 arcLikeLayout(geometry: geometry)
             }
-            #else
-            // macOS - use ARC Like UI design
-            arcLikeLayout(geometry: geometry)
-            #endif
         }
     }
     
@@ -66,7 +57,6 @@ struct ContentView: View {
     @ViewBuilder
     private func iphoneLayout(geometry: GeometryProxy) -> some View {
         // Set up keyboard observers
-        #if os(iOS)
         let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                 keyboardHeight = keyboardFrame.height
@@ -77,7 +67,6 @@ struct ContentView: View {
             keyboardHeight = 0
             keyboardVisible = false
         }
-        #endif
         
         ZStack {
             VStack(spacing: 0) {
@@ -223,9 +212,7 @@ struct ContentView: View {
                         
                         HStack(spacing: 10) {
                             Button(action: {
-                                #if os(iOS)
                                 openAppSettings()
-                                #endif
                                 hasShownDefaultBrowserPrompt = true
                                 withAnimation { showDefaultBrowserTip = false }
                             }) {
@@ -251,11 +238,7 @@ struct ContentView: View {
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            #if os(iOS)
                             .fill(Color(UIColor.systemBackground))
-                            #else
-                            .fill(Color(NSColor.controlBackgroundColor))
-                            #endif
                             .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
                     )
                     .padding(.horizontal, 20)
@@ -283,11 +266,7 @@ struct ContentView: View {
                     if !tabManager.isGestureActive {
                         let threshold: CGFloat = -100
                         let startY = value.startLocation.y
-                        #if os(iOS)
                         let screenHeight = UIScreen.main.bounds.height
-                        #else
-                        let screenHeight = geometry.size.height
-                        #endif
                         
                         // Check if gesture started in bottom 20% of screen
                         if startY > screenHeight * 0.8 && value.translation.height < threshold {
@@ -427,11 +406,9 @@ struct ContentView: View {
             }
             
             // Navigation buttons (iPad only) - positioned based on settings
-            #if os(iOS)
             if !uiViewModel.showSidebar && UIDevice.current.userInterfaceIdiom == .pad {
                 navigationButtonsOverlay
             }
-            #endif
             
             // Hover area for sidebar reveal (wider area for better detection)
             if !uiViewModel.showSidebar {
@@ -470,17 +447,6 @@ struct ContentView: View {
             setupInitialURL()
             AdBlockManager.shared.refreshOnLaunchIfNeeded()
         }
-        #if os(macOS)
-        .onKeyPress(.escape) {
-            if uiViewModel.showCommandBar {
-                uiViewModel.showCommandBar = false
-                uiViewModel.commandBarText = ""
-                uiViewModel.searchSuggestions = []
-                return .handled
-            }
-            return .ignored
-        }
-        #endif
         .sheet(isPresented: $uiViewModel.showSettings) {
             SettingsView(tabManager: tabManager)
         }
@@ -775,15 +741,7 @@ struct ContentView: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
     }
-    #endif
 }
-
-// MARK: - macOS Extensions
-#if os(macOS)
-extension Notification.Name {
-    static let toggleTabDrawer = Notification.Name("toggleTabDrawer")
-}
-#endif
 
 #Preview {
     ContentView()
