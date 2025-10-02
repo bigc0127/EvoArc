@@ -47,9 +47,6 @@ struct HistoryEntryRow: View {
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                #if os(macOS)
-                .help("Remove from history")
-                #endif
             }
             .contentShape(Rectangle())
         }

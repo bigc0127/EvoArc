@@ -6,11 +6,6 @@
 //
 
 import SwiftUI
-#if os(macOS)
-import AppKit
-#else
-import UIKit
-#endif
 
 struct ExternalBrowserFallback: View {
     @ObservedObject var tab: Tab
@@ -69,11 +64,6 @@ struct ExternalBrowserFallback: View {
     }
     
     private func openInExternalBrowser(url: URL) {
-        #if os(macOS)
-        NSWorkspace.shared.open(url)
-        #else
-        UIApplication.shared.open(url)
-        #endif
     }
 }
 

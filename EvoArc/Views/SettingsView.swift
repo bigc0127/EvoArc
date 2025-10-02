@@ -1,9 +1,5 @@
 import SwiftUI
-#if os(iOS)
 import UIKit
-#else
-import AppKit
-#endif
 
 /// The main settings interface view for EvoArc browser configuration
 struct SettingsView: View {
@@ -32,72 +28,10 @@ struct SettingsView: View {
     @State private var showAdvancedJSAdblockWarning: Bool = false
     
     private var toolbarPlacement: ToolbarItemPlacement {
-        #if os(iOS)
         .navigationBarTrailing
-        #else
-        .primaryAction
-        #endif
     }
     
     var body: some View {
-        #if os(macOS)
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Settings")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                Spacer()
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(.horizontal, baseFormPadding)
-            .padding(.vertical, 16)
-            .background(Color(nsColor: .windowBackgroundColor))
-            
-            Divider()
-            
-            // Settings content in a scrollable view
-            ScrollView {
-                Form {
-                    // Reuse the iOS settings content
-                    settingsContent
-                }
-                .padding(baseFormPadding)
-            }
-            .background(Color(nsColor: .windowBackgroundColor))
-        }
-        .frame(width: 600, height: 500)
-        .task {
-            homepageText = settings.homepage
-        }
-        #else
-        NavigationView {
-            Form {
-                settingsContent
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
-            }
-            .toolbar {
-                ToolbarItem(placement: toolbarPlacement) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .task {
-            homepageText = settings.homepage
-        }
-        #endif
     }
     
     @ViewBuilder
@@ -110,9 +44,7 @@ struct SettingsView: View {
                         TextField("Enter URL", text: $homepageText)
                             .textFieldStyle(.roundedBorder)
                             .autocorrectionDisabled(true)
-                            #if os(iOS)
                             .textInputAutocapitalization(.never)
-                            #endif
                             .frame(maxWidth: 200)
                             .onSubmit {
                                 saveHomepage()
@@ -183,7 +115,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                 }
                 
                 // User Interface Section (iPhone only)
-                #if os(iOS)
                 Section {
                     Toggle("Auto-hide URL Bar", isOn: $settings.autoHideURLBar)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -194,7 +125,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
-                #endif
                 
                 // Sidebar & Layout Section (iPad & macOS only)
                 #if !os(iOS) || targetEnvironment(macCatalyst)
@@ -219,7 +149,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                     Toggle("Auto-hide Sidebar", isOn: $uiViewModel.autoHideSidebar)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     
-                    #if os(iOS)
                     // iPad-specific: Navigation button position when sidebar is hidden
                     if UIDevice.current.userInterfaceIdiom == .pad {
                         Divider()
@@ -242,11 +171,9 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                             .pickerStyle(.segmented)
                         }
                     }
-                    #endif
                 } header: {
                     Text("Sidebar & Layout")
                 } footer: {
-                    #if os(iOS)
                     if UIDevice.current.userInterfaceIdiom == .pad {
                         Text("Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. When sidebar is hidden, back/forward navigation buttons appear at your chosen corner position.")
                             .font(.caption)
@@ -256,11 +183,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                             .font(.caption)
                             .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     }
-                    #else
-                    Text("Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. Auto-hide reveals sidebar on hover.")
-                        .font(.caption)
-                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                    #endif
                 }
                 #endif
                 
@@ -495,7 +417,6 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 }
                 
                 // Default Browser (iOS only)
-                #if os(iOS)
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: openAppSettings) {
@@ -509,7 +430,6 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 } header: {
                     Text("Default Browser")
                 }
-                #endif
                 
                 // About Section
                 Section {
@@ -549,11 +469,9 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
     }
     
     private var currentModeDescription: String {
-        #if os(iOS)
         if let device = UIDevice.current.userInterfaceIdiom.deviceDescription {
             return "Your \(device) will \(settings.useDesktopMode ? "always" : "never") request desktop websites by default."
         }
-        #endif
         return ""
     }
     
@@ -561,16 +479,13 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
         settings.homepage = homepageText
     }
     
-    #if os(iOS)
     private func openAppSettings() {
         if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsURL)
         }
     }
-    #endif
 }
 
-#if os(iOS)
 private extension UIUserInterfaceIdiom {
     var deviceDescription: String? {
         switch self {
@@ -580,4 +495,3 @@ private extension UIUserInterfaceIdiom {
         }
     }
 }
-#endif

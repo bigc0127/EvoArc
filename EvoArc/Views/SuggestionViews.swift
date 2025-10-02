@@ -7,11 +7,7 @@
 
 import SwiftUI
 import Combine
-#if os(iOS)
 import UIKit
-#else
-import AppKit
-#endif
 
 /// Combined suggestion item that can represent either history or search suggestions
 struct SuggestionItem: Identifiable, Hashable {
@@ -62,16 +58,11 @@ struct SuggestionListView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        #if os(iOS)
         iOSSuggestionList
-        #else
-        macOSSuggestionList
-        #endif
     }
     
     // MARK: - iOS Implementation
     
-    #if os(iOS)
     private var iOSSuggestionList: some View {
         VStack(spacing: 0) {
             ForEach(suggestions) { suggestion in
@@ -96,31 +87,9 @@ struct SuggestionListView: View {
                 .stroke(Color(UIColor.separator), lineWidth: 0.5)
         )
     }
-    #endif
     
     // MARK: - macOS Implementation
     
-    #if os(macOS)
-    private var macOSSuggestionList: some View {
-        VStack(spacing: 1) {
-            ForEach(suggestions) { suggestion in
-                Button(action: {
-                    onSuggestionTapped(suggestion)
-                }) {
-                    SuggestionRowView(suggestion: suggestion)
-                }
-                .buttonStyle(SuggestionButtonStyle())
-            }
-        }
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
-        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
-        )
-    }
-    #endif
 }
 
 /// Individual suggestion row component
@@ -167,17 +136,6 @@ struct SuggestionRowView: View {
 
 // MARK: - Custom Button Styles
 
-#if os(macOS)
-struct SuggestionButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(
-                Rectangle()
-                    .fill(configuration.isPressed ? Color.accentColor.opacity(0.1) : Color.clear)
-            )
-    }
-}
-#endif
 
 // MARK: - Suggestion Manager
 

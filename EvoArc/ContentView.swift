@@ -466,14 +466,12 @@ struct ContentView: View {
     
     // MARK: - Helper Functions
     
-    #if os(iOS)
     private func openAppSettings() {
         if let url = URL(string: UIApplication.openSettingsURLString),
            UIApplication.shared.canOpenURL(url) {
             UIApplication.shared.open(url)
         }
     }
-    #endif
     
     private func setupInitialURL() {
         if let selectedTab = tabManager.selectedTab {
@@ -616,7 +614,6 @@ struct ContentView: View {
     
     // MARK: - Navigation Buttons (iPad)
     
-    #if os(iOS)
     @ViewBuilder
     private var navigationButtonsOverlay: some View {
         let position = settings.navigationButtonPosition

@@ -33,7 +33,6 @@ extension Color {
         )
     }
     
-    #if os(iOS)
     /// Convert Color to hex string representation
     func toHex() -> String {
         let uiColor = UIColor(self)
@@ -54,30 +53,4 @@ extension Color {
         let brightness = (0.299 * r + 0.587 * g + 0.114 * b)
         return brightness < threshold
     }
-    #else
-    /// Convert Color to hex string representation (macOS)
-    func toHex() -> String {
-        let nsColor = NSColor(self)
-        guard let rgbColor = nsColor.usingColorSpace(.deviceRGB) else {
-            return "000000"
-        }
-        let r = Int(rgbColor.redComponent * 255)
-        let g = Int(rgbColor.greenComponent * 255)
-        let b = Int(rgbColor.blueComponent * 255)
-        return String(format: "%02X%02X%02X", r, g, b)
-    }
-    
-    /// Check if color is dark (for adaptive text color) (macOS)
-    func isDark(threshold: Double = 0.75) -> Bool {
-        let nsColor = NSColor(self)
-        guard let rgbColor = nsColor.usingColorSpace(.deviceRGB) else {
-            return false
-        }
-        let r = rgbColor.redComponent
-        let g = rgbColor.greenComponent
-        let b = rgbColor.blueComponent
-        let brightness = (0.299 * r + 0.587 * g + 0.114 * b)
-        return brightness < threshold
-    }
-    #endif
 }

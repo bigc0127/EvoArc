@@ -27,7 +27,6 @@ enum ThemeColors {
     
     /// Generates dynamic color that adapts to dark mode
     static func dynamic(light: Color, dark: Color) -> Color {
-#if os(iOS)
         return Color(uiColor: UIColor { traitCollection in
             switch traitCollection.userInterfaceStyle {
             case .dark:
@@ -36,18 +35,6 @@ enum ThemeColors {
                 return UIColor(light)
             }
         })
-#elseif os(macOS)
-        let dynamicColor = NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua {
-                return NSColor(dark)
-            } else {
-                return NSColor(light)
-            }
-        }
-        return Color(nsColor: dynamicColor)
-#else
-        return light
-#endif
     }
 }
 

@@ -3,9 +3,7 @@ import SwiftUI
 import Combine
 import UniformTypeIdentifiers
 import Observation
-#if os(iOS)
 import UIKit
-#endif
 
 /// Progress status of a download task
 struct DownloadProgress: Identifiable {
@@ -122,13 +120,8 @@ var downloadDirectory: URL {
                 return url
             }
             
-            #if os(iOS)
             // On iOS, default to the Documents directory
             return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            #else
-            // On macOS, default to Downloads folder
-            return FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-            #endif
         }
         set {
             UserDefaults.standard.set(newValue.absoluteString, forKey: "downloadDirectory")
@@ -190,11 +183,7 @@ var downloadDirectory: URL {
     
     /// Convenience to point to app Documents directory on iOS
     var defaultDocumentsDirectory: URL {
-        #if os(iOS)
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        #else
-        return FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-        #endif
     }
     
     /// Clear the recent downloads list
@@ -205,7 +194,6 @@ var downloadDirectory: URL {
     
     /// Opens or shares the downloaded file
     func openDownloadedFile(at url: URL) {
-        #if os(iOS)
         // Present a share sheet to preview/open the file
         let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -213,15 +201,10 @@ var downloadDirectory: URL {
            let rootVC = window.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
-        #else
-        // Use NSWorkspace on macOS
-        NSWorkspace.shared.open(url)
-        #endif
     }
     
     /// Shows the downloaded file using the platform's file viewer
     func showInFinder(url: URL) {
-        #if os(iOS)
         // Present a share sheet to reveal the file location or share it
         let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -229,10 +212,6 @@ var downloadDirectory: URL {
            let rootVC = window.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
-        #else
-        // Use NSWorkspace on macOS
-        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
-        #endif
     }
 }
 

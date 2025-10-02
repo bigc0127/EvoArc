@@ -51,12 +51,6 @@ struct HistorySettingsView: View {
             if showingHistory {
                 VStack(alignment: .leading, spacing: 8) {
                     // Search field
-                    #if os(macOS)
-                    TextField("Search history...", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
-                    #else
-                    SearchBar(text: $searchText, placeholder: "Search history...")
-                    #endif
                     
                     // History list
                     ScrollView {
@@ -203,7 +197,6 @@ private struct StatView: View {
     }
 }
 
-#if os(iOS)
 private struct SearchBar: View {
     @Binding var text: String
     let placeholder: String
@@ -229,7 +222,6 @@ private struct SearchBar: View {
         .cornerRadius(8)
     }
 }
-#endif
 
 #Preview {
     HistorySettingsView()

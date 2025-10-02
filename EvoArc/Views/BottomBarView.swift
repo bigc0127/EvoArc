@@ -60,19 +60,11 @@ struct BottomBarView: View {
     }
     
     private var backgroundColor: Color {
-        #if os(iOS)
         Color(uiColor: .systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
     }
     
     private var secondaryBackgroundColor: Color {
-        #if os(iOS)
         Color(uiColor: .secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
     }
     
     // MARK: - Background Material
@@ -601,11 +593,7 @@ struct BottomBarView: View {
             }
             isTextFieldFocused = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                #if os(iOS)
                 UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
-                #else
-                NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
-                #endif
             }
         }
     }
@@ -649,7 +637,6 @@ struct BottomBarView: View {
     }
     
     private func presentShareSheet(for url: URL) {
-        #if os(iOS)
         let items: [Any] = [url]
         let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -666,12 +653,5 @@ struct BottomBarView: View {
             }
             rootViewController.present(activityVC, animated: true)
         }
-        #else
-        // macOS sharing support can be added here if needed
-        let sharingPicker = NSSharingServicePicker(items: [url])
-        if let keyWindow = NSApp.keyWindow {
-            sharingPicker.show(relativeTo: .zero, of: keyWindow.contentView!, preferredEdge: .minY)
-        }
-        #endif
     }
 }

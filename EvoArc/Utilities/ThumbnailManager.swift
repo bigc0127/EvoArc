@@ -76,7 +76,6 @@ class ThumbnailManager: ObservableObject {
     }
     
     private func processImageForThumbnail(_ image: PlatformImage) -> PlatformImage? {
-        #if os(iOS)
         // Create a properly sized thumbnail with Safari's aspect ratio
         let targetSize = thumbnailSize
         let renderer = UIGraphicsImageRenderer(size: targetSize)
@@ -114,46 +113,6 @@ class ThumbnailManager: ObservableObject {
             
             image.draw(in: drawRect)
         }
-        #else
-        // macOS implementation
-        let targetSize = thumbnailSize
-        let newImage = NSImage(size: targetSize)
-        
-        newImage.lockFocus()
-        defer { newImage.unlockFocus() }
-        
-        // Fill with background color
-        NSColor.controlBackgroundColor.setFill()
-        NSRect(origin: .zero, size: targetSize).fill()
-        
-        // Calculate scaling
-        let imageAspectRatio = image.size.width / image.size.height
-        let targetAspectRatio = targetSize.width / targetSize.height
-        
-        var drawRect: NSRect
-        
-        if imageAspectRatio > targetAspectRatio {
-            let scaledWidth = targetSize.height * imageAspectRatio
-            drawRect = NSRect(
-                x: (targetSize.width - scaledWidth) / 2,
-                y: 0,
-                width: scaledWidth,
-                height: targetSize.height
-            )
-        } else {
-            let scaledHeight = targetSize.width / imageAspectRatio
-            drawRect = NSRect(
-                x: 0,
-                y: 0,
-                width: targetSize.width,
-                height: scaledHeight
-            )
-        }
-        
-        image.draw(in: drawRect)
-        
-        return newImage
-        #endif
     }
     
     func getThumbnail(for tabID: String) -> PlatformImage? {

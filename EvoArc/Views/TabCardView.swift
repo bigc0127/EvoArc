@@ -29,19 +29,11 @@ struct TabCardView: View {
     private let swipeThreshold: CGFloat = 80
     
     private var systemBackgroundColor: Color {
-        #if os(iOS)
         Color(UIColor.systemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
     }
     
     private var secondarySystemBackgroundColor: Color {
-        #if os(iOS)
         Color(UIColor.secondarySystemBackground)
-        #else
-        Color(NSColor.controlBackgroundColor)
-        #endif
     }
     
     @ViewBuilder
@@ -151,9 +143,6 @@ struct TabCardView: View {
                     showingNewGroupAlert = false
                 }
             )
-            #if os(macOS)
-            .frame(minWidth: 400, minHeight: 320)
-            #endif
         }
     }
     
@@ -259,11 +248,7 @@ private extension TabCardView {
         return ZStack {
             // Background circle with engine-specific border (unchanged)
             Circle()
-                #if os(iOS)
                 .fill(Color(UIColor.systemBackground))
-                #else
-                .fill(Color(NSColor.windowBackgroundColor))
-                #endif
                 .overlay(
                     Circle()
                         .strokeBorder(tab.browserEngine == .webkit ? Color.accentColor : .orange,

@@ -1,6 +1,5 @@
 import SwiftUI
 
-#if os(iOS)
 import UIKit
 import UniformTypeIdentifiers
 
@@ -44,7 +43,6 @@ struct DocumentPickerView: UIViewControllerRepresentable {
         }
     }
 }
-#endif
 
 struct DownloadSettingsView: View {
     @ObservedObject private var downloadManager = DownloadManager.shared
@@ -67,29 +65,6 @@ struct DownloadSettingsView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 
-                #if os(macOS)
-                Button("Change...") {
-                    let panel = NSOpenPanel()
-                    panel.canChooseFiles = false
-                    panel.canChooseDirectories = true
-                    panel.allowsMultipleSelection = false
-                    
-                    if panel.runModal() == .OK {
-                        if let url = panel.url {
-                            downloadManager.downloadDirectory = url
-                        }
-                    }
-                }
-                .buttonStyle(.bordered)
-                #else
-                Button("Change...") {
-                    showDocumentPicker = true
-                }
-                .buttonStyle(.bordered)
-                .sheet(isPresented: $showDocumentPicker) {
-                    DocumentPickerView(downloadManager: downloadManager)
-                }
-                #endif
             }
             
             // Download Options
@@ -230,7 +205,6 @@ struct DownloadSettingsView: View {
     }
 }
 
-#if os(iOS)
 extension DownloadSettingsView {
     class Coordinator: NSObject, UIDocumentPickerDelegate {
         var parent: DownloadSettingsView
@@ -259,4 +233,3 @@ extension DownloadSettingsView {
         Coordinator(self)
     }
 }
-#endif

@@ -7,18 +7,13 @@
 
 import SwiftUI
 import WebKit
-#if os(iOS)
 import SafariServices
-#else
-import AppKit
-#endif
 
 struct PerplexityModalView: View {
     let request: PerplexityRequest
     let onDismiss: () -> Void
     
     var body: some View {
-        #if os(iOS)
         NavigationView {
             PerplexityWebView(url: request.perplexityURL)
                 .navigationTitle("Perplexity")
@@ -31,34 +26,6 @@ struct PerplexityModalView: View {
                     }
                 }
         }
-        #else
-        VStack(spacing: 0) {
-            // Header bar
-            HStack {
-                Text("Perplexity")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            Divider()
-            
-            // Web view
-            PerplexityWebView(url: request.perplexityURL)
-        }
-        .frame(minWidth: 800, minHeight: 600)
-        #endif
     }
 }
 
@@ -66,15 +33,10 @@ struct PerplexityWebView: View {
     let url: URL
     
     var body: some View {
-        #if os(iOS)
         PerplexityWebViewiOS(url: url)
-        #else
-        PerplexityWebViewMacOS(url: url)
-        #endif
     }
 }
 
-#if os(iOS)
 struct PerplexityWebViewiOS: UIViewRepresentable {
     let url: URL
     
@@ -200,107 +162,7 @@ struct PerplexityWebViewiOS: UIViewRepresentable {
         }
     }
 }
-#endif
 
-#if os(macOS)
-struct PerplexityWebViewMacOS: NSViewRepresentable {
-    let url: URL
-    
-    func makeNSView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        // Use default persistent data store to share cookies with main browser
-        configuration.websiteDataStore = WKWebsiteDataStore.default()
-        
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
-        webView.uiDelegate = context.coordinator
-        webView.allowsBackForwardNavigationGestures = true
-        
-        // Set the same user agent as main browser
-        webView.customUserAgent = BrowserSettings.shared.userAgentString
-        
-        // Set up coordinator references
-        context.coordinator.webView = webView
-        
-        // Load the URL
-        let request = URLRequest(url: url)
-        webView.load(request)
-        
-        return webView
-    }
-    
-    func updateNSView(_ nsView: WKWebView, context: Context) {
-        // Check if we need to load a new URL
-        if nsView.url != url {
-            let request = URLRequest(url: url)
-            nsView.load(request)
-        }
-        
-        // Update user agent if settings changed
-        if nsView.customUserAgent != BrowserSettings.shared.userAgentString {
-            nsView.customUserAgent = BrowserSettings.shared.userAgentString
-        }
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
-        weak var webView: WKWebView?
-        
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("Started loading Perplexity page")
-        }
-        
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("Finished loading Perplexity page")
-            
-            // Simplified authentication check - only on perplexity.ai domains
-            if let url = webView.url, url.host?.contains("perplexity.ai") == true {
-                PerplexityManager.shared.refreshAuthenticationStatus()
-            }
-        }
-        
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("Failed to load Perplexity page: \(error.localizedDescription)")
-        }
-        
-        deinit {
-            // Cleanup if needed
-        }
-        
-        // Handle new window requests
-        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            // Open links in the same webview instead of creating new windows
-            if navigationAction.targetFrame == nil {
-                webView.load(navigationAction.request)
-            }
-            return nil
-        }
-        
-        // Handle JavaScript alerts
-        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
-            let alert = NSAlert()
-            alert.messageText = "Perplexity"
-            alert.informativeText = message
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-            completionHandler()
-        }
-        
-        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
-            let alert = NSAlert()
-            alert.messageText = "Perplexity"
-            alert.informativeText = message
-            alert.addButton(withTitle: "OK")
-            alert.addButton(withTitle: "Cancel")
-            let response = alert.runModal()
-            completionHandler(response == .alertFirstButtonReturn)
-        }
-    }
-}
-#endif
 
 #Preview {
     PerplexityModalView(

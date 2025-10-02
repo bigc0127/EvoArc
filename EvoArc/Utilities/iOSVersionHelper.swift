@@ -9,11 +9,7 @@ import Foundation
 import WebKit
 import SystemConfiguration
 
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 /// Utility for iOS/macOS version detection
 public class iOSVersionHelper {
@@ -134,7 +130,6 @@ public class iOSVersionHelper {
     
     /// Device type (iPhone, iPad, etc.)
     public static var deviceType: String {
-        #if os(iOS)
         switch UIDevice.current.userInterfaceIdiom {
         case .phone:
             return "iPhone"
@@ -153,11 +148,6 @@ public class iOSVersionHelper {
         @unknown default:
             return "Unknown"
         }
-        #elseif os(macOS)
-        return "Mac"
-        #else
-        return "Unknown Platform"
-        #endif
     }
     
     /// Extended debug report including device information
