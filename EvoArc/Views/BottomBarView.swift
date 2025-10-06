@@ -1047,18 +1047,18 @@ struct RainbowBorderModifier: ViewModifier {
     /// Controls the animation state
     @State private var rotation: Double = 0
     
-    /// Very soft pastel rainbow gradient colors with smooth transitions
-    /// Matches ChatGPT's subtle, blended aesthetic
+    /// Medium saturation rainbow gradient colors with smooth transitions
+    /// Balanced between soft pastels and vivid colors for a pleasant loading effect
     private let rainbowColors: [Color] = [
-        Color(red: 0.95, green: 0.85, blue: 0.95),  // Very soft lavender
-        Color(red: 0.85, green: 0.90, blue: 1.0),   // Very soft sky blue
-        Color(red: 0.85, green: 0.95, blue: 0.95),  // Very soft cyan
-        Color(red: 0.85, green: 0.98, blue: 0.85),  // Very soft mint
-        Color(red: 0.98, green: 0.98, blue: 0.85),  // Very soft cream
-        Color(red: 1.0, green: 0.93, blue: 0.85),   // Very soft peach
-        Color(red: 1.0, green: 0.88, blue: 0.90),   // Very soft pink
-        Color(red: 0.98, green: 0.85, blue: 0.92),  // Very soft rose
-        Color(red: 0.95, green: 0.85, blue: 0.95)   // Back to lavender for smooth loop
+        Color(red: 0.78, green: 0.65, blue: 0.98),  // Soft lavender
+        Color(red: 0.60, green: 0.75, blue: 1.00),  // Soft sky blue
+        Color(red: 0.50, green: 0.88, blue: 0.93),  // Soft cyan
+        Color(red: 0.50, green: 0.94, blue: 0.70),  // Soft mint
+        Color(red: 1.00, green: 0.94, blue: 0.50),  // Soft yellow
+        Color(red: 1.00, green: 0.78, blue: 0.55),  // Soft peach
+        Color(red: 1.00, green: 0.60, blue: 0.70),  // Soft pink
+        Color(red: 0.94, green: 0.55, blue: 0.70),  // Soft rose
+        Color(red: 0.78, green: 0.65, blue: 0.98)   // Back to lavender for smooth loop
     ]
     
     func body(content: Content) -> some View {
@@ -1075,9 +1075,9 @@ struct RainbowBorderModifier: ViewModifier {
                     )
             )
             .onAppear {
-                // Start continuous rotation animation with slower speed
+                // Start continuous rotation animation - 3 seconds per full rotation
                 withAnimation(
-                    .linear(duration: 4.0)
+                    .linear(duration: 3.0)
                     .repeatForever(autoreverses: false)
                 ) {
                     rotation = 360
