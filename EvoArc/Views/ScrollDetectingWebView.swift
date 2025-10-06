@@ -292,6 +292,12 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 parent.tab.estimatedProgress = 0.0
                 parent.tab.startLoadingTimeout()
                 print("💪 iOS: Started loading timeout for tab: \(parent.tab.id)")
+                
+                // Record navigation start time for tap intent detection
+                // This helps determine if a tap triggered navigation (clicked a link)
+                // versus just trying to reveal the bottom bar
+                parent.tabManager.lastNavigationStart = Date()
+                
                 if let url = webView.url {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString

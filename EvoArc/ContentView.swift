@@ -353,6 +353,7 @@ struct ContentView: View {
                             isURLBarFocused: $isURLBarFocused,
                             showingSettings: $showingSettings,
                             shouldNavigate: $shouldNavigate,
+                            urlBarVisible: $urlBarVisible,
                             selectedTab: selected,
                             tabManager: tabManager
                         )
@@ -393,31 +394,6 @@ struct ContentView: View {
                 }
             }
             
-            // Invisible area at bottom to show URL bar when touched
-            if settings.autoHideURLBar && !urlBarVisible {
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 80)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                urlBarVisible = true
-                            }
-                        }
-                        .gesture(
-                            DragGesture()
-                                .onEnded { value in
-                                    if value.translation.height < -20 {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            urlBarVisible = true
-                                        }
-                                    }
-                                }
-                        )
-                }
-            }
             
             // iOS first-run default browser tooltip overlay
             if showDefaultBrowserTip {
@@ -493,14 +469,25 @@ struct ContentView: View {
                 .onEnded { value in
                     // Only process gesture if BottomBarView gesture is not active
                     if !tabManager.isGestureActive {
-                        let threshold: CGFloat = -100
                         let startY = value.startLocation.y
                         let screenHeight = UIScreen.main.bounds.height
+                        let verticalTranslation = value.translation.height
                         
                         // Check if gesture started in bottom 20% of screen
-                        if startY > screenHeight * 0.8 && value.translation.height < threshold {
-                            withAnimation(.spring()) {
-                                tabManager.toggleTabDrawer()
+                        if startY > screenHeight * 0.8 {
+                            // Swipe up: either show bar or toggle tab drawer
+                            if verticalTranslation < -50 {
+                                // Short swipe up: show bottom bar if hidden
+                                if settings.autoHideURLBar && !urlBarVisible {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        urlBarVisible = true
+                                    }
+                                }
+                            } else if verticalTranslation < -100 {
+                                // Long swipe up: toggle tab drawer
+                                withAnimation(.spring()) {
+                                    tabManager.toggleTabDrawer()
+                                }
                             }
                         }
                     }

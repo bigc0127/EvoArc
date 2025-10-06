@@ -28,6 +28,7 @@
 import Foundation  // Core types, UUID, URL, UserDefaults
 import SwiftUI     // ObservableObject, Published wrappers
 import Combine     // Reactive programming, publishers, subscribers
+import WebKit      // WKWebView for web view access
 
 // MARK: - Tab State Structure
 
@@ -135,6 +136,10 @@ class TabManager: ObservableObject {
     /// 
     /// Used by UI to show loading state vs. ready state.
     @Published var isInitialized: Bool = false
+    
+    /// Timestamp of the last navigation start event.
+    /// Used to detect if a navigation was triggered by a tap (to avoid showing bottom bar).
+    @Published var lastNavigationStart: Date = .distantPast
     
     // MARK: - Confirmation Dialog State
     
@@ -381,6 +386,30 @@ class TabManager: ObservableObject {
         withAnimation(.spring()) {
             isTabDrawerVisible = false
         }
+    }
+    
+    // MARK: - Web View Access
+    
+    /// Provides safe access to the currently selected tab's web view.
+    /// Returns nil if no tab is selected or if the web view hasn't been initialized yet.
+    /// 
+    /// **Use case**: Useful for features that need to interact with the current page's content,
+    /// such as detecting taps on interactive elements or executing JavaScript.
+    var currentWebView: WKWebView? {
+        return selectedTab?.webView
+    }
+    
+    /// Checks if a navigation event started after the given timestamp.
+    /// Used to determine if a user's tap triggered navigation (clicking a link)
+    /// versus just trying to reveal the bottom bar.
+    /// 
+    /// **Use case**: When the bottom bar is hidden and user taps, we wait a short time.
+    /// If navigation starts during that window, we assume they clicked a link and don't show the bar.
+    /// 
+    /// - Parameter since: The timestamp to compare against (typically when tap was detected)
+    /// - Returns: true if navigation started after the given time, false otherwise
+    func navigationStartedSince(_ since: Date) -> Bool {
+        return lastNavigationStart > since
     }
     
     // MARK: - Browser Engine Switching

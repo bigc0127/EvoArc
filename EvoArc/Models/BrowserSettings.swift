@@ -438,6 +438,15 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    /// Provides haptic feedback when bottom bar reveals (light tap)
+    /// Only applies on iPhone when auto-hide is enabled
+    @Published var bottomBarHaptics: Bool {
+        didSet {
+            UserDefaults.standard.set(bottomBarHaptics, forKey: "bottomBarHaptics")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     private init() {
         // Set default based on device type
         let defaultDesktopMode: Bool
@@ -616,6 +625,13 @@ class BrowserSettings: ObservableObject {
             self.searchPreloadingEnabled = UserDefaults.standard.bool(forKey: "searchPreloadingEnabled")
         } else {
             self.searchPreloadingEnabled = true
+        }
+        
+        // Load bottom bar haptics setting (default on)
+        if UserDefaults.standard.object(forKey: "bottomBarHaptics") != nil {
+            self.bottomBarHaptics = UserDefaults.standard.bool(forKey: "bottomBarHaptics")
+        } else {
+            self.bottomBarHaptics = true
         }
     }
     

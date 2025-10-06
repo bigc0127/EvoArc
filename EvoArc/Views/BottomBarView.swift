@@ -95,6 +95,12 @@ struct BottomBarView: View {
     /// ContentView resets it back to false after handling.
     @Binding var shouldNavigate: Bool
     
+    /// Controls the visibility of the URL bar (for auto-hide feature).
+    ///
+    /// **Use case**: On iPhone with auto-hide enabled, users can manually hide
+    /// the bar to maximize screen space for content.
+    @Binding var urlBarVisible: Bool
+    
     // MARK: Observed Objects (Passed from parent)
     // @ObservedObject is used for objects that are OWNED BY SOMEONE ELSE (usually the parent).
     // When these objects' @Published properties change, this view automatically re-renders.
@@ -580,7 +586,36 @@ struct BottomBarView: View {
     
     private var browserControls: some View {
         HStack(spacing: 8) {
-            // Pin/Unpin button
+            // Hide bar button (only on iPhone with auto-hide enabled)
+            #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .phone && settings.autoHideURLBar {
+                Button(action: {
+                    // Hide the bottom bar
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        urlBarVisible = false
+                    }
+                }) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 18))
+                        .foregroundColor(.primary)
+                }
+            } else {
+                // Pin/Unpin button (iPad or when auto-hide is off)
+                Button(action: {
+                    if selectedTab.isPinned {
+                        tabManager.unpinTab(selectedTab)
+                    } else {
+                        tabManager.pinTab(selectedTab)
+                    }
+                }) {
+                    Image(systemName: selectedTab.isPinned ? "pin.slash" : "pin")
+                        .font(.system(size: 18))
+                        .foregroundColor(selectedTab.isPinned ? .accentColor : .primary)
+                }
+                .disabled(selectedTab.url == nil)
+            }
+            #else
+            // Pin/Unpin button (macOS)
             Button(action: {
                 if selectedTab.isPinned {
                     tabManager.unpinTab(selectedTab)
@@ -593,6 +628,7 @@ struct BottomBarView: View {
                     .foregroundColor(selectedTab.isPinned ? .accentColor : .primary)
             }
             .disabled(selectedTab.url == nil)
+            #endif
             
             // Reader mode indicator
             if selectedTab.readerModeEnabled {

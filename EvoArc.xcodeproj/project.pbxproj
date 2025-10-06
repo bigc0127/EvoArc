@@ -30,7 +30,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C8F6D9042E6A00220001783B /* Exceptions for "EvoArc" folder */ = {
+		C8F6D9042E6A00220001783B /* Exceptions for "EvoArc" folder in "EvoArc" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Info-iOS.plist",
@@ -43,7 +43,7 @@
 		C8F6D9042E6A00220001783A /* EvoArc */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				C8F6D9042E6A00220001783B /* Exceptions for "EvoArc" folder */,
+				C8F6D9042E6A00220001783B /* Exceptions for "EvoArc" folder in "EvoArc" target */,
 			);
 			path = EvoArc;
 			sourceTree = "<group>";
