@@ -4,86 +4,315 @@
 //
 //  Created by Connor W. Needling on 2025-09-04.
 //
+//  This is the ROOT VIEW of the EvoArc browser app - the main container that
+//  orchestrates all UI components, browser functionality, and user interactions.
+//  It adapts between iPhone and iPad/Mac layouts dynamically.
+//
 
-import SwiftUI
-import WebKit
-import UIKit
-import Combine
+// MARK: - Import Explanation for Beginners
+import SwiftUI   // Apple's declarative UI framework - used for all views and layouts
+import WebKit    // Web rendering engine - provides WKWebView for displaying web content
+import UIKit     // iOS/iPadOS UI framework - used for device detection and system integration
+import Combine   // Reactive programming framework - used for observing state changes (though not heavily used here)
 
+// MARK: - What is ContentView?
+// ContentView is the root SwiftUI view for EvoArc. It:
+// 1. Manages the browser's tab system through TabManager
+// 2. Adapts UI between iPhone (bottom bar) and iPad (sidebar) layouts
+// 3. Handles URL navigation, settings, and user interactions
+// 4. Coordinates with managers for browser settings, ad blocking, and Perplexity AI integration
+//
+// Key Swift/SwiftUI Concepts:
+// - @StateObject: Creates and owns an observable object for the view's lifetime
+// - @State: Creates mutable state that triggers view updates when changed
+// - @AppStorage: Persists simple values to UserDefaults automatically
+// - @Environment: Reads system-provided values (color scheme, dynamic type, etc.)
+// - GeometryReader: A view that provides size and position information
+// - @ViewBuilder: Allows functions to return multiple view types conditionally
+
+/// The root view of the EvoArc browser application.
+///
+/// **Architecture**: ContentView acts as a coordinator, managing multiple child views
+/// and state objects. It doesn't contain much business logic - instead, it delegates
+/// to managers and child views.
+///
+/// **Adaptive Layout**: Uses `UIDevice.current.userInterfaceIdiom` to detect device type
+/// and render either:
+/// - iPhone: Bottom URL bar with traditional browser UI
+/// - iPad/Mac: Arc-inspired sidebar interface with command bar
+///
+/// **State Management**: Uses property wrappers to observe and react to changes:
+/// - @StateObject for owned, long-lived objects
+/// - @State for local, view-specific mutable state
+/// - @AppStorage for persistent user preferences
 struct ContentView: View {
-    // State Objects
-    @StateObject private var tabManager = TabManager()
-    @StateObject private var settings = BrowserSettings.shared
-    @StateObject private var perplexityManager = PerplexityManager.shared
-    @StateObject private var uiViewModel = UIViewModel() // ARC Like UI state
     
-    // State Variables
+    // MARK: - State Objects (Long-lived, Observable)
+    // These are objects that ContentView owns and observes for changes.
+    // When their @Published properties change, ContentView automatically re-renders.
+    //
+    // @StateObject vs @ObservedObject:
+    // - @StateObject: View OWNS the object (creates and manages its lifetime)
+    // - @ObservedObject: View OBSERVES an object owned by someone else
+    // Use @StateObject for objects created in this view, @ObservedObject for passed-in objects.
+    
+    /// The tab manager - handles all browser tabs, their state, and persistence.
+    ///
+    /// **What it does**: Manages the list of open tabs, which tab is selected,
+    /// tab creation/deletion, and saving/restoring tabs between app launches.
+    @StateObject private var tabManager = TabManager()
+    
+    /// The browser settings singleton - provides access to all user preferences.
+    ///
+    /// **Singleton Pattern**: `BrowserSettings.shared` ensures only one instance
+    /// exists app-wide. All parts of the app reference the same settings object.
+    @StateObject private var settings = BrowserSettings.shared
+    
+    /// The Perplexity AI manager - handles AI search integration.
+    ///
+    /// **What it does**: Manages requests to Perplexity AI (an AI-powered search engine)
+    /// and displays results in a modal.
+    @StateObject private var perplexityManager = PerplexityManager.shared
+    
+    /// The UI view model - manages iPad/Mac Arc-like UI state (sidebar, command bar, etc.).
+    ///
+    /// **iPad-specific**: This is primarily used for the iPad/Mac layout.
+    /// Contains state for sidebar visibility, position, command bar, etc.
+    @StateObject private var uiViewModel = UIViewModel()
+    
+    // MARK: - State Variables (Local, View-specific)
+    // These are simple values that ContentView manages directly.
+    // When they change, SwiftUI automatically re-renders affected parts of the view.
+    //
+    // @State Property Wrapper Explanation:
+    // @State tells SwiftUI to manage storage for these values and watch for changes.
+    // When a @State variable changes, SwiftUI re-computes the view's body.
+    // Always mark @State as private - it's internal to this view.
+    
+    /// The text displayed in the URL bar.
+    ///
+    /// **Binding**: This is passed to child views using `$urlString` (a Binding),
+    /// allowing them to read AND write the value.
     @State private var urlString: String = ""
+    
+    /// Whether the URL bar is currently focused (keyboard is up).
+    ///
+    /// **Use case**: Controls keyboard behavior and URL bar appearance.
     @State private var isURLBarFocused: Bool = false
+    
+    /// The current drag offset for the tab drawer.
+    ///
+    /// **CGSize Explanation**: A struct with width and height properties.
+    /// Used to track gesture movement for dismissing the tab drawer.
     @State private var dragOffset: CGSize = .zero
+    
+    /// Whether to show the hover area for revealing hidden UI (currently unused).
     @State private var showHoverArea: Bool = false
+    
+    /// Whether the settings sheet is presented (iPhone layout).
     @State private var showingSettings: Bool = false
+    
+    /// Triggers navigation to the current URL when set to true.
+    ///
+    /// **Pattern**: This is a common SwiftUI pattern for triggering actions
+    /// based on state changes. Child views set this to true to navigate.
     @State private var shouldNavigate: Bool = false
+    
+    /// Whether the URL bar is visible (for auto-hide feature).
+    ///
+    /// **Auto-hide**: If enabled in settings, the URL bar hides when scrolling
+    /// and shows when the user taps the bottom of the screen.
     @State private var urlBarVisible: Bool = true
+    
+    /// The last recorded scroll offset (for auto-hide detection).
+    ///
+    /// **CGFloat**: A floating-point number type used for graphics/layout measurements.
     @State private var lastScrollOffset: CGFloat = 0
+    
+    /// Whether to show the "set as default browser" tip on first launch.
     @State private var showDefaultBrowserTip: Bool = false
+    
+    /// The current keyboard height (when keyboard is visible).
+    ///
+    /// **Use case**: Adjust layout to prevent keyboard from covering important UI.
     @State private var keyboardHeight: CGFloat = 0
+    
+    /// Whether the keyboard is currently visible.
     @State private var keyboardVisible: Bool = false
+    
+    /// Whether the web view can navigate backward (used for iPad nav buttons).
     @State private var canGoBack: Bool = false
+    
+    /// Whether the web view can navigate forward (used for iPad nav buttons).
     @State private var canGoForward: Bool = false
     
-    // App Storage
+    // MARK: - App Storage (Persistent Preferences)
+    // @AppStorage automatically saves values to UserDefaults (iOS's key-value storage).
+    // Changes persist between app launches.
+    //
+    // @AppStorage vs @State:
+    // - @State: Value exists only while the view is alive
+    // - @AppStorage: Value persists to disk automatically
+    
+    /// Tracks whether we've shown the default browser prompt to the user.
+    ///
+    /// **Purpose**: Only show the prompt once on first launch, not every time.
+    ///
+    /// **UserDefaults Key**: "hasShownDefaultBrowserPrompt" - this is the key
+    /// used to store/retrieve the value from UserDefaults.
     @AppStorage("hasShownDefaultBrowserPrompt") private var hasShownDefaultBrowserPrompt: Bool = false
     
-    // Environment Values
+    // MARK: - Environment Values (System-provided)
+    // @Environment reads values provided by the SwiftUI environment.
+    // These are system-level settings that change based on user preferences or device state.
+    //
+    // Environment vs State:
+    // - @State: You control and modify the value
+    // - @Environment: System provides the value (read-only in most cases)
+    
+    /// The current dynamic type size (user's text size preference in Settings).
+    ///
+    /// **Accessibility**: iOS users can adjust text size system-wide.
+    /// Apps should respect this for accessibility. ContentView doesn't currently
+    /// use this, but it's available for future layout adjustments.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    
+    /// The current color scheme (light or dark mode).
+    ///
+    /// **Use case**: ContentView uses this to adjust the iPad background gradient
+    /// overlay (darker in dark mode).
+    ///
+    /// **ColorScheme**: An enum with cases `.light` and `.dark`.
     @Environment(\.colorScheme) private var colorScheme
-    // MARK: - Main View
+    // MARK: - Main View (Entry Point)
+    // This is ContentView's `body` property - SwiftUI calls this to render the view.
+    // It's a computed property that returns a View.
+    //
+    // View Protocol Explanation:
+    // All SwiftUI views must conform to the View protocol, which requires a `body` property.
+    // The body describes what the view looks like and how it behaves.
+    
+    /// The main body of ContentView - adapts layout based on device type.
+    ///
+    /// **Architecture Decision**: EvoArc uses different UI paradigms for different devices:
+    /// - **iPhone**: Traditional mobile browser with bottom URL bar and compact layout
+    /// - **iPad/Mac**: Arc-inspired interface with sidebar, command bar, and spacious layout
+    ///
+    /// **GeometryReader Explanation**: A container view that provides access to its size
+    /// and position through a `GeometryProxy` parameter. Child layouts use this to adapt
+    /// to available space.
+    ///
+    /// **Device Detection**: `UIDevice.current.userInterfaceIdiom` returns:
+    /// - `.phone` for iPhones
+    /// - `.pad` for iPads
+    /// - `.mac` for Mac Catalyst apps
     var body: some View {
+        // GeometryReader provides size information to child views
         GeometryReader { geometry in
-            // Check if we're on iPhone or iPad
+            // Device-specific layout branching
             if UIDevice.current.userInterfaceIdiom == .phone {
-                // iPhone UI - keep original design
+                // iPhone: Traditional mobile browser UI with bottom bar
                 iphoneLayout(geometry: geometry)
             } else {
-                // iPad UI - use ARC Like UI design
+                // iPad/Mac: Arc-inspired UI with sidebar and command bar
                 arcLikeLayout(geometry: geometry)
             }
         }
     }
     
-    // MARK: - iPhone Layout (Original)
+    // MARK: - iPhone Layout (Original Mobile Browser UI)
+    // This function returns the complete iPhone layout as a View.
+    // It uses a ZStack to layer multiple UI elements (web content, URL bar, overlays).
+    //
+    // @ViewBuilder Explanation:
+    // This attribute allows the function to return different view types and use
+    // SwiftUI's declarative syntax (if/else, ForEach, etc.) directly.
+    // Without @ViewBuilder, you'd need to wrap everything in AnyView or return a single type.
     
+    /// Constructs the iPhone-specific browser layout.
+    ///
+    /// **Layout Strategy**: Uses ZStack to layer views on top of each other:
+    /// 1. Bottom layer: Web content (TabViewContainer)
+    /// 2. Middle layer: Bottom URL bar (BottomBarView)
+    /// 3. Top layers: Tab drawer overlay, default browser tip, gesture areas
+    ///
+    /// **Keyboard Handling**: Sets up NotificationCenter observers to track keyboard
+    /// visibility and adjust layout accordingly.
+    ///
+    /// **Parameter**:
+    /// - geometry: Provides screen size for responsive layout calculations
     @ViewBuilder
     private func iphoneLayout(geometry: GeometryProxy) -> some View {
-        // Set up keyboard observers
-        let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+        // MARK: Keyboard Observers
+        // These observers watch for keyboard show/hide notifications from iOS.
+        // When the keyboard appears, we need to adjust the layout to prevent it
+        // from covering important UI elements.
+        //
+        // NotificationCenter Pattern:
+        // iOS uses NotificationCenter to broadcast system events. We register
+        // observers that execute closure blocks when specific notifications occur.
+        //
+        // `let _ = ...` Explanation:
+        // This executes the code and discards the return value (the observer object).
+        // We don't need to keep a reference since the observer is automatically removed
+        // when the view disappears.
+        
+        // Observer 1: Keyboard will show
+        let _ = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,  // Notification name
+            object: nil,                                         // No specific object filter
+            queue: .main                                         // Execute on main thread (UI updates)
+        ) { notification in
+            // Extract keyboard frame from notification's userInfo dictionary
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                keyboardHeight = keyboardFrame.height
-                keyboardVisible = true
+                keyboardHeight = keyboardFrame.height  // Store keyboard height
+                keyboardVisible = true                 // Mark keyboard as visible
             }
         }
-        let _ = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-            keyboardHeight = 0
-            keyboardVisible = false
+        
+        // Observer 2: Keyboard will hide
+        let _ = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,  // Notification name
+            object: nil,                                        // No specific object filter
+            queue: .main                                        // Execute on main thread
+        ) { _ in
+            keyboardHeight = 0        // Reset keyboard height
+            keyboardVisible = false   // Mark keyboard as hidden
         }
         
+        // MARK: Main Layout Stack
+        // ZStack layers views on the Z-axis (front to back).
+        // Order matters: later views appear on top of earlier ones.
         ZStack {
+            // Bottom layer: Main content area
             VStack(spacing: 0) {
-                // Web content area
+                // MARK: Web Content Area
+                // This section displays the actual web content or placeholder states.
+                // Three possible states:
+                // 1. Normal: Tabs exist and are initialized → show web content
+                // 2. Loading: Tabs are being restored → show loading spinner
+                // 3. Empty: No tabs exist → show empty state
+                
+                // State 1: Normal - Display web content
                 if !tabManager.tabs.isEmpty && tabManager.isInitialized {
+                    // TabViewContainer wraps WKWebView and handles web rendering
                     TabViewContainer(
-                        tabManager: tabManager,
-                        urlString: $urlString,
-                        shouldNavigate: $shouldNavigate,
-                        urlBarVisible: $urlBarVisible,
+                        tabManager: tabManager,             // Manager for tab state
+                        urlString: $urlString,              // $ creates a Binding (two-way)
+                        shouldNavigate: $shouldNavigate,    // Trigger for navigation
+                        urlBarVisible: $urlBarVisible,      // Controls URL bar auto-hide
                         onNavigate: { url in
+                            // Closure called when navigation occurs
+                            // Updates the URL bar to show the new URL
                             urlString = url.absoluteString
                         },
-                        autoHideEnabled: settings.autoHideURLBar
+                        autoHideEnabled: settings.autoHideURLBar  // User preference
                     )
-                    .ignoresSafeArea(edges: .horizontal)
-                    .ignoresSafeArea(edges: urlBarVisible ? [] : .bottom)
+                    // ignoresSafeArea: Extends content into system areas (notch, home indicator)
+                    .ignoresSafeArea(edges: .horizontal)  // Extend to screen edges horizontally
+                    .ignoresSafeArea(edges: urlBarVisible ? [] : .bottom)  // Extend to bottom only when URL bar is hidden
+                    
+                // State 2: Loading - Show restoration progress
                 } else if !tabManager.isInitialized {
                     VStack {
                         Spacer()
@@ -545,42 +774,106 @@ struct ContentView: View {
     }
     
     // MARK: - Helper Functions
+    // These private methods provide reusable functionality for ContentView.
     
+    /// Opens the iOS Settings app to EvoArc's settings page.
+    ///
+    /// **Use case**: Called when the user taps "Open Settings" in the default browser prompt.
+    ///
+    /// **UIApplication Explanation**: A singleton object (`UIApplication.shared`) that
+    /// represents the app itself and provides system-level functionality.
+    ///
+    /// **openSettingsURLString**: A special URL scheme (app-settings:) that opens Settings.
+    ///
+    /// **Optional Chaining**: The `if let` safely unwraps the optional URL, and the
+    /// `canOpenURL` check ensures the URL is valid before attempting to open it.
     private func openAppSettings() {
+        // Create a URL for the Settings app
         if let url = URL(string: UIApplication.openSettingsURLString),
-           UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
+           UIApplication.shared.canOpenURL(url) {  // Verify the URL can be opened
+            UIApplication.shared.open(url)  // Open Settings
         }
     }
     
+    /// Initializes the URL bar text based on the currently selected tab.
+    ///
+    /// **Purpose**: Called when ContentView appears and when the selected tab changes.
+    /// Updates the `urlString` state to reflect the current tab's URL.
+    ///
+    /// **Design Note**: Some tabs (like new tab pages) don't show their URL in the bar.
+    /// The `showURLInBar` property controls this behavior.
+    ///
+    /// **Optional Chaining**: Uses `selectedTab?.url?.absoluteString` to safely
+    /// navigate through potentially nil values. The `??` operator provides a default ("").
     private func setupInitialURL() {
         if let selectedTab = tabManager.selectedTab {
-            // Only show URL if explicitly enabled
+            // Only show URL if the tab wants to display it (not all tabs do)
             if selectedTab.showURLInBar {
+                // Convert the URL to a string, or use empty string if URL is nil
                 urlString = selectedTab.url?.absoluteString ?? ""
             } else {
+                // Hide the URL for this tab (e.g., new tab page)
                 urlString = ""
             }
         }
     }
     
+    /// Handles URLs opened externally (from other apps or Safari).
+    ///
+    /// **Use case**: When another app opens a link in EvoArc, or when the user
+    /// shares a URL to EvoArc, this function is called.
+    ///
+    /// **Feature**: If "Redirect External Searches" is enabled in settings, EvoArc
+    /// intercepts search engine URLs and redirects them to the user's preferred
+    /// search engine. For example, Google searches can be redirected to DuckDuckGo.
+    ///
+    /// **Guard Statement**: An early exit pattern. If the condition is false,
+    /// execute the code and return early. This avoids deep nesting.
+    ///
+    /// **Parameter**:
+    /// - url: The incoming URL from another app
     private func handleIncomingURL(_ url: URL) {
-        // If redirect is disabled, just open the incoming URL in a new tab
+        // Check if redirect feature is disabled
         guard settings.redirectExternalSearches else {
+            // Redirect is off: just open the URL as-is in a new tab
             tabManager.createNewTab(url: url)
-            return
+            return  // Exit early
         }
         
-        if let query = extractSearchQuery(from: url),
-           let target = BrowserSettings.shared.searchURL(for: query) {
-            tabManager.createNewTab(url: target)
+        // Redirect is on: try to extract a search query
+        if let query = extractSearchQuery(from: url),  // Extract query from URL
+           let target = BrowserSettings.shared.searchURL(for: query) {  // Build new search URL
+            // Successfully extracted query and built target URL
+            tabManager.createNewTab(url: target)  // Open redirected search
         } else {
+            // Couldn't extract a query (not a search URL) - open original URL
             tabManager.createNewTab(url: url)
         }
     }
     
-    // MARK: - URL Parsing
+    // MARK: - URL Parsing (Search Query Extraction)
+    // This section contains logic to extract search queries from various search engines.
+    // It's used for the "redirect external searches" feature.
     
+    /// Extracts a search query from a search engine URL.
+    ///
+    /// **Purpose**: When EvoArc receives a search URL from another app (e.g., a Google
+    /// search), this function extracts the query text so it can be redirected to
+    /// the user's preferred search engine.
+    ///
+    /// **Supported Search Engines**: Google, DuckDuckGo, Bing, Yahoo, Qwant, Startpage,
+    /// Presearch, Ecosia, Perplexity, Yandex.
+    ///
+    /// **URL Structure**: Search engine URLs typically have a query parameter:
+    /// - Google: `https://google.com/search?q=swift+programming`
+    /// - DuckDuckGo: `https://duckduckgo.com/?q=swift+programming`
+    /// The parameter name varies by engine (usually `q`, but sometimes `p` or `text`).
+    ///
+    /// **Returns**: The extracted query string, or `nil` if the URL isn't a recognized
+    /// search engine or doesn't contain a query.
+    ///
+    /// **Parameter**:
+    /// - url: The URL to parse
     private func extractSearchQuery(from url: URL) -> String? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
         let host = (components.host ?? "").lowercased()
@@ -646,51 +939,51 @@ struct ContentView: View {
     // MARK: - Sidebar Toggle Button
     
     private var sidebarToggleButton: some View {
-        Button(action: {
+        ZStack {
+            // Frosted glass background with gradient tint
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 44, height: 44)
+                .overlay {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "8041E6").opacity(0.3),
+                                    Color(hex: "A0F2FC").opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay {
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.4), lineWidth: 1.5)
+                }
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            
+            // Icon with darker color for visibility on light backgrounds
+            Image(systemName: uiViewModel.sidebarPosition == "left" ? "sidebar.left" : "sidebar.right")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.75), Color.black.opacity(0.65)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .shadow(color: .white.opacity(0.5), radius: 1, x: 0, y: 1)
+        }
+        .frame(width: 64, height: 64) // Larger hit area for easier touch
+        .contentShape(Rectangle()) // Define the entire frame as tappable
+        .onTapGesture {
             withAnimation(.easeInOut) {
                 uiViewModel.isSidebarFloating = false // Manual toggle uses docked mode
                 uiViewModel.showSidebar = true
             }
-        }) {
-            ZStack {
-                // Frosted glass background with gradient tint
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(hex: "8041E6").opacity(0.3),
-                                        Color(hex: "A0F2FC").opacity(0.3)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-                    .overlay {
-                        Circle()
-                            .strokeBorder(Color.white.opacity(0.4), lineWidth: 1.5)
-                    }
-                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                
-                // Icon with darker color for visibility on light backgrounds
-                Image(systemName: uiViewModel.sidebarPosition == "left" ? "sidebar.left" : "sidebar.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.black.opacity(0.75), Color.black.opacity(0.65)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .shadow(color: .white.opacity(0.5), radius: 1, x: 0, y: 1)
-            }
         }
-        .buttonStyle(.plain)
         .zIndex(100) // Ensure button is above hover detection areas
     }
     
@@ -825,4 +1118,155 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
+// MARK: - Architecture Summary for Beginners
+// ============================================
+//
+// ContentView is the HEART of the EvoArc browser app. Here's how it all fits together:
+//
+// 1. STATE MANAGEMENT HIERARCHY:
+//    ┌─────────────────────────────────────────┐
+//    │         ContentView (Root)              │  ← You are here
+//    │  - Owns TabManager, Settings, etc.      │
+//    │  - Coordinates all child views          │
+//    └─────────────────────────────────────────┘
+//              │
+//              ├─ iPhone Layout               iPad/Mac Layout ─┐
+//              │                                                 │
+//    ┌─────────▼────────────┐               ┌─────────────────▼────────┐
+//    │  BottomBarView       │               │  SidebarView             │
+//    │  TabViewContainer    │               │  CommandBarView          │
+//    │  TabDrawerView       │               │  WebContentPanel         │
+//    └──────────────────────┘               └──────────────────────────┘
+//
+// 2. PROPERTY WRAPPER DECISION TREE:
+//    When should you use each wrapper?
+//
+//    @State
+//    ├─ Use for: Simple, local view state (Bool, String, Int, etc.)
+//    ├─ Lifetime: Exists only while view is alive
+//    ├─ Example: urlBarVisible, showingSettings
+//    └─ Rule: Always private, owned by this view
+//
+//    @StateObject
+//    ├─ Use for: Objects (classes) this view creates and owns
+//    ├─ Lifetime: Managed by this view, persists across view updates
+//    ├─ Example: tabManager, uiViewModel
+//    └─ Rule: View creates the object (using initializer)
+//
+//    @ObservedObject (not used in ContentView, but related)
+//    ├─ Use for: Objects passed in from parent or elsewhere
+//    ├─ Lifetime: Managed by someone else
+//    └─ Example: Would be used if TabManager was created elsewhere
+//
+//    @AppStorage
+//    ├─ Use for: User preferences that persist between launches
+//    ├─ Lifetime: Permanent (stored in UserDefaults)
+//    ├─ Example: hasShownDefaultBrowserPrompt
+//    └─ Rule: Automatically saves to disk
+//
+//    @Environment
+//    ├─ Use for: System-provided values (color scheme, size classes, etc.)
+//    ├─ Lifetime: Managed by system
+//    ├─ Example: colorScheme, dynamicTypeSize
+//    └─ Rule: Read-only in most cases
+//
+// 3. KEY SWIFTUI CONCEPTS DEMONSTRATED:
+//
+//    Bindings ($):
+//    - The $ prefix creates a two-way binding to a state variable
+//    - Example: $urlString allows child views to read AND write urlString
+//    - Without $: Child can only read (one-way)
+//    - With $: Child can read and write (two-way)
+//
+//    @ViewBuilder:
+//    - Allows functions to return different view types
+//    - Enables SwiftUI's declarative syntax (if/else) in function bodies
+//    - Used extensively in iphoneLayout() and arcLikeLayout()
+//
+//    GeometryReader:
+//    - Provides size and position information to child views
+//    - ContentView uses it to detect screen size for responsive layouts
+//    - Pattern: GeometryReader { geometry in ... }
+//
+//    ZStack, VStack, HStack:
+//    - ZStack: Layers views front-to-back (Z-axis)
+//    - VStack: Stacks views vertically (top to bottom)
+//    - HStack: Stacks views horizontally (left to right)
+//
+//    View Modifiers:
+//    - .onAppear { }: Executes when view appears
+//    - .onChange(of:) { }: Executes when value changes
+//    - .sheet(isPresented:) { }: Presents modal sheets
+//    - .gesture() { }: Adds gesture recognizers
+//    - .transition() { }: Animates view appearance/disappearance
+//
+// 4. ADAPTIVE LAYOUT STRATEGY:
+//
+//    Device Detection:
+//    ```
+//    if UIDevice.current.userInterfaceIdiom == .phone {
+//        iphoneLayout()  // Bottom bar, compact UI
+//    } else {
+//        arcLikeLayout() // Sidebar, spacious UI
+//    }
+//    ```
+//
+//    Why separate layouts?
+//    - iPhone: Limited screen space → bottom URL bar, vertical focus
+//    - iPad: Ample space → sidebar navigation, Arc-like command bar
+//    - Different interaction paradigms: touch vs cursor/keyboard
+//
+// 5. DATA FLOW (How information moves through ContentView):
+//
+//    User Action → State Change → UI Update
+//    ─────────────────────────────────────────
+//    Example: User taps a tab in the drawer
+//
+//    1. User taps → TabDrawerView calls tabManager.selectTab()
+//    2. TabManager updates @Published var selectedTab
+//    3. ContentView observes change (via @StateObject)
+//    4. SwiftUI re-renders ContentView.body
+//    5. setupInitialURL() updates urlString
+//    6. URL bar displays new URL
+//
+//    This is called "unidirectional data flow" - data flows one direction:
+//    Action → State → View
+//
+// 6. COMMON PITFALLS & TIPS FOR BEGINNERS:
+//
+//    ❌ Don't: Create @StateObject in a subview for an object created elsewhere
+//    ✅ Do: Use @StateObject in the view that creates the object
+//
+//    ❌ Don't: Mutate @State variables from outside the view
+//    ✅ Do: Pass Bindings ($variable) to allow child views to mutate
+//
+//    ❌ Don't: Perform heavy work directly in body
+//    ✅ Do: Use .onAppear, .task, or .onChange to trigger async work
+//
+//    ❌ Don't: Create new Timer/NotificationCenter observers in body
+//    ✅ Do: Set them up in .onAppear or in an initializer
+//
+// 7. FILE ORGANIZATION PATTERN:
+//    - Property declarations at top (state, observed objects)
+//    - Main body property (entry point)
+//    - Layout functions (iphoneLayout, arcLikeLayout)
+//    - Helper functions (setup, URL handling)
+//    - Computed view properties (buttons, overlays)
+//
+// 8. RELATED FILES TO STUDY NEXT:
+//    - TabManager.swift: How tabs are managed and persisted
+//    - BrowserSettings.swift: User preferences and storage
+//    - BottomBarView.swift: iPhone URL bar implementation
+//    - SidebarView.swift: iPad sidebar implementation
+//    - TabViewContainer.swift: Web view wrapper and scroll handling
+//
+// 9. DEBUGGING TIPS:
+//    - Use print() statements to trace state changes
+//    - SwiftUI's Live Preview for rapid iteration
+//    - Xcode's View Hierarchy debugger to inspect layout
+//    - Look for @Published properties in manager classes (TabManager, etc.)
+//
+// This file demonstrates real-world SwiftUI architecture in a production app.
+// Study the patterns here to understand how large SwiftUI apps are structured!
 

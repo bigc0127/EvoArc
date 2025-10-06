@@ -4,43 +4,95 @@
 //
 //  Created on 2025-09-04.
 //
+//  This file defines ALL user-configurable settings for the EvoArc browser.
+//  It uses the Singleton pattern to provide a single, shared settings instance
+//  throughout the app. All settings automatically persist to UserDefaults.
+//
+//  Key responsibilities:
+//  1. Define available options (browser engines, search engines, etc.)
+//  2. Store user preferences with @Published for automatic UI updates
+//  3. Persist settings to UserDefaults automatically
+//  4. Provide computed properties for derived values (user agent strings, search URLs)
+//  5. Broadcast changes via NotificationCenter for non-SwiftUI components
+//
 
-import Foundation
-import SwiftUI
-import Combine
-import UIKit
+// MARK: - Import Explanation for Beginners
+import Foundation  // Core Swift framework - provides UserDefaults for persistence
+import SwiftUI    // Apple's UI framework - provides ObservableObject and @Published
+import Combine    // Reactive programming framework - used by @Published under the hood
+import UIKit      // iOS/iPadOS UI framework - provides UIDevice for platform detection
 
-// Browser engine available on all platforms
+// MARK: - Configuration Enums
+// These enums define the available options for various settings.
+// They're used throughout the settings UI to present choices to the user.
+//
+// Swift Enum Concepts:
+// - String: The enum has a String raw value (useful for persistence)
+// - CaseIterable: Automatically provides an `allCases` array of all enum values
+// - Identifiable: Makes the enum usable in SwiftUI ForEach loops
+
+/// Defines the available browser rendering engines.
+///
+/// **Purpose**: EvoArc supports two rendering engines:
+/// - **WebKit** (Safari's engine): iOS's native engine, fast and energy-efficient
+/// - **Blink** (Chrome's engine): Google's engine for cross-platform compatibility
+///
+/// **Raw Value**: String makes it easy to save/load from UserDefaults.
+///
+/// **CaseIterable**: Provides `BrowserEngine.allCases` for settings UI.
+///
+/// **Use case**: Users can switch engines in settings to test compatibility
+/// or performance differences.
 enum BrowserEngine: String, CaseIterable {
-    case webkit = "webkit"
-    case blink = "blink"
+    case webkit = "webkit"  // Apple's WebKit engine (WKWebView)
+    case blink = "blink"    // Google's Blink engine (experimental via Chromium wrapper)
     
+    /// Human-readable name for display in settings UI.
+    ///
+    /// **Computed Property**: Calculates the display name each time it's accessed.
     var displayName: String {
         switch self {
-        case .webkit: return "Safari Mode"
-        case .blink: return "Chrome Mode"
+        case .webkit: return "Safari Mode"  // More familiar to users than "WebKit"
+        case .blink: return "Chrome Mode"  // More familiar than "Blink"
         }
     }
 }
 
-// Default search engine selection
+/// Defines the available search engines for the browser.
+///
+/// **Purpose**: Users can choose their preferred search engine for the URL bar.
+/// When they type a query (not a URL), EvoArc uses this engine to search.
+///
+/// **Privacy Focus**: Engines are ordered by privacy-friendliness, with private
+/// engines like Qwant and DuckDuckGo first, followed by mainstream engines.
+///
+/// **Identifiable Protocol**: Required for SwiftUI's Picker and ForEach.
+/// We use the `rawValue` (String) as the `id`.
+///
+/// **String Raw Value**: Makes persistence to UserDefaults trivial.
 enum SearchEngine: String, CaseIterable, Identifiable {
-    // Private engines
-    case qwant = "qwant"
-    case startpage = "startpage"
-    case presearch = "presearch"
-    case duckduckgo = "duckduckgo"
-    case ecosia = "ecosia"
+    // MARK: Privacy-focused search engines
+    // These engines don't track users, sell data, or build advertising profiles.
+    case qwant = "qwant"            // French search engine, respects privacy
+    case startpage = "startpage"    // Google results without tracking
+    case presearch = "presearch"    // Decentralized blockchain-based search
+    case duckduckgo = "duckduckgo"  // Popular privacy-focused search
+    case ecosia = "ecosia"          // Plants trees with ad revenue, privacy-friendly
     
-    // Less private engines
-    case perplexity = "perplexity"
-    case google = "google"
-    case bing = "bing"
-    case yahoo = "yahoo"
+    // MARK: Mainstream search engines
+    // These engines provide excellent results but collect user data for advertising.
+    case perplexity = "perplexity"  // AI-powered search engine
+    case google = "google"          // Most popular, but tracks heavily
+    case bing = "bing"              // Microsoft's search engine
+    case yahoo = "yahoo"            // Yahoo search (powered by Bing)
     
-    // Custom
-    case custom = "custom"
+    // MARK: User-defined custom engine
+    case custom = "custom"          // User provides their own search URL template
     
+    /// The unique identifier for SwiftUI's Identifiable protocol.
+    ///
+    /// **Identifiable Requirement**: SwiftUI's ForEach and Picker require
+    /// conforming types to have a unique `id`. We use the raw value (String).
     var id: String { rawValue }
     
     var displayName: String {
@@ -62,7 +114,14 @@ enum SearchEngine: String, CaseIterable, Identifiable {
     }
 }
 
-// Navigation button position for iPad when sidebar is hidden
+/// Defines where navigation buttons appear on iPad when the sidebar is hidden.
+///
+/// **iPad-specific**: On iPad, when the Arc-like sidebar is hidden, users can
+/// optionally display floating back/forward navigation buttons. This enum
+/// controls where those buttons appear.
+///
+/// **Why this matters**: Different users have different preferences - left-handed
+/// users might prefer buttons on the left, right-handed on the right, etc.
 enum NavigationButtonPosition: String, CaseIterable, Identifiable {
     case topLeft = "topLeft"
     case topRight = "topRight"
@@ -81,7 +140,17 @@ enum NavigationButtonPosition: String, CaseIterable, Identifiable {
     }
 }
 
-// Ad blocking subscription options
+/// Defines the available ad blocking filter lists.
+///
+/// **Purpose**: EvoArc supports multiple ad blocking lists that users can enable.
+/// Each list is maintained by a different community and targets different types
+/// of ads, trackers, and annoyances.
+///
+/// **How it works**: These filter lists contain rules (like "block requests to
+/// ads.example.com") that EvoArc downloads and compiles into WKWebView content
+/// blockers. Multiple lists can be active simultaneously.
+///
+/// **List quality**: These are well-maintained, reputable lists used by millions.
 enum AdBlockList: String, CaseIterable, Identifiable {
     case easyList
     case easyListPrivacy
@@ -115,17 +184,83 @@ enum AdBlockList: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - BrowserSettings Class
+// This is the central settings store for EvoArc. It manages all user preferences
+// and handles persistence to UserDefaults.
+//
+// Key Design Patterns:
+// 1. **Singleton**: Only one instance exists app-wide (shared)
+// 2. **ObservableObject**: SwiftUI views can observe changes
+// 3. **Property Observers (didSet)**: Automatically save to UserDefaults when changed
+// 4. **NotificationCenter Broadcasting**: Notify non-SwiftUI components of changes
+//
+// Swift Concepts:
+// - @Published: Property wrapper that notifies observers when value changes
+// - didSet: Observer that runs after a property's value is set
+// - private init(): Prevents external code from creating additional instances
+// - UserDefaults: iOS's key-value storage for app preferences (persists between launches)
+
+/// The central settings manager for EvoArc.
+///
+/// **Singleton Pattern**: Access via `BrowserSettings.shared`. Only one instance exists.
+///
+/// **ObservableObject**: SwiftUI views that reference this (via @StateObject or
+/// @ObservedObject) automatically update when any @Published property changes.
+///
+/// **Persistence**: Every setting automatically saves to UserDefaults when changed.
+/// The `didSet` observer on each @Published property handles this.
+///
+/// **Notifications**: Settings changes are broadcast via NotificationCenter so
+/// non-SwiftUI components (like WebView managers) can react to changes.
+///
+/// **Initialization**: All settings are loaded from UserDefaults in the `init()`,
+/// with sensible defaults if no saved value exists.
 class BrowserSettings: ObservableObject {
+    
+    /// The shared singleton instance.
+    ///
+    /// **Singleton Pattern**: This is the only instance of BrowserSettings.
+    /// All parts of the app use this same instance via `BrowserSettings.shared`.
+    ///
+    /// **Why singleton?**: Settings should be consistent app-wide. Having multiple
+    /// instances would lead to conflicting preferences.
     static let shared = BrowserSettings()
     
+    // MARK: - General Browser Settings
+    
+    /// Whether to request desktop websites instead of mobile versions.
+    ///
+    /// **@Published Explanation**: This property wrapper makes the property observable.
+    /// When `useDesktopMode` changes, SwiftUI views observing BrowserSettings
+    /// automatically re-render.
+    ///
+    /// **didSet Explanation**: This code block runs AFTER the property's value is set.
+    /// We use it to:
+    /// 1. Save the new value to UserDefaults (persistent storage)
+    /// 2. Broadcast a notification so other app components can react
+    ///
+    /// **Default**: iPad defaults to true (desktop mode), iPhone to false (mobile mode).
+    /// The actual default is set in `init()`.
+    ///
+    /// **Use case**: iPad has more screen space, so desktop sites work better.
     @Published var useDesktopMode = false {
         didSet {
+            // Save to UserDefaults so the setting persists between app launches
             UserDefaults.standard.set(useDesktopMode, forKey: "useDesktopMode")
+            // Broadcast notification so WebView managers can update user agent strings
             NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
         }
     }
     
     
+    /// The user's homepage URL (opened in new tabs).
+    ///
+    /// **Default**: DuckDuckGo's start page (set in `init()`).
+    ///
+    /// **Type**: String instead of URL because users can type invalid URLs.
+    /// The `homepageURL` computed property handles validation and fallbacks.
+    ///
+    /// **Use case**: New tabs open this URL by default.
     @Published var homepage: String {
         didSet {
             UserDefaults.standard.set(homepage, forKey: "homepage")
@@ -133,6 +268,15 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    /// Whether the URL bar automatically hides when scrolling down.
+    ///
+    /// **iPhone-specific**: This setting only affects iPhone layouts.
+    /// iPad uses a different UI (sidebar) that doesn't have this feature.
+    ///
+    /// **Default**: true (URL bar hides for more screen space).
+    ///
+    /// **UX**: When enabled, the URL bar hides when scrolling down and shows
+    /// when scrolling up or tapping the bottom of the screen.
     @Published var autoHideURLBar: Bool {
         didSet {
             UserDefaults.standard.set(autoHideURLBar, forKey: "autoHideURLBar")
@@ -475,31 +619,97 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // MARK: - Computed Properties (Derived Values)
+    // These properties calculate their values based on other settings.
+    // They don't store data - they compute it on-demand.
+    
+    /// Generates the appropriate user agent string based on desktop mode setting.
+    ///
+    /// **User Agent Explanation**: The user agent is a string that browsers send
+    /// to websites to identify themselves. Websites use this to serve desktop or
+    /// mobile versions of their site.
+    ///
+    /// **Computed Property**: The `var name: Type { }` syntax defines a read-only
+    /// computed property. It calculates the value each time it's accessed.
+    ///
+    /// **Safari Masquerading**: EvoArc identifies as Safari (not a custom browser)
+    /// to maximize compatibility. Websites trust Safari and serve it well-tested content.
+    ///
+    /// **Example Values**:
+    /// - Desktop: "Mozilla/5.0 (Macintosh...) Safari/605.1.15"
+    /// - Mobile: "Mozilla/5.0 (iPhone...) Mobile/15E148 Safari/604.1"
     var userAgentString: String {
         if useDesktopMode {
-            // Desktop Safari user agent
+            // Desktop Safari user agent (macOS)
+            // Websites see this as Safari on Mac and serve desktop layouts
             return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
         } else {
-            // Mobile Safari user agent
+            // Mobile Safari user agent (iOS)
+            // Websites see this as Safari on iPhone and serve mobile layouts
             return "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
         }
     }
     
+    /// Converts the homepage string into a valid URL.
+    ///
+    /// **Purpose**: The `homepage` property is a String (users can type anything),
+    /// but we need a proper URL to load. This computed property validates and
+    /// fixes common user mistakes.
+    ///
+    /// **Validation Steps**:
+    /// 1. Try parsing the string as-is
+    /// 2. If that fails and there's no "://", add "https://" prefix
+    /// 3. If all else fails, return Qwant as a safe fallback
+    ///
+    /// **Optional Return**: Returns `URL?` (optional) because even with validation,
+    /// the URL might be invalid. Callers must handle the nil case.
+    ///
+    /// **Example Transformations**:
+    /// - "google.com" → "https://google.com"
+    /// - "https://example.com" → unchanged
+    /// - "invalid!!!" → fallback to Qwant
     var homepageURL: URL? {
-        // Ensure the homepage has a valid scheme
+        // Step 1: Try parsing as-is
         if let url = URL(string: homepage) {
             return url
         }
-        // Try adding https:// if no scheme
+        // Step 2: Try adding https:// prefix if no scheme exists
         if !homepage.contains("://") {
             return URL(string: "https://\(homepage)")
         }
-        // Fallback to Google
+        // Step 3: Fallback to a known-good URL (Qwant)
         return URL(string: "https://www.qwant.com")
     }
     
-    // Build a search URL for the current default search engine
+    // MARK: - Search URL Building
+    
+    /// Builds a search URL for the given query using the currently selected search engine.
+    ///
+    /// **Purpose**: When the user types a query (not a URL) in the address bar,
+    /// this function converts it into a search URL for the appropriate engine.
+    ///
+    /// **URL Encoding**: The query is percent-encoded to handle special characters
+    /// (spaces become %20, etc.). This is required for URLs.
+    ///
+    /// **Custom Engine**: If the user selected "custom", we use their template
+    /// (which must contain "{query}") and replace it with the encoded query.
+    ///
+    /// **Fallback**: If the custom template is invalid, falls back to Google.
+    ///
+    /// **Parameters**:
+    /// - query: The user's search query (e.g., "swift programming")
+    ///
+    /// **Returns**: A complete search URL, or nil if construction failed
+    ///
+    /// **Example**:
+    /// ```swift
+    /// // If defaultSearchEngine is .google:
+    /// searchURL(for: "swift tips")
+    /// // Returns: https://www.google.com/search?q=swift%20tips
+    /// ```
     func searchURL(for query: String) -> URL? {
+        // Percent-encode the query for URL safety
+        // Example: "swift programming" becomes "swift%20programming"
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         switch defaultSearchEngine {
         // Private
@@ -586,8 +796,198 @@ class BrowserSettings: ObservableObject {
     }
 }
 
+// MARK: - Notification Names
+
+/// Notification names for broadcasting setting changes.
+/// BrowserSettings posts these notifications.
+/// Other parts of the app (WebView managers, ad blocker, etc.) can observe
+/// these notifications and update accordingly.
+///
+/// **Pattern**: Using static constants prevents typos and provides autocomplete.
+///
+/// **SwiftUI Alternative**: SwiftUI views don't need these - they use @Published
+/// and ObservableObject automatically. These are for UIKit/non-SwiftUI code.
 extension Notification.Name {
+    /// Posted when any general browser setting changes (desktop mode, homepage, etc.).
     static let browserSettingsChanged = Notification.Name("browserSettingsChanged")
+    
+    /// Posted specifically when the browser engine changes (WebKit ↔ Blink).
+    /// This has its own notification because engine changes require special handling.
     static let browserEngineChanged = Notification.Name("browserEngineChanged")
+    
+    /// Posted when any ad blocking setting changes (lists, enabled state, etc.).
+    /// AdBlockManager observes this to recompile content blocker rules.
     static let adBlockSettingsChanged = Notification.Name("adBlockSettingsChanged")
 }
+
+// MARK: - Architecture Summary for Beginners
+// ============================================
+//
+// BrowserSettings is the CENTRAL CONFIGURATION HUB for EvoArc. Here's how it works:
+//
+// 1. SINGLETON PATTERN:
+//    ┌────────────────────────────────────┐
+//    │  BrowserSettings.shared       │  ← Only one instance exists
+//    │  (singleton)                  │
+//    └────────────────────────────────────┘
+//             │
+//             ├── ContentView observes
+//             ├── SettingsView observes
+//             ├── WebView managers observe via NotificationCenter
+//             └── All access the same instance
+//
+// 2. PROPERTY WRAPPER CHAIN (@Published + didSet):
+//
+//    User changes setting in UI
+//         ↓
+//    @Published property updates
+//         ↓
+//    didSet observer runs:
+//      1. Save to UserDefaults (persistence)
+//      2. Post NotificationCenter notification
+//         ↓                        ↓
+//    SwiftUI views re-render    Non-SwiftUI components react
+//
+// 3. PERSISTENCE STRATEGY:
+//
+//    UserDefaults.standard
+//    ├─ Key-value storage
+//    ├─ Automatically persists to disk
+//    ├─ Survives app restarts
+//    ├─ Simple types only (String, Bool, Int, Array)
+//    └─ NOT secure (don't store passwords here!)
+//
+// 4. INITIALIZATION PATTERN:
+//
+//    private init() {
+//      // For each setting:
+//      if let stored = UserDefaults.standard.value(forKey: "key") {
+//          self.property = stored  // Restore saved value
+//      } else {
+//          self.property = defaultValue  // First launch: use default
+//      }
+//    }
+//
+//    Why private? Prevents external code from creating multiple instances.
+//
+// 5. COMPUTED PROPERTIES vs STORED PROPERTIES:
+//
+//    Stored Properties (@Published):
+//    - Actually store a value in memory
+//    - Persist to UserDefaults
+//    - Example: useDesktopMode, homepage
+//
+//    Computed Properties (var name: Type { }):
+//    - Calculate value on-demand
+//    - Don't store anything
+//    - Example: userAgentString, homepageURL
+//
+// 6. ENUM PATTERN FOR OPTIONS:
+//
+//    enum SearchEngine: String, CaseIterable, Identifiable {
+//        case google = "google"
+//        case duckduckgo = "duckduckgo"
+//        // ...
+//    }
+//
+//    Benefits:
+//    - Type-safe (can't have invalid values)
+//    - Autocomplete in Xcode
+//    - CaseIterable provides array of all options for UI
+//    - String raw value makes persistence easy
+//
+// 7. SETTINGS CATEGORIES:
+//
+//    General:
+//    ├─ useDesktopMode
+//    ├─ homepage
+//    ├─ autoHideURLBar
+//    └─ browserEngine
+//
+//    Search:
+//    ├─ defaultSearchEngine
+//    ├─ customSearchTemplate
+//    └─ searchPreloadingEnabled
+//
+//    iPad UI:
+//    ├─ navigationButtonPosition
+//    └─ hideNavigationButtonsOnIPad
+//
+//    Tab Management:
+//    ├─ confirmClosingPinnedTabs
+//    ├─ persistTabGroups
+//    └─ hideEmptyTabGroups
+//
+//    Ad Blocking:
+//    ├─ adBlockEnabled
+//    ├─ selectedAdBlockLists
+//    ├─ adBlockScriptletEnabled
+//    ├─ adBlockAdvancedJS
+//    ├─ adBlockObfuscatedClass
+//    └─ adBlockCookieBanners
+//
+//    Downloads:
+//    ├─ showDownloadNotifications
+//    └─ autoOpenDownloads
+//
+// 8. NOTIFICATION CENTER INTEGRATION:
+//
+//    Why use NotificationCenter if we have @Published?
+//    - @Published only works for SwiftUI (ObservableObject pattern)
+//    - Some managers (AdBlockManager, WebView delegates) are NOT SwiftUI views
+//    - NotificationCenter is the UIKit way to broadcast events
+//    - We use BOTH: @Published for SwiftUI, NotificationCenter for everything else
+//
+// 9. VALIDATION PATTERNS:
+//
+//    Some settings need validation (custom search template, homepage URL).
+//    Validation strategies used:
+//
+//    a) Store as String, validate on use:
+//       - homepage (String) → homepageURL (computed URL?)
+//       - Allows storing invalid values temporarily
+//
+//    b) Validation helper methods:
+//       - isCustomSearchTemplateValid
+//       - customSearchTemplateErrorMessage
+//       - Used by settings UI to show errors
+//
+//    c) Fallbacks for invalid values:
+//       - Invalid homepage → fallback to Qwant
+//       - Invalid custom template → fallback to Google
+//
+// 10. DEFAULT VALUE STRATEGY:
+//
+//     Some defaults depend on device type:
+//     - iPad: useDesktopMode = true (more screen space)
+//     - iPhone: useDesktopMode = false (mobile sites work better)
+//
+//     Privacy-focused defaults:
+//     - defaultSearchEngine = .duckduckgo (not Google)
+//     - homepage = DuckDuckGo start page
+//     - adBlockEnabled = true by default
+//
+// 11. COMMON PITFALLS & TIPS:
+//
+//     ❌ Don't: Directly modify UserDefaults elsewhere in the app
+//     ✅ Do: Always change settings through BrowserSettings.shared
+//
+//     ❌ Don't: Create instances of BrowserSettings (init is private)
+//     ✅ Do: Always use BrowserSettings.shared singleton
+//
+//     ❌ Don't: Forget didSet when adding new @Published properties
+//     ✅ Do: Always add didSet to save to UserDefaults + post notification
+//
+//     ❌ Don't: Use @Published for expensive computations
+//     ✅ Do: Use computed properties for derived values
+//
+// 12. TESTING CONSIDERATIONS:
+//
+//     The singleton pattern can make unit testing harder (shared state).
+//     Potential improvements for testability:
+//     - Add a reset() method to restore defaults
+//     - Consider dependency injection for UserDefaults
+//     - Mock NotificationCenter for testing
+//
+// This file demonstrates production-quality settings management in iOS.
+// Study the patterns here - they're applicable to any app with user preferences!
