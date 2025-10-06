@@ -43,6 +43,17 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.ConnorNeedling.EvoArcBrowser</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>evoarc</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
 	<key>UISupportedInterfaceOrientations</key>

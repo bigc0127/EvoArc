@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 6536061AE59B00EBD1E1522A /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		89681BED86412599E4B8EB82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29BF21F9DCA05DC776ED9768 /* Foundation.framework */; };
+		C97355F14F9AC0E31B13C140 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		1DAA0F5E45D4F9DEED399AC6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C8F6D8FA2E6A00220001783A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 773065D4A6351ED496D8E9DC;
+			remoteInfo = ShareExtension;
+		};
 		C8F6D9172E6A00280001783A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C8F6D8FA2E6A00220001783A /* Project object */;
@@ -23,10 +36,30 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		A4165996A094E6B3F4CD301D /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		031635AD3B90221056A98473 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = ShareExtension.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
+		29BF21F9DCA05DC776ED9768 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		6536061AE59B00EBD1E1522A /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		82F6584CFF0AF8D0E49CC655 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
+		B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShareViewController.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		C8F6D9022E6A00220001783A /* EvoArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvoArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8F6D9162E6A00280001783A /* EvoArcTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EvoArcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8F6D9202E6A00280001783A /* EvoArcUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EvoArcUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FEE2698FF3FAA6BD4C1032C2 /* MainInterface.storyboard */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file.storyboard; name = MainInterface.storyboard; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -50,11 +83,15 @@
 		};
 		C8F6D9192E6A00280001783A /* EvoArcTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = EvoArcTests;
 			sourceTree = "<group>";
 		};
 		C8F6D9232E6A00280001783A /* EvoArcUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = EvoArcUITests;
 			sourceTree = "<group>";
 		};
@@ -82,9 +119,45 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DBE652D736DB6B60255BE5F5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				89681BED86412599E4B8EB82 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1162BEA93189210214E54267 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4FB16B85F05D99CC8D6096EC /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		1D8E4AC147EA4DEB9A7CC980 /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */,
+				82F6584CFF0AF8D0E49CC655 /* Info.plist */,
+				031635AD3B90221056A98473 /* ShareExtension.entitlements */,
+				FEE2698FF3FAA6BD4C1032C2 /* MainInterface.storyboard */,
+			);
+			name = ShareExtension;
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		4FB16B85F05D99CC8D6096EC /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				29BF21F9DCA05DC776ED9768 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		C8F6D8F92E6A00220001783A = {
 			isa = PBXGroup;
 			children = (
@@ -92,6 +165,8 @@
 				C8F6D9192E6A00280001783A /* EvoArcTests */,
 				C8F6D9232E6A00280001783A /* EvoArcUITests */,
 				C8F6D9032E6A00220001783A /* Products */,
+				1162BEA93189210214E54267 /* Frameworks */,
+				1D8E4AC147EA4DEB9A7CC980 /* ShareExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -101,6 +176,7 @@
 				C8F6D9022E6A00220001783A /* EvoArc.app */,
 				C8F6D9162E6A00280001783A /* EvoArcTests.xctest */,
 				C8F6D9202E6A00280001783A /* EvoArcUITests.xctest */,
+				6536061AE59B00EBD1E1522A /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,6 +184,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		773065D4A6351ED496D8E9DC /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0180A2F2339341E6BBC87684 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				126197E47E94E3AB26838041 /* Sources */,
+				DBE652D736DB6B60255BE5F5 /* Frameworks */,
+				657A2FB4B05CB3CCE8ACC270 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			productName = ShareExtension;
+			productReference = 6536061AE59B00EBD1E1522A /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C8F6D9012E6A00220001783A /* EvoArc */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C8F6D9292E6A00280001783A /* Build configuration list for PBXNativeTarget "EvoArc" */;
@@ -115,17 +208,17 @@
 				C8F6D8FE2E6A00220001783A /* Sources */,
 				C8F6D8FF2E6A00220001783A /* Frameworks */,
 				C8F6D9002E6A00220001783A /* Resources */,
+				A4165996A094E6B3F4CD301D /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C5A2961AB6E5FCFD067F5B37 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C8F6D9042E6A00220001783A /* EvoArc */,
 			);
 			name = EvoArc;
-			packageProductDependencies = (
-			);
 			productName = EvoArc;
 			productReference = C8F6D9022E6A00220001783A /* EvoArc.app */;
 			productType = "com.apple.product-type.application";
@@ -147,8 +240,6 @@
 				C8F6D9192E6A00280001783A /* EvoArcTests */,
 			);
 			name = EvoArcTests;
-			packageProductDependencies = (
-			);
 			productName = EvoArcTests;
 			productReference = C8F6D9162E6A00280001783A /* EvoArcTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -170,8 +261,6 @@
 				C8F6D9232E6A00280001783A /* EvoArcUITests */,
 			);
 			name = EvoArcUITests;
-			packageProductDependencies = (
-			);
 			productName = EvoArcUITests;
 			productReference = C8F6D9202E6A00280001783A /* EvoArcUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -217,11 +306,19 @@
 				C8F6D9012E6A00220001783A /* EvoArc */,
 				C8F6D9152E6A00280001783A /* EvoArcTests */,
 				C8F6D91F2E6A00280001783A /* EvoArcUITests */,
+				773065D4A6351ED496D8E9DC /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		657A2FB4B05CB3CCE8ACC270 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C8F6D9002E6A00220001783A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -246,6 +343,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		126197E47E94E3AB26838041 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C97355F14F9AC0E31B13C140 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C8F6D8FE2E6A00220001783A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -270,6 +375,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		C5A2961AB6E5FCFD067F5B37 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ShareExtension;
+			target = 773065D4A6351ED496D8E9DC /* ShareExtension */;
+			targetProxy = 1DAA0F5E45D4F9DEED399AC6 /* PBXContainerItemProxy */;
+		};
 		C8F6D9182E6A00280001783A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C8F6D9012E6A00220001783A /* EvoArc */;
@@ -283,6 +394,27 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		7E461E41A7B02031A8655D08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69LLXLJW63;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ConnorNeedling.EvoArcBrowser.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		C8F6D92A2E6A00280001783A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -595,9 +727,38 @@
 			};
 			name = Release;
 		};
+		FFECEC0046194B14B92AF571 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69LLXLJW63;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ConnorNeedling.EvoArcBrowser.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0180A2F2339341E6BBC87684 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E461E41A7B02031A8655D08 /* Release */,
+				FFECEC0046194B14B92AF571 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C8F6D8FD2E6A00220001783A /* Build configuration list for PBXProject "EvoArc" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
