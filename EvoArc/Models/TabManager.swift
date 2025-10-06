@@ -2,108 +2,345 @@
 //  TabManager.swift
 //  EvoArc
 //
-//  Created on 2025-09-04.
+//  Central coordinator for managing all browser tabs and tab groups in EvoArc.
+//  This is one of the most critical classes in the app - it orchestrates tab lifecycle,
+//  persistence, grouping, pinning, and state management.
 //
+//  Responsibilities:
+//  - Create, close, and switch between tabs
+//  - Manage tab groups (collections of related tabs)
+//  - Handle pinned tabs (persistent across sessions)
+//  - Persist and restore tab state
+//  - Coordinate with browser engine switching
+//  - Track UI state (drawer visibility, gestures, etc.)
+//
+//  Architecture:
+//  - Conforms to ObservableObject for SwiftUI reactivity
+//  - Uses Combine for reactive updates
+//  - Singleton pattern via shared manager references
+//  - Integrates with HybridPinnedTabManager for pinned tabs
+//
+//  For Swift beginners:
+//  - This is a reference type (class) that lives for the app's lifetime
+//  - @Published properties automatically update the UI when changed
+//  - Manages arrays of Tab and TabGroup objects
 
-import Foundation
-import SwiftUI
-import Combine
+import Foundation  // Core types, UUID, URL, UserDefaults
+import SwiftUI     // ObservableObject, Published wrappers
+import Combine     // Reactive programming, publishers, subscribers
 
-// MARK: - Tab State for Persistence
+// MARK: - Tab State Structure
+
+/// Lightweight snapshot of a tab's state for persistence.
+/// Used to save and restore tabs between app launches.
+/// 
+/// For Swift beginners:
+/// - struct is a value type (copied when assigned)
+/// - Codable enables JSON encoding/decoding for saving to disk
+/// - This is a "data transfer object" pattern - just data, no logic
+/// 
+/// Why we need this:
+/// - Tab objects contain WKWebView references that can't be saved
+/// - TabState extracts only the serializable data
+/// - We reconstruct full Tab objects from TabState on app launch
 struct TabState: Codable {
+    /// The tab's current URL as a string.
+    /// Empty string if tab has no URL (rare).
     let urlString: String
+    
+    /// Optional UUID string of the tab group this tab belongs to.
+    /// nil means the tab is not in any group.
     let groupID: String?
+    
+    /// The browser engine name ("webkit" or "blink").
+    /// Stored as string for Codable compatibility.
     let browserEngine: String
+    
+    /// The page title, or nil if it's still "New Tab".
+    /// We don't persist default titles to keep saved data clean.
     let title: String?
     
+    /// Creates a TabState from an existing Tab object.
+    /// Extracts only the data that can be persisted to disk.
+    /// 
+    /// For Swift beginners:
+    /// - init(from:) is a custom initializer that converts one type to another
+    /// - We use optional chaining (?.) to safely access properties that might be nil
+    /// - The ?? operator provides fallback values for nil cases
     init(from tab: Tab) {
+        /// Convert URL to string, defaulting to empty if nil.
         self.urlString = tab.url?.absoluteString ?? ""
+        
+        /// Convert UUID to string for storage. nil stays nil.
         self.groupID = tab.groupID?.uuidString
+        
+        /// Get the engine's string representation ("webkit" or "blink").
         self.browserEngine = tab.browserEngine.rawValue
+        
+        /// Only save custom titles, not the default "New Tab".
+        /// This keeps our saved data cleaner and smaller.
         self.title = tab.title != "New Tab" ? tab.title : nil
     }
 }
 
+// MARK: - Tab Manager Class
+
+/// Central manager coordinating all tab and tab group operations.
+/// This class is the "brain" of EvoArc's tab system.
+/// 
+/// For Swift beginners:
+/// - class (not struct) because we want reference semantics
+/// - ObservableObject enables SwiftUI to watch for changes
+/// - All tabs in the app are managed by this single instance
 class TabManager: ObservableObject {
+    // MARK: - Published Properties
+    
+    /// Indicates whether a user gesture (swipe/drag) is currently in progress.
+    /// Used to prevent conflicting gestures from activating simultaneously.
+    /// 
+    /// For Swift beginners:
+    /// - @Published automatically notifies SwiftUI when this changes
+    /// - Bool is true/false (gesture active/inactive)
     @Published var isGestureActive: Bool = false
+    
+    /// Array of all open tabs in the browser.
+    /// Order matters: pinned tabs appear first, then unpinned tabs.
+    /// 
+    /// For Swift beginners:
+    /// - [Tab] means "array of Tab objects"
+    /// - = [] initializes with empty array
+    /// - This is the master list of all tabs
     @Published var tabs: [Tab] = []
+    
+    /// The currently active/visible tab, or nil if no tabs exist (rare).
+    /// When this changes, the UI switches to display the new tab's content.
+    /// 
+    /// For Swift beginners:
+    /// - Tab? means "optional Tab" - can be nil or contain a Tab
+    /// - nil should only happen briefly during initialization
     @Published var selectedTab: Tab?
+    
+    /// Controls visibility of the tab drawer (tab switcher UI).
+    /// true = drawer is visible (showing all tabs)
+    /// false = drawer is hidden (showing active tab)
     @Published var isTabDrawerVisible: Bool = false
+    
+    /// Array of all tab groups defined by the user.
+    /// Tab groups let users organize tabs into logical collections.
     @Published var tabGroups: [TabGroup] = []
+    
+    /// Indicates whether TabManager has completed its initialization.
+    /// false during startup while loading pinned tabs and restoring state.
+    /// true once all initialization is complete and tabs are ready.
+    /// 
+    /// Used by UI to show loading state vs. ready state.
     @Published var isInitialized: Bool = false
     
-    // Confirmation dialog states
+    // MARK: - Confirmation Dialog State
+    
+    /// Whether to show the "confirm unpin tab" dialog.
+    /// User preference determines if we ask before unpinning.
     @Published var showUnpinConfirmation: Bool = false
+    
+    /// The tab waiting to be unpinned (pending user confirmation).
+    /// nil when no confirmation is pending.
     @Published var tabToUnpin: Tab?
     
+    // MARK: - Private Properties
+    
+    /// Manager responsible for persisting pinned tabs.
+    /// HybridPinnedTabManager handles both local and cloud storage.
+    /// 
+    /// For Swift beginners:
+    /// - 'let' means this reference never changes (always points to same manager)
+    /// - .shared is singleton pattern (one instance for entire app)
+    /// - 'private' means only TabManager can access this
     private let pinnedTabManager = HybridPinnedTabManager.shared
+    
+    /// Set of Combine subscriptions for reactive updates.
+    /// Stores connections to publishers we're observing.
+    /// 
+    /// For Swift beginners:
+    /// - Set<AnyCancellable> holds subscriptions
+    /// - When TabManager is deallocated, these subscriptions auto-cancel
+    /// - This prevents memory leaks from dangling observers
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - Initialization
+    
+    /// Initializes the TabManager and restores previous session state.
+    /// 
+    /// Initialization sequence:
+    /// 1. Set up observers for pinned tab changes
+    /// 2. Load saved tab groups from disk
+    /// 3. Asynchronously restore pinned tabs
+    /// 4. Create a new tab if none exist
+    /// 5. Restore tab group assignments
+    /// 6. Mark initialization as complete
+    /// 
+    /// For Swift beginners:
+    /// - init() is called automatically when creating a TabManager
+    /// - We use async dispatch to avoid blocking the UI during restoration
+    /// - [weak self] prevents retain cycles in the closure
     init() {
-        // Set up observer first
+        /// Set up Combine observer to watch for pinned tab changes.
+        /// This keeps our tabs array synchronized with the pinned tab manager.
         setupPinnedTabObserver()
         
-        // Load tab groups first
+        /// Load tab groups from persistent storage (UserDefaults).
+        /// Must happen before restoring tabs so groups exist for assignment.
         loadTabGroups()
         
-        // Defer pinned tab restoration to avoid circular initialization
+        /// Defer tab restoration to the next run loop to avoid circular initialization issues.
+        /// 
+        /// Why async:
+        /// - Tab restoration might trigger observers
+        /// - Observers might access TabManager properties
+        /// - We need TabManager fully initialized first
+        /// 
+        /// DispatchQueue.main.async schedules work on the main thread "soon".
+        /// [weak self] prevents a retain cycle (closure strongly capturing self).
         DispatchQueue.main.async { [weak self] in
+            /// Restore pinned tabs from persistent storage.
+            /// These are tabs the user wants to persist across app launches.
             self?.restorePinnedTabs()
             
-            // Create a new tab if no tabs exist (including pinned ones)
+            /// Ensure at least one tab exists for the user to browse.
+            /// Without this check, the app would show an empty state.
             if self?.tabs.isEmpty == true {
                 self?.createNewTab()
             }
             
-            // Restore tab group assignments after all tabs are loaded
+            /// Restore which tabs belong to which groups.
+            /// This must happen after tabs are created.
             self?.restoreTabGroupAssignments()
             
-            // Mark initialization as complete
+            /// Signal that initialization is complete and UI can show tabs.
+            /// Views watching isInitialized will update from "loading" to "ready" state.
             self?.isInitialized = true
             print("✅ TabManager initialization complete with \(self?.tabs.count ?? 0) tabs")
         }
     }
     
+    // MARK: - Tab Creation
+    
+    /// Creates a new tab and makes it the active tab.
+    /// 
+    /// Parameter url: Optional URL to load in the new tab.
+    ///   - nil: Creates a blank tab (homepage will load automatically)
+    ///   - URL: Loads the specified URL immediately
+    /// 
+    /// Side effects:
+    /// - Adds tab to tabs array
+    /// - Selects the new tab (becomes visible)
+    /// - Records URL in browsing history (if URL provided)
+    /// - Saves tab state to disk (if URL provided)
+    /// 
+    /// For Swift beginners:
+    /// - URL? = nil provides a default parameter value
+    /// - You can call: createNewTab() or createNewTab(url: someURL)
     func createNewTab(url: URL? = nil) {
+        /// Create the new tab object with the specified URL.
+        /// Tab's initializer handles homepage logic if url is nil.
         let newTab = Tab(url: url)
-        newTab.showURLInBar = false // Ensure URL bar starts empty
+        
+        /// Hide URL in the address bar for new tabs (cleaner look).
+        /// The URL will show once the page loads.
+        newTab.showURLInBar = false
+        
+        /// Add to our master list of tabs.
         tabs.append(newTab)
+        
+        /// Make this the visible/active tab.
+        /// This triggers UI update to display the new tab's content.
         selectedTab = newTab
         
-        // Record history for new tabs with URLs
+        /// Record in browsing history if a URL was provided.
+        /// Uses optional binding (if let) to safely unwrap the optional URL.
         if let url = url {
+            /// Generate a title for history: use tab title if set, otherwise use domain.
+            /// The ternary operator ? : is a compact if-else.
+            /// Empty check prevents recording untitled pages.
             HistoryManager.shared.addEntry(url: url, title: newTab.title.isEmpty ? (url.host ?? url.absoluteString) : newTab.title)
         }
         
-        // Save tab states when new tabs are created with URLs
+        /// Persist tab state if a URL was provided.
+        /// We don't save blank tabs to keep storage clean.
         if url != nil {
             saveTabGroupsIfNeeded()
         }
     }
     
-    /// Create a tab from restored state without triggering homepage navigation or selection changes
+    /// Creates a tab from saved state during app restoration.
+    /// This is used when loading tabs from disk, not for user-initiated tab creation.
+    /// 
+    /// Key differences from createNewTab:
+    /// - Doesn't make the tab active/selected
+    /// - Doesn't save state (we're loading, not saving)
+    /// - Doesn't add to history (these are old pages)
+    /// - Accepts all tab properties for exact restoration
+    /// 
+    /// Parameters:
+    /// - title: The page title to restore
+    /// - url: The URL to restore (nil = homepage)
+    /// - isPinned: Whether this tab was pinned
+    /// - groupID: Optional UUID of tab group
+    /// - engine: Browser engine to use (nil = user's default)
+    /// 
+    /// Returns: The newly created Tab object
+    /// 
+    /// For Swift beginners:
+    /// - Multiple default parameters (= false, = nil) make calling convenient
+    /// - Return type is Tab (not optional) - always succeeds
     func createRestoredTab(title: String, url: URL?, isPinned: Bool = false, groupID: UUID? = nil, engine: BrowserEngine? = nil) -> Tab {
+        /// Create tab with full restoration parameters.
+        /// Uses nil coalescing (??) to fall back to default engine if none specified.
         let tab = Tab(url: url, browserEngine: engine ?? BrowserSettings.shared.browserEngine, isPinned: isPinned, groupID: groupID)
+        
+        /// Set the restored title.
+        /// Tab initializer sets title to "New Tab", so we override with saved title.
         tab.title = title
-        // Do not change selectedTab here; caller manages selection if needed
+        
+        /// Add to tabs array WITHOUT selecting it.
+        /// Caller decides which tab to select after all are restored.
         tabs.append(tab)
+        
+        /// Return the tab in case caller needs to do additional setup.
         return tab
     }
     
+    // MARK: - Tab Lifecycle
+    
+    /// Closes the specified tab and selects an appropriate replacement.
+    /// Ensures at least one tab always exists.
+    /// 
+    /// Selection logic after closing:
+    /// 1. If other tabs exist, select the next tab (or previous if closing last tab)
+    /// 2. If no tabs remain, create a new blank tab
+    /// 
+    /// For Swift beginners:
+    /// - firstIndex(where:) finds array index matching a condition
+    /// - The closure { $0.id == tab.id } checks if each element's id matches
     func closeTab(_ tab: Tab) {
+        /// Find this tab's position in our array.
+        /// Returns nil if tab isn't found (shouldn't happen).
         if let index = tabs.firstIndex(where: { $0.id == tab.id }) {
-            // Clean up WebView reference
+            /// Break the reference cycle by clearing the WKWebView.
+            /// This ensures proper memory cleanup.
             tab.webView = nil
             
+            /// Remove from array. This triggers @Published update.
             tabs.remove(at: index)
             
-            // Save tab group assignments after removing tab
+            /// Save updated state to disk.
             saveTabGroupsIfNeeded()
             
+            /// Ensure at least one tab exists.
             if tabs.isEmpty {
                 createNewTab()
             } else if selectedTab?.id == tab.id {
-                // Select the next tab or the previous one
+                /// We closed the active tab - select a replacement.
+                /// Try next tab, then previous, then first available.
                 if index < tabs.count {
                     selectedTab = tabs[index]
                 } else if index > 0 {
@@ -115,90 +352,121 @@ class TabManager: ObservableObject {
         }
     }
     
+    /// Makes the specified tab active and visible.
+    /// Also records the visit in browsing history.
     func selectTab(_ tab: Tab) {
         selectedTab = tab
         isTabDrawerVisible = false
         
-        // Record history when selecting a tab with a URL
+        /// Add to history for visit tracking.
         if let url = tab.url {
             HistoryManager.shared.addEntry(url: url, title: tab.title.isEmpty ? (url.host ?? url.absoluteString) : tab.title)
         }
         
-        // Trigger a change notification to update UI
+        /// Force UI update by manually sending change notification.
         objectWillChange.send()
     }
     
+    // MARK: - Tab Drawer UI
+    
+    /// Toggles tab drawer visibility with spring animation.
     func toggleTabDrawer() {
         withAnimation(.spring()) {
             isTabDrawerVisible.toggle()
         }
     }
     
+    /// Hides the tab drawer with spring animation.
     func hideTabDrawer() {
         withAnimation(.spring()) {
             isTabDrawerVisible = false
         }
     }
     
+    // MARK: - Browser Engine Switching
+    
+    /// Changes the browser engine for a specific tab.
+    /// Forces WebView recreation to apply the new engine.
+    /// 
+    /// For Swift beginners:
+    /// - We use DispatchQueue.main.async to avoid SwiftUI publishing errors
+    /// - Changing @Published properties during view updates can cause crashes
+    /// - async schedules the change for "next run loop" safely
     func changeBrowserEngine(for tab: Tab, to engine: BrowserEngine) {
-        // Use async dispatch to avoid "Publishing changes from within view updates"
         DispatchQueue.main.async {
             tab.browserEngine = engine
             
-            // Force WebView recreation by clearing the current WebView reference
+            /// Clear WebView to force recreation with new engine.
             tab.webView = nil
             
-            // Save updated tab states
+            /// Persist the engine change.
             self.saveTabGroupsIfNeeded()
             
-            // Trigger objectWillChange to update UI
+            /// Trigger UI update.
             self.objectWillChange.send()
         }
     }
     
+    /// Toggles between WebKit and Blink for the specified tab.
     func toggleBrowserEngine(for tab: Tab) {
         let newEngine: BrowserEngine = tab.browserEngine == .webkit ? .blink : .webkit
         changeBrowserEngine(for: tab, to: newEngine)
     }
     
-    // MARK: - Pinned Tab Methods
+    // MARK: - Pinned Tabs
     
+    /// Pins a tab, making it persistent across app launches.
+    /// Pinned tabs appear first in the tab list.
     func pinTab(_ tab: Tab) {
+        /// Tabs without URLs can't be pinned (nothing to restore).
         guard let url = tab.url else { 
             print("Cannot pin tab without URL")
             return 
         }
         
+        /// Register with persistence manager.
         pinnedTabManager.pinTab(url: url, title: tab.title)
         tab.isPinned = true
         
-        // Move pinned tab to front of tabs array
+        /// Move to front of tabs array.
         repositionPinnedTabs()
     }
     
+    /// Unpins a tab, making it ephemeral (won't persist).
     func unpinTab(_ tab: Tab) {
         guard let url = tab.url else {
             print("Cannot unpin tab without URL")
             return
         }
         
+        /// Unregister from persistence.
         pinnedTabManager.unpinTab(url: url)
         tab.isPinned = false
         
-        // Reposition tabs to maintain pinned tabs at front
+        /// Reorder tabs array.
         repositionPinnedTabs()
     }
     
+    /// Checks if a tab is currently pinned.
     func isTabPinned(_ tab: Tab) -> Bool {
         guard let url = tab.url else { return false }
         return pinnedTabManager.isTabPinned(url: url)
     }
     
-    // MARK: - Private Methods
+    // MARK: - Private Helpers
     
+    /// Sets up Combine observer to watch for pinned tab changes.
+    /// When pinned tabs change externally (iCloud sync, other device), update our tabs.
+    /// 
+    /// For Swift beginners:
+    /// - $ prefix accesses the @Published property's publisher
+    /// - .sink subscribes to published values
+    /// - [weak self] prevents retain cycle
+    /// - .store saves subscription so it stays active
     private func setupPinnedTabObserver() {
         pinnedTabManager.$pinnedTabs
             .sink { [weak self] _ in
+                /// Always update on main thread (UI requirement).
                 DispatchQueue.main.async {
                     self?.updateTabPinnedStates()
                 }
@@ -206,98 +474,137 @@ class TabManager: ObservableObject {
             .store(in: &cancellables)
     }
     
+    /// Restores pinned tabs from persistent storage on app launch.
+    /// Creates Tab objects from saved pinned tab entities.
     private func restorePinnedTabs() {
+        /// Get pinned tabs sorted by their saved order.
+        /// .sorted creates a new sorted array without modifying original.
         let pinnedTabEntities = pinnedTabManager.pinnedTabs
             .sorted { $0.pinnedOrder < $1.pinnedOrder }
         
+        /// Create a Tab for each pinned entity.
         for entity in pinnedTabEntities {
             let url = entity.url
+            /// _ = discards the return value (we don't need it here).
             _ = createRestoredTab(title: entity.title, url: url, isPinned: true, groupID: nil)
         }
         
-        // Select the first tab if available
+        /// Auto-select the first tab so user sees content immediately.
         if let firstTab = tabs.first {
             selectedTab = firstTab
         }
     }
     
+    /// Synchronizes tab pinned states with the pinned tab manager.
+    /// Called when pinned tabs change externally (iCloud sync).
     private func updateTabPinnedStates() {
+        /// Check each tab against persistence to see if pin state changed.
         for tab in tabs {
             if let url = tab.url {
                 let wasPinned = tab.isPinned
                 let isPinned = pinnedTabManager.isTabPinned(url: url)
                 
+                /// Only update if state actually changed.
                 if wasPinned != isPinned {
                     tab.isPinned = isPinned
                 }
             }
         }
         
+        /// Reorder tabs to maintain pinned-first ordering.
         repositionPinnedTabs()
     }
     
+    /// Sorts tabs array so pinned tabs appear before unpinned tabs.
+    /// Within each group (pinned/unpinned), maintains existing order.
     private func repositionPinnedTabs() {
-        // Sort tabs so pinned tabs appear first
+        /// Sort using custom comparison logic.
+        /// For Swift beginners:
+        /// - .sort modifies array in-place
+        /// - Closure returns true if tab1 should come before tab2
         tabs.sort { tab1, tab2 in
             if tab1.isPinned && !tab2.isPinned {
+                /// Pinned tab comes before unpinned tab.
                 return true
             } else if !tab1.isPinned && tab2.isPinned {
+                /// Unpinned tab comes after pinned tab.
                 return false
             } else {
-                return false // Maintain existing order for same type
+                /// Both same type - maintain existing relative order.
+                return false
             }
         }
     }
     
+    /// Sorts tabs by pinned status first, then by group membership.
+    /// Final order: pinned tabs, grouped tabs (by group age), ungrouped tabs.
     private func repositionGroupedTabs() {
-        // First, ensure pinned tabs are at the front
+        /// First pass: ensure pinned tabs are at front.
         repositionPinnedTabs()
         
-        // Then, sort non-pinned tabs by group membership
+        /// Second pass: sort non-pinned tabs by group membership.
+        /// .filter creates new array with only matching elements.
         let nonPinnedTabs = tabs.filter { !$0.isPinned }
         let sortedNonPinned = nonPinnedTabs.sorted { tab1, tab2 in
-            // First, compare group presence
+            /// Use switch on tuple to handle all four combinations.
+            /// For Swift beginners:
+            /// - (tab1.groupID != nil, tab2.groupID != nil) creates a tuple of bools
+            /// - switch matches against tuple patterns
             switch (tab1.groupID != nil, tab2.groupID != nil) {
             case (true, false):
+                /// tab1 has group, tab2 doesn't - tab1 comes first.
                 return true
             case (false, true):
+                /// tab2 has group, tab1 doesn't - tab2 comes first.
                 return false
             case (true, true):
-                // Both have groups, sort by group creation date
+                /// Both have groups - sort by group creation date (older groups first).
                 guard let group1 = tabGroups.first(where: { $0.id == tab1.groupID }),
                       let group2 = tabGroups.first(where: { $0.id == tab2.groupID }) else {
                     return false
                 }
                 return group1.createdAt < group2.createdAt
             case (false, false):
-                // Both ungrouped, maintain original order
+                /// Neither has group - maintain original order.
                 return false
             }
         }
         
-        // Reconstruct the tabs array with pinned tabs followed by sorted non-pinned tabs
+        /// Reconstruct tabs array: pinned first, then sorted non-pinned.
+        /// The + operator concatenates arrays.
         let pinnedTabs = tabs.filter { $0.isPinned }
         tabs = pinnedTabs + sortedNonPinned
         
         print("🔄 Repositioned tabs: \(pinnedTabs.count) pinned + \(sortedNonPinned.count) grouped/ungrouped")
     }
     
-    // MARK: - Tab Group Methods
+    // MARK: - Tab Groups
     
+    /// Creates a new tab group and optionally assigns tabs to it.
+    /// 
+    /// Parameters:
+    /// - name: Display name for the group
+    /// - color: Visual color identifier (default: blue)
+    /// - selectedTabIDs: Tab IDs to add to the group immediately
+    /// 
+    /// Returns: The newly created TabGroup
     func createTabGroup(name: String, color: TabGroupColor = .blue, selectedTabIDs: [String] = []) -> TabGroup {
+        /// Create the group object.
         let group = TabGroup(name: name, color: color)
         tabGroups.append(group)
         
-        // Assign selected tabs to the group
+        /// Assign specified tabs to this group.
+        /// .first(where:) finds first tab matching the condition.
         for tabID in selectedTabIDs {
             if let tab = tabs.first(where: { $0.id == tabID }) {
                 tab.groupID = group.id
             }
         }
         
+        /// Persist the new group.
         saveTabGroupsIfNeeded()
         
-        // Trigger UI update
+        /// Force UI update on main thread.
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
@@ -305,29 +612,36 @@ class TabManager: ObservableObject {
         return group
     }
     
+    /// Deletes a tab group and optionally ungroups its tabs.
+    /// 
+    /// Parameter moveTabsToNoGroup:
+    /// - true: Tabs stay open but leave the group (default)
+    /// - false: Tabs are closed along with the group
     func deleteTabGroup(_ group: TabGroup, moveTabsToNoGroup: Bool = true) {
-        // Remove group reference from tabs
+        /// Unlink tabs from this group if requested.
+        /// 'where' clause filters tabs in the loop.
         if moveTabsToNoGroup {
             for tab in tabs where tab.groupID == group.id {
                 tab.groupID = nil
             }
         }
         
-        // Remove the group
+        /// Remove group from array.
+        /// .removeAll with closure removes matching elements.
         tabGroups.removeAll { $0.id == group.id }
         saveTabGroupsIfNeeded()
         
-        // Trigger UI update
+        /// Update UI.
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
     }
     
+    /// Adds a tab to an existing group.
     func addTabToGroup(_ tab: Tab, group: TabGroup) {
         tab.groupID = group.id
         saveTabGroupsIfNeeded()
         
-        // Trigger UI update
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
@@ -335,11 +649,11 @@ class TabManager: ObservableObject {
         print("📝 Added tab '\(tab.title)' to group '\(group.name)'")
     }
     
+    /// Removes a tab from its current group (if any).
     func removeTabFromGroup(_ tab: Tab) {
         tab.groupID = nil
         saveTabGroupsIfNeeded()
         
-        // Trigger UI update
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
@@ -347,29 +661,37 @@ class TabManager: ObservableObject {
         print("📝 Removed tab '\(tab.title)' from group")
     }
     
+    /// Convenience method that calls saveTabGroupsIfNeeded.
     func saveTabsIfNeeded() {
         saveTabGroupsIfNeeded()
     }
     
+    /// Returns all tabs belonging to the specified group.
     func getTabsInGroup(_ group: TabGroup) -> [Tab] {
+        /// .filter creates new array with only matching elements.
         return tabs.filter { $0.groupID == group.id }
     }
     
+    /// Returns all tabs not belonging to any group.
     func getUngroupedTabs() -> [Tab] {
         return tabs.filter { $0.groupID == nil }
     }
     
-    // MARK: - Confirmation Methods
+    // MARK: - Confirmation Dialogs
     
+    /// Requests to unpin a tab, showing confirmation dialog if enabled in settings.
     func requestUnpinTab(_ tab: Tab) {
         if BrowserSettings.shared.confirmClosingPinnedTabs {
+            /// Show confirmation dialog.
             tabToUnpin = tab
             showUnpinConfirmation = true
         } else {
+            /// Unpin immediately without confirmation.
             unpinTab(tab)
         }
     }
     
+    /// User confirmed unpinning the tab.
     func confirmUnpinTab() {
         if let tab = tabToUnpin {
             unpinTab(tab)
@@ -378,6 +700,7 @@ class TabManager: ObservableObject {
         showUnpinConfirmation = false
     }
     
+    /// User cancelled unpinning the tab.
     func cancelUnpinTab() {
         tabToUnpin = nil
         showUnpinConfirmation = false
