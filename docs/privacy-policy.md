@@ -6,7 +6,7 @@ permalink: /privacy-policy/
 
 # EvoArc Browser Privacy Policy
 
-*Last updated: September 17, 2025*
+*Last updated: October 10, 2025*
 
 ## Our Commitment to Privacy
 
