@@ -1,10 +1,10 @@
 # EvoArc
 
-**Privacy-focused, ARC-inspired Web Browser for iOS and macOS**
+**Privacy-focused, ARC-inspired Web Browser for iOS and iPadOS**
 
-[![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20macOS-blue.svg)](https://developer.apple.com/) [![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)](https://swift.org/) [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-green.svg)](https://developer.apple.com/swiftui/) [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+[![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20iPadOS-blue.svg)](https://developer.apple.com/) [![Swift](https://img.shields.io/badge/Swift-5.0+-orange.svg)](https://swift.org/) [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-green.svg)](https://developer.apple.com/swiftui/) [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
-EvoArc is a modern, privacy-first web browser built with SwiftUI that combines the best of privacy protection with an intuitive browsing experience. Inspired by the Arc browser's innovative design principles, EvoArc prioritizes user privacy while delivering powerful browsing capabilities across iOS and macOS platforms.
+EvoArc is a modern, privacy-first web browser built with SwiftUI that combines the best of privacy protection with an intuitive browsing experience. Inspired by the Arc browser's innovative design principles, EvoArc prioritizes user privacy while delivering powerful browsing capabilities on iPhone and iPad.
 
 ## ✨ Key Features
 
@@ -16,10 +16,10 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 - **No tracking** - Zero data collection or user tracking
 - **iCloud Integration** - Secure sync using your personal iCloud account
 
-### 🌐 Dual Browser Engine Support
-- **Safari Mode (WebKit)** - Native WebKit integration for optimal performance and privacy
-- **Chrome Mode (Blink)** - Chromium-based engine support for enhanced compatibility
-- **Intelligent fallback** - Automatic engine switching based on site requirements
+### 🌐 Chrome Compatibility Mode
+- **WebKit Engine** - Built on Apple's WebKit for optimal performance, privacy, and energy efficiency
+- **Chrome Compatibility** - Optional mode that emulates Chrome behavior with custom user agent and Chrome API polyfills
+- **Enhanced Compatibility** - Access sites that may detect or prefer Chrome-based browsers without sacrificing WebKit's native advantages
 
 ### 🎛️ Advanced Customization
 - **Configurable homepage** - Set any URL as your default starting page
@@ -31,13 +31,17 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 - **Dynamic Type Support** - Full accessibility support with adaptive UI scaling
 - **Ad Block Customization** - Choose from multiple filter lists with auto-updates
 
-### 📱 Cross-Platform Experience
-- **Universal SwiftUI design** - Consistent experience across iOS and macOS
-- **Platform-specific optimizations** - Native feel on each platform
-- **macOS-specific features**:
-  - Configurable tab drawer (left/right positioning)
-  - Keyboard shortcuts (⌘T for new tab, ⌘⇧Y for tab drawer)
-  - Native menu bar integration
+### 📱 iOS and iPadOS Experience
+- **Universal SwiftUI design** - Optimized for both iPhone and iPad
+- **iPad-specific features**:
+  - Desktop mode by default for full-featured web browsing
+  - Configurable navigation button positions (top/bottom, left/right)
+  - Split-screen and multitasking support
+  - Optimized Arc-like sidebar for larger displays
+- **iPhone optimizations**:
+  - Mobile mode by default with adaptive layouts
+  - Auto-hiding URL bar for immersive browsing
+  - Gesture-based navigation
 
 ### 🗂️ Tab Management
 - **Efficient tab handling** - Advanced tab management system
@@ -54,8 +58,8 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 - `Persistence.swift` - Core Data stack with CloudKit integration for cross-device sync
 
 **Browser Engine**
-- `BrowserEngineView.swift` - Unified interface for both WebKit and Chromium engines
-- `ChromiumWebView.swift` - Chromium/Blink engine implementation
+- `BrowserEngineView.swift` - Manages engine mode selection (WebKit/Chrome Compatibility)
+- `ChromiumWebView.swift` - WebKit with Chrome user agent and API emulation
 - `ScrollDetectingWebView.swift` - Enhanced WebKit view with scroll detection
 - `BrowserEngineProtocol.swift` - Protocol defining browser engine interface
 
@@ -74,15 +78,16 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 **User Interface**
 - `SettingsView.swift` - Comprehensive settings interface
 - `TabDrawerView.swift` - Tab management drawer
-- `MacOSViews.swift` - macOS-specific UI components
+- `BottomBarView.swift` - Navigation controls and action buttons
 - `ExternalBrowserFallback.swift` - Fallback mechanisms for unsupported content
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Xcode 15.0 or later
-- iOS 18.0+ / macOS 14.0+
+- iOS 18.0+ / iPadOS 18.0+
 - Swift 5.9+
+- iPhone or iPad device/simulator
 
 ### Installation
 
@@ -104,17 +109,17 @@ EvoArc is a modern, privacy-first web browser built with SwiftUI that combines t
 ### Build Commands
 
 ```bash
-# Build for iOS Simulator (Debug)
-xcodebuild -project EvoArc.xcodeproj -scheme EvoArc -sdk iphonesimulator -configuration Debug build
+# Build for iPhone Simulator (Debug)
+xcodebuild -project EvoArc.xcodeproj -scheme EvoArc -destination "platform=iOS Simulator,OS=18.0,name=iPhone 16" -configuration Debug clean build | xcpretty
 
-# Build for macOS (Debug)
-xcodebuild -project EvoArc.xcodeproj -scheme EvoArc -configuration Debug build
+# Build for iPad Simulator (Debug)
+xcodebuild -project EvoArc.xcodeproj -scheme EvoArc -destination "platform=iOS Simulator,OS=18.0,name=iPad Mini (A17 Pro)" -configuration Debug clean build | xcpretty
 
 # Build for Release
 xcodebuild -project EvoArc.xcodeproj -scheme EvoArc -configuration Release build
 
 # Run tests
-xcodebuild test -project EvoArc.xcodeproj -scheme EvoArc -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
+xcodebuild test -project EvoArc.xcodeproj -scheme EvoArc -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
 ## ⚙️ Configuration
@@ -123,9 +128,9 @@ xcodebuild test -project EvoArc.xcodeproj -scheme EvoArc -destination 'platform=
 - **Search Engine**: Qwant (privacy-focused)
 - **Homepage**: Qwant (www.qwant.com)
 - **Browser Engine**: WebKit (Safari Mode)
-- **Desktop Mode**: Enabled on iPad and macOS, disabled on iPhone
+- **Desktop Mode**: Enabled on iPad, disabled on iPhone
 - **Auto-hide URL Bar**: Enabled
-- **Tab Drawer Position** (macOS): Left side
+- **Navigation Button Position** (iPad): Top Right
 
 ### Privacy Features
 - Local-first data storage

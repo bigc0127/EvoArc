@@ -68,14 +68,14 @@ The only external connections made are:
 
 ### Browser Engine Privacy
 
-- WebKit (Safari) mode uses Apple's native privacy protections
-- Chrome mode available for compatibility while maintaining privacy
-- No telemetry or usage data is collected in either mode
+- Built exclusively on WebKit with Apple's native privacy protections
+- Chrome Compatibility mode available (uses WebKit with Chrome user agent)
+- No telemetry or usage data is collected in any mode
 
 ## Your Rights and Control
 
 You have complete control over your data:
-- All data can be deleted through the iOS Settings app
+- All data can be deleted through the Settings app on your iPhone or iPad
 - iCloud sync can be disabled at any time
 - Ad blocking can be customized or disabled
 - Search engines can be changed or customized
@@ -85,9 +85,9 @@ You have complete control over your data:
 
 ### Local Storage
 
-- All local data is protected by iOS/macOS system security
+- All local data is protected by iOS/iPadOS system security
 - Benefits from device encryption when enabled
-- Protected by your device's security measures
+- Protected by your device's security measures (Face ID, Touch ID, passcode)
 
 ### iCloud Sync Security
 

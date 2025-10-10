@@ -26,7 +26,7 @@ is stored **exclusively** on your local device.
 ## Data Storage and Security
 
 ### Local Device Storage
-- All browser data is stored locally on your device
+- All browser data is stored locally on your iPhone or iPad
 - Data never leaves your device unless you explicitly choose to use iCloud sync
 - You maintain complete control over your data at all times
 
@@ -38,7 +38,7 @@ is stored **exclusively** on your local device.
 - We never have access to your iCloud data
 
 ### Data Security
-- Your data remains protected by your device's built-in security features
+- Your data remains protected by iOS/iPadOS system security and device encryption
 - If you choose to use iCloud sync, your data is protected by Apple's iCloud security
 
 ## User Controls
