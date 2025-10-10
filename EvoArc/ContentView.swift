@@ -60,7 +60,11 @@ struct ContentView: View {
     ///
     /// **What it does**: Manages the list of open tabs, which tab is selected,
     /// tab creation/deletion, and saving/restoring tabs between app launches.
-    @StateObject private var tabManager = TabManager()
+    ///
+    /// **Important**: This TabManager is passed from EvoArcApp (not created here)
+    /// to ensure there's only ONE TabManager instance for the entire app.
+    /// This allows share extension URLs to work properly.
+    @ObservedObject var tabManager: TabManager
     
     /// The browser settings singleton - provides access to all user preferences.
     ///
@@ -742,6 +746,7 @@ struct ContentView: View {
         .onAppear {
             setupInitialURL()
             AdBlockManager.shared.refreshOnLaunchIfNeeded()
+            checkForPendingSharedURL()
         }
         .sheet(isPresented: $uiViewModel.showSettings) {
             SettingsView(tabManager: tabManager)
@@ -820,9 +825,19 @@ struct ContentView: View {
     /// **Parameter**:
     /// - url: The incoming URL from another app
     private func handleIncomingURL(_ url: URL) {
+        print("[ContentView] handleIncomingURL called with: \(url.absoluteString)")
+        
+        // Check if this is from share extension
+        if url.scheme == "evoarc" {
+            print("[ContentView] Detected evoarc:// scheme, delegating to EvoArcApp handler")
+            // Don't handle custom schemes here - let EvoArcApp handle them
+            return
+        }
+        
         // Check if redirect feature is disabled
         guard settings.redirectExternalSearches else {
             // Redirect is off: just open the URL as-is in a new tab
+            print("[ContentView] Opening URL directly (no redirect): \(url.absoluteString)")
             tabManager.createNewTab(url: url)
             return  // Exit early
         }
@@ -831,11 +846,47 @@ struct ContentView: View {
         if let query = extractSearchQuery(from: url),  // Extract query from URL
            let target = BrowserSettings.shared.searchURL(for: query) {  // Build new search URL
             // Successfully extracted query and built target URL
+            print("[ContentView] Redirecting search query: \(query)")
             tabManager.createNewTab(url: target)  // Open redirected search
         } else {
             // Couldn't extract a query (not a search URL) - open original URL
+            print("[ContentView] Opening URL (not a search): \(url.absoluteString)")
             tabManager.createNewTab(url: url)
         }
+    }
+    
+    /// Checks App Group UserDefaults for pending shared URL from share extension
+    private func checkForPendingSharedURL() {
+        let appGroupID = "group.com.ConnorNeedling.EvoArcBrowser"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return
+        }
+        
+        guard let urlString = sharedDefaults.string(forKey: "pendingSharedURL"),
+              let url = URL(string: urlString) else {
+            return
+        }
+        
+        // Check timestamp to ensure URL is recent (within last 10 seconds)
+        let timestamp = sharedDefaults.double(forKey: "pendingSharedURLTimestamp")
+        let age = Date().timeIntervalSince1970 - timestamp
+        
+        if age > 10.0 {
+            // Clear the old URL
+            sharedDefaults.removeObject(forKey: "pendingSharedURL")
+            sharedDefaults.removeObject(forKey: "pendingSharedURLTimestamp")
+            return
+        }
+        
+        print("[ContentView] Found pending shared URL: \(urlString)")
+        
+        // Clear the pending URL
+        sharedDefaults.removeObject(forKey: "pendingSharedURL")
+        sharedDefaults.removeObject(forKey: "pendingSharedURLTimestamp")
+        sharedDefaults.synchronize()
+        
+        // Open the URL
+        tabManager.createNewTab(url: url)
     }
     
     // MARK: - URL Parsing (Search Query Extraction)
@@ -1103,7 +1154,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(tabManager: TabManager())
 }
 
 // MARK: - Architecture Summary for Beginners

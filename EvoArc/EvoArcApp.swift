@@ -57,13 +57,8 @@ struct EvoArcApp: App {
             ZStack(alignment: .bottom) {
                 /// ContentView is the main browser interface.
                 /// It contains the web view, URL bar, tabs, and all primary browser UI.
-                ContentView()
-                    /// .onOpenURL is a modifier that handles URLs from external sources.
-                    /// Examples: clicking a link in Mail, opening from Spotlight, URL schemes
-                    /// The closure receives the URL and we pass it to our handler method.
-                    .onOpenURL { url in
-                        handleIncomingURL(url)
-                    }
+                /// Pass our TabManager instance to ContentView so they share the same instance.
+                ContentView(tabManager: tabManager)
                     /// .sheet presents a modal view that slides up from the bottom.
                     /// isPresented: binds to our @State variable ($ creates a Binding)
                     /// onDismiss: called when the sheet is dismissed by swiping down
@@ -92,6 +87,11 @@ struct EvoArcApp: App {
                 /// This is used here as a placeholder - the actual download state is managed elsewhere.
                 DownloadProgressOverlay(isPresented: .constant(false))
             }
+                /// .onOpenURL handles URLs from external sources at the root level
+                .onOpenURL { url in
+                    print("[EvoArcApp] Root view onOpenURL called with: \(url.absoluteString)")
+                    handleIncomingURL(url)
+                }
                 /// .handlesExternalEvents configures how this scene responds to external events.
                 /// This is important for deep linking and URL schemes.
                 /// - preferring: Events this scene prefers to handle (gets priority)
@@ -111,25 +111,85 @@ struct EvoArcApp: App {
     /// - The underscore '_' parameter label means callers don't use a label: handleIncomingURL(url)
     /// - URL is a Foundation struct representing a web address or file location
     private func handleIncomingURL(_ url: URL) {
+        print("[EvoArcApp] handleIncomingURL called with: \(url.absoluteString)")
+        
         /// Check if the URL uses our custom scheme "evoarc://"
-        /// Custom schemes let other apps or the system open URLs in your app.
-        /// Example: evoarc://www.example.com would open example.com in EvoArc
         if url.scheme == "evoarc" {
-            /// For our custom scheme, the actual URL is stored in the host component.
-            /// Example: evoarc://www.google.com -> host is "www.google.com"
-            /// 
-            /// 'if let' is optional binding - it safely unwraps optional values.
-            /// If urlString is nil or decodedURL fails to create, the block doesn't execute.
-            if let urlString = url.host,
-               let decodedURL = URL(string: urlString) {
-                /// Create a new tab with the decoded URL
-                tabManager.createNewTab(url: decodedURL)
+            print("[EvoArcApp] Detected evoarc:// scheme")
+            
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                print("[EvoArcApp] Failed to parse URL components")
+                return
             }
+            
+            // Handle evoarc://open-url?url=<url> (from share extension)
+            if components.host == "open-url",
+               let urlString = components.queryItems?.first(where: { $0.name == "url" })?.value,
+               let targetURL = URL(string: urlString) {
+                print("[EvoArcApp] Opening URL from share extension: \(targetURL.absoluteString)")
+                tabManager.createNewTab(url: targetURL)
+                return
+            }
+            
+            // Handle evoarc://search?q=<query> (search from share extension)
+            if components.host == "search",
+               let query = components.queryItems?.first(where: { $0.name == "q" })?.value,
+               let searchURL = BrowserSettings.shared.searchURL(for: query) {
+                print("[EvoArcApp] Performing search from share extension: \(query)")
+                tabManager.createNewTab(url: searchURL)
+                return
+            }
+            
+            // Legacy: evoarc://open (check App Groups)
+            if components.host == "open" {
+                print("[EvoArcApp] Legacy share extension trigger, checking App Group")
+                checkForPendingSharedURL()
+                return
+            }
+            
+            print("[EvoArcApp] Unknown evoarc URL format: \(url.absoluteString)")
         } else {
+            print("[EvoArcApp] Standard URL scheme: \(url.scheme ?? "none")")
             /// For standard http:// or https:// URLs, open directly.
-            /// This handles links shared from other apps, Spotlight searches, etc.
             tabManager.createNewTab(url: url)
         }
+    }
+    
+    /// Checks App Group UserDefaults for pending shared URL from share extension
+    private func checkForPendingSharedURL() {
+        let appGroupID = "group.com.ConnorNeedling.EvoArcBrowser"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("[EvoArcApp] ERROR: Failed to access App Group UserDefaults")
+            return
+        }
+        
+        guard let urlString = sharedDefaults.string(forKey: "pendingSharedURL"),
+              let url = URL(string: urlString) else {
+            print("[EvoArcApp] No pending shared URL found")
+            return
+        }
+        
+        // Check timestamp to ensure URL is recent (within last 5 seconds)
+        let timestamp = sharedDefaults.double(forKey: "pendingSharedURLTimestamp")
+        let age = Date().timeIntervalSince1970 - timestamp
+        
+        if age > 5.0 {
+            print("[EvoArcApp] Pending URL is too old (\(age)s), ignoring")
+            // Clear the old URL
+            sharedDefaults.removeObject(forKey: "pendingSharedURL")
+            sharedDefaults.removeObject(forKey: "pendingSharedURLTimestamp")
+            return
+        }
+        
+        print("[EvoArcApp] Found pending shared URL: \(urlString)")
+        
+        // Clear the pending URL
+        sharedDefaults.removeObject(forKey: "pendingSharedURL")
+        sharedDefaults.removeObject(forKey: "pendingSharedURLTimestamp")
+        sharedDefaults.synchronize()
+        
+        // Open the URL
+        tabManager.createNewTab(url: url)
     }
 }
 

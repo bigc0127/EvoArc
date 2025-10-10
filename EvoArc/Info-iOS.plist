@@ -51,6 +51,8 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>evoarc</string>
+				<string>http</string>
+				<string>https</string>
 			</array>
 		</dict>
 	</array>
