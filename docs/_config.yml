@@ -1,6 +1,6 @@
 theme: minima
 title: EvoArc Browser
-description: A privacy-focused, modern web browser for iOS and macOS
+description: A privacy-focused, modern web browser for iOS and iPadOS
 author: Connor Needling
 baseurl: "/EvoArc"
 url: "https://bigc0127.github.io"

@@ -5,7 +5,7 @@ title: EvoArc Browser Documentation
 
 # EvoArc Browser Documentation
 
-Welcome to the EvoArc Browser documentation site. EvoArc is a privacy-focused, modern web browser for iOS and macOS.
+Welcome to the EvoArc Browser documentation site. EvoArc is a privacy-focused, modern web browser for iOS and iPadOS.
 
 ## Quick Links
 
