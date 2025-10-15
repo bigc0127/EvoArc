@@ -63,11 +63,6 @@ class SetupCoordinator: ObservableObject {
                 view: AnyView(GestureSetupView())
             ),
             SetupPage(
-                title: "Downloads & Media",
-                subtitle: "Configure download and media preferences",
-                view: AnyView(DownloadSetupView())
-            ),
-            SetupPage(
                 title: "You're All Set!",
                 subtitle: "Start browsing smarter",
                 view: AnyView(SetupCompletionView())
@@ -1397,6 +1392,11 @@ struct GesturePracticeStep {
     let gestureHint: String
 }
 
+// MARK: - Download Setup (Removed for App Store Compliance)
+// Downloads are now disabled by default and must be manually enabled in Settings
+// per App Store guideline 5.2 regarding copyrighted content
+
+/*
 struct DownloadSetupView: View {
     @StateObject private var settings = BrowserSettings.shared
     @State private var showDownloadDemo = false
@@ -1542,7 +1542,9 @@ struct DownloadSetupView: View {
         }
     }
 }
+*/
 
+/*
 struct DownloadDemoView: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -1613,6 +1615,7 @@ struct DownloadDemoView: View {
         .padding()
     }
 }
+*/
 
 struct SetupCompletionView: View {
     @StateObject private var settings = BrowserSettings.shared
@@ -1688,12 +1691,6 @@ struct SetupCompletionView: View {
                                 title: "Privacy",
                                 subtitle: "Adjust privacy settings",
                                 icon: "shield.lefthalf.filled"
-                            )
-                            
-                            quickAccessButton(
-                                title: "Downloads",
-                                subtitle: "Manage downloads",
-                                icon: "arrow.down.circle"
                             )
                             
                             quickAccessButton(
