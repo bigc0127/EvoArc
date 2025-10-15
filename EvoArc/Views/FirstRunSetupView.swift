@@ -208,7 +208,7 @@ struct WelcomeSetupView: View {
             
             VStack(alignment: .leading, spacing: 15) {
                 FeatureRow(icon: "hand.tap", title: "Gesture-Based", description: "Navigate with intuitive swipes and taps")
-                FeatureRow(icon: "arrow.triangle.2.circlepath.circle", title: "Dual Engines", description: "Switch between Safari and Chrome engines")
+                FeatureRow(icon: "arrow.triangle.2.circlepath.circle", title: "Dual Modes", description: "Switch between Safari and Chrome identification")
                 FeatureRow(icon: "shield.checkerboard", title: "Privacy First", description: "Built-in ad blocking and tracking protection")
                 FeatureRow(icon: "folder.badge.gearshape", title: "Smart Organization", description: "Efficient tab management and grouping")
             }
