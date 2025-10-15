@@ -1,4 +1,4 @@
-//
+//qw
 //  ContentView.swift
 //  EvoArc
 //
@@ -134,6 +134,7 @@ struct ContentView: View {
     @State private var lastScrollOffset: CGFloat = 0
     
     /// Whether to show the "set as default browser" tip on first launch.
+    /// DISABLED: Awaiting Apple approval for default browser entitlement
     @State private var showDefaultBrowserTip: Bool = false
     
     /// The current keyboard height (when keyboard is visible).
@@ -159,6 +160,7 @@ struct ContentView: View {
     // - @AppStorage: Value persists to disk automatically
     
     /// Tracks whether we've shown the default browser prompt to the user.
+    /// DISABLED: Awaiting Apple approval for default browser entitlement
     ///
     /// **Purpose**: Only show the prompt once on first launch, not every time.
     ///
@@ -400,7 +402,8 @@ struct ContentView: View {
             
             
             // iOS first-run default browser tooltip overlay
-            if showDefaultBrowserTip {
+            // DISABLED: Awaiting Apple approval for default browser entitlement
+            if false && showDefaultBrowserTip {
                 Color.black.opacity(0.45)
                     .ignoresSafeArea()
                     .transition(.opacity)
@@ -459,6 +462,8 @@ struct ContentView: View {
         .onAppear {
             setupInitialURL()
             AdBlockManager.shared.refreshOnLaunchIfNeeded()
+            // DISABLED: Default browser prompt hidden until Apple approves entitlement
+            /*
             if !hasShownDefaultBrowserPrompt {
                 // Show one-time tip to set default browser on first run
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
@@ -467,6 +472,7 @@ struct ContentView: View {
                     }
                 }
             }
+            */
         }
         .gesture(
             DragGesture(minimumDistance: 20)

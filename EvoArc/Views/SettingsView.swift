@@ -504,7 +504,9 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         .font(.caption)
                 }
                 
-                // Default Browser (iOS only)
+                // Default Browser (iOS only) - Hidden until Apple approves entitlement
+                // Uncomment this section once Apple has approved the default browser entitlement
+                /*
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: openAppSettings) {
@@ -518,6 +520,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 } header: {
                     Text("Default Browser")
                 }
+                */
                 
                 // About Section
                 Section {
