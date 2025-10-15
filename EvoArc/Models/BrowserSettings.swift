@@ -447,6 +447,21 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // MARK: - Download Settings
+    
+    /// Controls whether downloads are enabled in the app
+    ///
+    /// **Default**: false (disabled) for App Store compliance
+    ///
+    /// **Purpose**: When enabled, users can download files from websites.
+    /// Each download requires per-file confirmation (Brave-style approach).
+    @Published var downloadsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(downloadsEnabled, forKey: "downloadsEnabled")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     private init() {
         // Set default based on device type
         let defaultDesktopMode: Bool
@@ -632,6 +647,13 @@ class BrowserSettings: ObservableObject {
             self.bottomBarHaptics = UserDefaults.standard.bool(forKey: "bottomBarHaptics")
         } else {
             self.bottomBarHaptics = true
+        }
+        
+        // Load downloads enabled setting (default OFF for App Store compliance)
+        if UserDefaults.standard.object(forKey: "downloadsEnabled") != nil {
+            self.downloadsEnabled = UserDefaults.standard.bool(forKey: "downloadsEnabled")
+        } else {
+            self.downloadsEnabled = false
         }
     }
     

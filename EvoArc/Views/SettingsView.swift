@@ -438,11 +438,35 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 
                 // Downloads Section
                 Section {
+                    Toggle("Enable Downloads", isOn: $settings.downloadsEnabled)
+                    
+                    if settings.downloadsEnabled {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Downloads enabled - you will be asked to confirm each download")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("Downloads are disabled - enable to save files from websites")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    Divider()
+                    
                     DownloadSettingsView()
                 } header: {
                     Text("Downloads")
                 } footer: {
-                    Text("Configure where downloads are saved and how they are handled.")
+                    Text("Downloads are disabled by default for App Store compliance. When enabled, you will be asked to confirm each download individually (similar to Safari). Toggle on to enable file downloads from websites.")
                         .font(.caption)
                 }
                 

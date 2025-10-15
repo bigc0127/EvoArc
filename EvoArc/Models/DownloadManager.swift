@@ -380,13 +380,117 @@ final class DownloadManager: NSObject, ObservableObject {
     
     // MARK: - Public Methods
     
+    // MARK: - Download Permission & Confirmation
+    
+    /// Shows an alert when downloads are disabled, directing user to settings.
+    private func showDownloadsDisabledAlert() {
+        Task { @MainActor in
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = windowScene.windows.first,
+                  let rootVC = window.rootViewController else {
+                return
+            }
+            
+            let alert = UIAlertController(
+                title: "Downloads Disabled",
+                message: "Downloads are currently disabled. Enable downloads in Settings to save files from websites.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+                // Post notification that settings should be opened to Downloads section
+                NotificationCenter.default.post(name: NSNotification.Name("OpenDownloadSettings"), object: nil)
+            })
+            rootVC.present(alert, animated: true)
+        }
+    }
+    
+    /// Shows Brave-style download confirmation alert before starting download.
+    ///
+    /// **Brave Approach**: User must explicitly confirm each download with details:
+    /// - Filename (truncated to 33 chars, like Brave)
+    /// - Domain/host
+    /// - File size (if known)
+    ///
+    /// **Returns**: `true` if user tapped Download, `false` if cancelled
+    private func showDownloadConfirmation(for url: URL, filename: String, fileSize: Int64?) async -> Bool {
+        await withCheckedContinuation { continuation in
+            Task { @MainActor in
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let window = windowScene.windows.first,
+                      let rootVC = window.rootViewController else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                // Extract host from URL
+                let host = url.host ?? url.absoluteString
+                
+                // Truncate filename to 33 chars (Brave's approach)
+                let truncatedFilename: String
+                if filename.count > 33 {
+                    let start = filename.prefix(15)
+                    let end = filename.suffix(15)
+                    truncatedFilename = "\(start)...\(end)"
+                } else {
+                    truncatedFilename = filename
+                }
+                
+                // Format file size if available
+                let fileSizeText: String?
+                if let fileSize = fileSize, fileSize > 0 {
+                    fileSizeText = ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+                } else {
+                    fileSizeText = nil
+                }
+                
+                // Build title: "filename - host"
+                let title = "\(truncatedFilename) - \(host)"
+                
+                // Build download button text
+                var downloadButtonText = "Download"
+                if let fileSizeText = fileSizeText {
+                    downloadButtonText += " (\(fileSizeText))"
+                }
+                
+                let alert = UIAlertController(
+                    title: title,
+                    message: nil,
+                    preferredStyle: .actionSheet
+                )
+                
+                alert.addAction(UIAlertAction(title: downloadButtonText, style: .default) { _ in
+                    continuation.resume(returning: true)
+                })
+                
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                    continuation.resume(returning: false)
+                })
+                
+                // Configure popover for iPad
+                if let popover = alert.popoverPresentationController {
+                    popover.sourceView = window
+                    popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.maxY - 16, width: 0, height: 0)
+                    popover.permittedArrowDirections = []
+                }
+                
+                rootVC.present(alert, animated: true)
+            }
+        }
+    }
+    
     /// Starts downloading a file from the given URL.
     ///
     /// **Process**:
-    /// 1. Create URLSession download task
-    /// 2. Create DownloadProgress to track it
-    /// 3. Add to activeDownloads array
-    /// 4. Start the download
+    /// 1. Check if downloads are enabled (App Store compliance)
+    /// 2. Show Brave-style confirmation alert
+    /// 3. Create URLSession download task
+    /// 4. Create DownloadProgress to track it
+    /// 5. Add to activeDownloads array
+    /// 6. Start the download
+    ///
+    /// **Permission Check**: Downloads disabled by default for App Store compliance.
+    /// User must enable in settings, then confirm each individual download.
     ///
     /// **Progress tracking**: Delegate callbacks update the progress.
     ///
@@ -400,6 +504,33 @@ final class DownloadManager: NSObject, ObservableObject {
     /// DownloadManager.shared.downloadFile(from: url)
     /// ```
     func downloadFile(from url: URL, suggestedFilename: String? = nil) {
+        // Check if downloads are enabled
+        guard BrowserSettings.shared.downloadsEnabled else {
+            showDownloadsDisabledAlert()
+            return
+        }
+        
+        // Get filename and prepare for confirmation
+        let filename = suggestedFilename ?? url.lastPathComponent
+        
+        // Show Brave-style confirmation alert
+        Task {
+            let confirmed = await showDownloadConfirmation(for: url, filename: filename, fileSize: nil)
+            
+            guard confirmed else {
+                // User cancelled
+                return
+            }
+            
+            // User confirmed - proceed with download
+            await MainActor.run {
+                self.startDownload(from: url, filename: filename)
+            }
+        }
+    }
+    
+    /// Internal method to actually start the download after confirmation.
+    private func startDownload(from url: URL, filename: String) {
         /// Create URLSession download task.
         /// This doesn't start the download yet - just creates the task object.
         let task = session.downloadTask(with: url)
@@ -407,7 +538,7 @@ final class DownloadManager: NSObject, ObservableObject {
         /// Create progress tracker for this download.
         let progress = DownloadProgress(
             url: url,
-            fileName: suggestedFilename ?? url.lastPathComponent,  // Filename from URL or custom
+            fileName: filename,  // Use the confirmed filename
             progress: 0,      // Start at 0%
             status: .downloading
         )
