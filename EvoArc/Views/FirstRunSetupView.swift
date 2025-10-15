@@ -38,8 +38,8 @@ class SetupCoordinator: ObservableObject {
                 view: AnyView(WelcomeSetupView())
             ),
             SetupPage(
-                title: "Choose Your Engine",
-                subtitle: "Switch between Safari and Chrome engines with a long press",
+                title: "Browser Compatibility",
+                subtitle: "Choose how websites see your browser",
                 view: AnyView(EngineSetupView())
             ),
             SetupPage(
@@ -250,14 +250,19 @@ struct EngineSetupView: View {
             VStack(spacing: 20) {
                 // Engine selection
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Choose Your Default Engine")
+                    Text("Choose Your Default Mode")
                         .font(.headline)
+                    
+                    Text("EvoArc uses Apple's WebKit engine for all browsing. Choose how websites see your browser:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 8)
                     
                     ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         engineButton(engine)
                     }
                     
-                    Text("You can always switch engines by long-pressing any tab in the tab drawer.")
+                    Text("You can always switch modes by long-pressing any tab in the tab drawer.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
@@ -266,7 +271,7 @@ struct EngineSetupView: View {
                 
                 // Feature comparison
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("Engine Features")
+                    Text("Mode Comparison")
                         .font(.headline)
                         .padding(.horizontal)
                     
@@ -276,10 +281,10 @@ struct EngineSetupView: View {
                                 title: "Safari Mode",
                                 icon: "safari",
                                 features: [
-                                    "Native iOS performance",
-                                    "Better battery life",
-                                    "System-wide content blockers",
-                                    "iCloud syncing support"
+                                    "Identifies as Safari browser",
+                                    "Best for privacy",
+                                    "Standard user agent",
+                                    "Most compatible with iOS"
                                 ]
                             )
                             
@@ -287,20 +292,26 @@ struct EngineSetupView: View {
                                 title: "Chrome Mode",
                                 icon: "globe",
                                 features: [
-                                    "Chrome-compatible websites",
-                                    "Advanced web features",
-                                    "Enhanced site compatibility",
-                                    "Chrome extension support (partial)"
+                                    "Identifies as Chrome browser",
+                                    "Better site compatibility",
+                                    "Chrome user agent",
+                                    "Access Chrome-only sites"
                                 ]
                             )
                         }
                         .padding(.horizontal)
                     }
+                    
+                    Text("Note: Both modes use Apple's WebKit engine. Only the browser identification changes.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
                 }
                 
                 // Long-press tutorial
                 VStack(spacing: 15) {
-                    Text("Quick Engine Switching")
+                    Text("Quick Mode Switching")
                         .font(.headline)
                     
                     Image(systemName: "hand.tap.fill")
@@ -308,7 +319,7 @@ struct EngineSetupView: View {
                         .foregroundColor(.accentColor)
                         .padding()
                     
-                    Text("Long-press any tab in the tab drawer to instantly switch between Safari and Chrome engines for that tab. Perfect for when you encounter site compatibility issues.")
+                    Text("Long-press any tab in the tab drawer to instantly switch between Safari and Chrome modes for that tab. Perfect for when you encounter sites that require Chrome.")
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                 }
@@ -343,7 +354,7 @@ struct EngineSetupView: View {
                     Text(engine.displayName)
                         .font(.body)
                     
-                    Text(engine == .webkit ? "Best for battery life and privacy" : "Best for site compatibility")
+                    Text(engine == .webkit ? "Standard Safari identification" : "Chrome identification for compatibility")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
