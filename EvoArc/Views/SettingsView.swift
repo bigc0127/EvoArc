@@ -466,7 +466,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                 } header: {
                     Text("Downloads")
                 } footer: {
-                    Text("Downloads are disabled by default for App Store compliance. When enabled, you will be asked to confirm each download individually (similar to Safari). Toggle on to enable file downloads from websites.")
+                    Text("Downloads are disabled by default for App Store compliance. When enabled, you will be asked to confirm each download individually. Downloads are limited to non-media document and archive files; audio, video, and image media downloads are not supported.")
                         .font(.caption)
                 }
                 

@@ -336,8 +336,9 @@ struct WebView: UIViewRepresentable {
             // Intercept link activations that trigger downloads
             if navigationAction.navigationType == .linkActivated,
                let url = navigationAction.request.url {
-                // If the URL looks like a direct file (no HTML), let URLSession handle it
-                let fileExtensions = ["zip","pdf","png","jpg","jpeg","gif","mp4","mov","mp3","wav","dmg","pkg","ipa","csv","txt","json"]
+                // If the URL looks like a direct file (no HTML), only allow document/archive downloads
+                // Media formats (audio, video, images) are intentionally excluded for App Store Guideline 5.2.3 compliance.
+                let fileExtensions = ["zip", "pdf", "dmg", "pkg", "ipa", "csv", "txt", "json"]
                 if fileExtensions.contains(url.pathExtension.lowercased()) {
                     DownloadManager.shared.downloadFile(from: url)
                     decisionHandler(.cancel)
@@ -352,18 +353,14 @@ struct WebView: UIViewRepresentable {
             if !navigationResponse.canShowMIMEType,
                let url = navigationResponse.response.url,
                let mimeType = navigationResponse.response.mimeType {
-                // Known downloadable MIME types
+                // Known downloadable non-media MIME types (documents and archives only)
+                // Audio, video, and image MIME types are intentionally excluded for App Store Guideline 5.2.3 compliance.
                 let downloadableTypes = [
                     "application/pdf",
                     "application/zip",
                     "application/x-zip",
                     "application/x-zip-compressed",
                     "application/octet-stream",
-                    "image/jpeg",
-                    "image/png",
-                    "image/gif",
-                    "audio/mpeg",
-                    "video/mp4",
                     "text/csv",
                     "text/plain"
                 ]
