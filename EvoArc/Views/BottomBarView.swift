@@ -354,6 +354,23 @@ struct BottomBarView: View {
     var body: some View {
         // GeometryReader gives us access to the view's size and position
         GeometryReader { geometry in
+            // Compute a dynamic gap between keyboard and bottom bar based on
+            // screen height and Dynamic Type size (larger text → slightly
+            // larger gap for comfort).
+            let keyboardGap: CGFloat = {
+                let screenHeight = geometry.size.height
+                let baseGap: CGFloat
+                if screenHeight < 700 {         // smaller phones
+                    baseGap = 6
+                } else if screenHeight < 850 {  // mid-size phones
+                    baseGap = 8
+                } else {                        // large phones / Plus / Max
+                    baseGap = 10
+                }
+                let accessibilityExtra: CGFloat = dynamicTypeSize >= .accessibility1 ? 4 : 0
+                return baseGap + accessibilityExtra
+            }()
+            
             // ZStack layers views on the Z-axis (front to back)
             // alignment: .bottom means child views align to the bottom
             ZStack(alignment: .bottom) {
@@ -417,16 +434,20 @@ struct BottomBarView: View {
                     .padding(.vertical, bottomBarVerticalPadding)
                     .background(bottomFillBackground)  // Rounded rectangle background
                     .padding(.horizontal, bottomBarHorizontalPadding)  // Space from screen edges
-                    .padding(.bottom, 8)  // Space above bottom edge
+                    .padding(.bottom, 8)  // Space above bottom edge when keyboard is hidden
                 }
-                .padding(.bottom, 8)  // Additional bottom spacing
                 
                 // MARK: Keyboard Avoidance
                 // When URL bar is focused, lift the entire view above the keyboard.
-                // The ternary operator checks focus state:
-                // - Focused: Add padding equal to keyboard height
-                // - Not focused: No extra padding
-                .padding(.bottom, isURLBarFocused ? keyboardManager.keyboardHeight : 0)
+                // We subtract a dynamic gap so the bar visually hugs the keyboard
+                // while still leaving a comfortable buffer that scales with device
+                // size and Dynamic Type.
+                .padding(
+                    .bottom,
+                    isURLBarFocused
+                        ? max(keyboardManager.keyboardHeight - keyboardGap, 0)
+                        : 8
+                )
                 .animation(.easeOut(duration: keyboardManager.keyboardAnimationDuration), value: keyboardManager.keyboardHeight)
             }
         }

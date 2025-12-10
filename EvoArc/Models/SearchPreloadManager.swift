@@ -50,7 +50,9 @@ class SearchPreloadManager: NSObject, ObservableObject {
         preloadWebView?.customUserAgent = userAgent
         preloadWebView?.navigationDelegate = self
         
+        #if DEBUG
         print("[SearchPreloadManager] WebView configured for search preloading")
+        #endif
     }
     
     func preloadSearch(for query: String) {
@@ -81,11 +83,15 @@ class SearchPreloadManager: NSObject, ObservableObject {
             
             // Prevent duplicate preloading
             guard !self.isPreloading else { 
+                #if DEBUG
                 print("[SearchPreloadManager] Already preloading, skipping query: \(query)")
+                #endif
                 return 
             }
             
+            #if DEBUG
             print("[SearchPreloadManager] Starting preload for query: '\(query)' on \(searchEngine)")
+            #endif
             self.isPreloading = true
             
             var request = URLRequest(url: searchURL)
@@ -105,12 +111,16 @@ class SearchPreloadManager: NSObject, ObservableObject {
             )
             
             self.preloadedResults[query] = preliminaryResult
+            #if DEBUG
             print("[SearchPreloadManager] Stored preliminary result for: \(query)")
+            #endif
             
             // Set a timeout to ensure spinner doesn't get stuck
             DispatchQueue.main.asyncAfter(deadline: .now() + 15.0) {
                 if self.isPreloading {
+                    #if DEBUG
                     print("[SearchPreloadManager] Timeout reached, stopping preload for: \(query)")
+                    #endif
                     self.isPreloading = false
                 }
             }
@@ -230,36 +240,48 @@ class SearchPreloadManager: NSObject, ObservableObject {
             """
         }
         
+        #if DEBUG
         print("[SearchPreloadManager] Executing JavaScript for \(searchEngine) search results")
+        #endif
         webView.evaluateJavaScript(script) { [weak self] result, error in
             DispatchQueue.main.async {
                 defer { 
+                    #if DEBUG
                     print("[SearchPreloadManager] JavaScript execution completed, setting isPreloading = false")
+                    #endif
                     self?.isPreloading = false 
                 } // Always reset loading state
                 
                 if let error = error {
+                    #if DEBUG
                     print("[SearchPreloadManager] JavaScript execution error: \(error.localizedDescription)")
+                    #endif
                     return
                 }
                 
                 guard let self = self else { return }
                 
                 guard let resultDict = result as? [String: String] else {
+                    #if DEBUG
                     print("[SearchPreloadManager] JavaScript returned unexpected result type: \(type(of: result))")
                     if let result = result {
                         print("[SearchPreloadManager] Actual result: \(result)")
                     }
+                    #endif
                     return
                 }
                 
                 guard let urlString = resultDict["url"], let url = URL(string: urlString) else {
+                    #if DEBUG
                     print("[SearchPreloadManager] No valid URL found in result: \(resultDict)")
+                    #endif
                     return
                 }
                 
                 let title = resultDict["title"] ?? ""
+                #if DEBUG
                 print("[SearchPreloadManager] Successfully extracted first result: \(title) - \(url.absoluteString)")
+                #endif
                 
                 // Update the preloaded result with first link information
                 if var existingResult = self.preloadedResults[query] {
@@ -272,12 +294,16 @@ class SearchPreloadManager: NSObject, ObservableObject {
                         searchEngine: existingResult.searchEngine
                     )
                     self.preloadedResults[query] = existingResult
+                    #if DEBUG
                     print("[SearchPreloadManager] Updated preloaded result for: \(query)")
+                    #endif
                     
                     // Now preload the first result page
                     self.preloadFirstResult(url: url)
                 } else {
+                    #if DEBUG
                     print("[SearchPreloadManager] No existing result found to update for query: \(query)")
+                    #endif
                 }
             }
         }
@@ -296,40 +322,54 @@ class SearchPreloadManager: NSObject, ObservableObject {
 // MARK: - WKNavigationDelegate
 extension SearchPreloadManager: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        #if DEBUG
         print("[SearchPreloadManager] WebView finished loading: \(webView.url?.absoluteString ?? "unknown")")
+        #endif
         
         // Extract the query from the current URL
         guard let currentURL = webView.url,
               let query = extractSearchQuery(from: currentURL) else {
+            #if DEBUG
             print("[SearchPreloadManager] Could not extract query from URL: \(webView.url?.absoluteString ?? "nil")")
+            #endif
             isPreloading = false
             return
         }
         
+        #if DEBUG
         print("[SearchPreloadManager] Extracted query: '\(query)' from URL")
+        #endif
         
         // Wait a bit for JavaScript to load content
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self = self,
                   let existingResult = self.preloadedResults[query] else { 
+                #if DEBUG
                 print("[SearchPreloadManager] No existing result for query: \(query)")
+                #endif
                 return 
             }
             
+            #if DEBUG
             print("[SearchPreloadManager] Starting JavaScript extraction for: \(query)")
+            #endif
             self.extractFirstSearchResult(from: webView, query: query, searchEngine: existingResult.searchEngine)
         }
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        #if DEBUG
         print("[SearchPreloadManager] WebView navigation failed: \(error.localizedDescription)")
+        #endif
         DispatchQueue.main.async { [weak self] in
             self?.isPreloading = false
         }
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        #if DEBUG
         print("[SearchPreloadManager] WebView provisional navigation failed: \(error.localizedDescription)")
+        #endif
         DispatchQueue.main.async { [weak self] in
             self?.isPreloading = false
         }

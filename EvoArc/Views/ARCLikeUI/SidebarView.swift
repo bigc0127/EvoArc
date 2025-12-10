@@ -25,8 +25,6 @@ struct SidebarView: View {
     @State private var showingNewGroupSheet = false
     @State private var newGroupName = ""
     @State private var newGroupColor: TabGroupColor = .blue
-    @State private var canGoBack: Bool = false
-    @State private var canGoForward: Bool = false
     
     var body: some View {
         HStack(spacing: 0) {
@@ -106,39 +104,11 @@ struct SidebarView: View {
             
             Spacer()
             
-            Button(action: { tabManager.selectedTab?.webView?.goBack() }) {
-                buttonBackground(id: "goBack", systemImage: "arrow.left")
-            }
-            .disabled(!canGoBack)
-            
-            Button(action: { tabManager.selectedTab?.webView?.goForward() }) {
-                buttonBackground(id: "goForward", systemImage: "arrow.right")
-            }
-            .disabled(!canGoForward)
-            
-            Button {
-                guard let webView = tabManager.selectedTab?.webView else { return }
-                if webView.isLoading {
-                    webView.stopLoading()
-                }
-                webView.reload()
-            } label: {
-                buttonBackground(id: "reload", systemImage: "arrow.clockwise")
+            if let selectedTab = tabManager.selectedTab {
+                SidebarNavigationButtonsView(tab: selectedTab)
             }
         }
         .padding(.horizontal, 8)
-        .onReceive(tabManager.$selectedTab) { selectedTab in
-            canGoBack = selectedTab?.canGoBack ?? false
-            canGoForward = selectedTab?.canGoForward ?? false
-        }
-        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-            let newCanGoBack = tabManager.selectedTab?.canGoBack ?? false
-            let newCanGoForward = tabManager.selectedTab?.canGoForward ?? false
-            if newCanGoBack != canGoBack || newCanGoForward != canGoForward {
-                canGoBack = newCanGoBack
-                canGoForward = newCanGoForward
-            }
-        }
     }
     
     private var searchBar: some View {
@@ -401,6 +371,52 @@ struct SidebarView: View {
                 dragOffset = 0
                 startWidth = nil
             }
+    }
+}
+
+// MARK: - Sidebar Navigation Buttons View
+
+private struct SidebarNavigationButtonsView: View {
+    @ObservedObject var tab: Tab
+    
+    var body: some View {
+        HStack {
+            Button(action: { tab.webView?.goBack() }) {
+                buttonBackground(id: "goBack", systemImage: "arrow.left")
+            }
+            .disabled(!tab.canGoBack)
+            
+            Button(action: { tab.webView?.goForward() }) {
+                buttonBackground(id: "goForward", systemImage: "arrow.right")
+            }
+            .disabled(!tab.canGoForward)
+            
+            Button {
+                if tab.webView?.isLoading == true {
+                    tab.webView?.stopLoading()
+                }
+                tab.webView?.reload()
+            } label: {
+                buttonBackground(id: "reload", systemImage: "arrow.clockwise")
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func buttonBackground(id: String, systemImage: String) -> some View {
+        // Reuse SidebarView's styling by delegating to a helper on Color/Shape level
+        // (duplicated styling kept minimal here for isolation).
+        ZStack {
+            Color.white.opacity(0.15)
+            Image(systemName: systemImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .foregroundColor(.primary)
+                .opacity(0.7)
+        }
+        .frame(width: 40, height: 40)
+        .cornerRadius(7)
     }
 }
 

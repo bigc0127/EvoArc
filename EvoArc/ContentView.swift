@@ -137,20 +137,6 @@ struct ContentView: View {
     /// DISABLED: Awaiting Apple approval for default browser entitlement
     @State private var showDefaultBrowserTip: Bool = false
     
-    /// The current keyboard height (when keyboard is visible).
-    ///
-    /// **Use case**: Adjust layout to prevent keyboard from covering important UI.
-    @State private var keyboardHeight: CGFloat = 0
-    
-    /// Whether the keyboard is currently visible.
-    @State private var keyboardVisible: Bool = false
-    
-    /// Whether the web view can navigate backward (used for iPad nav buttons).
-    @State private var canGoBack: Bool = false
-    
-    /// Whether the web view can navigate forward (used for iPad nav buttons).
-    @State private var canGoForward: Bool = false
-    
     // MARK: - App Storage (Persistent Preferences)
     // @AppStorage automatically saves values to UserDefaults (iOS's key-value storage).
     // Changes persist between app launches.
@@ -242,50 +228,14 @@ struct ContentView: View {
     /// 2. Middle layer: Bottom URL bar (BottomBarView)
     /// 3. Top layers: Tab drawer overlay, default browser tip, gesture areas
     ///
-    /// **Keyboard Handling**: Sets up NotificationCenter observers to track keyboard
-    /// visibility and adjust layout accordingly.
+    /// **Keyboard Handling**: On iPhone, keyboard avoidance is handled inside
+    /// `BottomBarView` via `KeyboardHeightManager`, so no additional observers
+    /// are needed at this root level.
     ///
     /// **Parameter**:
     /// - geometry: Provides screen size for responsive layout calculations
     @ViewBuilder
     private func iphoneLayout(geometry: GeometryProxy) -> some View {
-        // MARK: Keyboard Observers
-        // These observers watch for keyboard show/hide notifications from iOS.
-        // When the keyboard appears, we need to adjust the layout to prevent it
-        // from covering important UI elements.
-        //
-        // NotificationCenter Pattern:
-        // iOS uses NotificationCenter to broadcast system events. We register
-        // observers that execute closure blocks when specific notifications occur.
-        //
-        // `let _ = ...` Explanation:
-        // This executes the code and discards the return value (the observer object).
-        // We don't need to keep a reference since the observer is automatically removed
-        // when the view disappears.
-        
-        // Observer 1: Keyboard will show
-        let _ = NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillShowNotification,  // Notification name
-            object: nil,                                         // No specific object filter
-            queue: .main                                         // Execute on main thread (UI updates)
-        ) { notification in
-            // Extract keyboard frame from notification's userInfo dictionary
-            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                keyboardHeight = keyboardFrame.height  // Store keyboard height
-                keyboardVisible = true                 // Mark keyboard as visible
-            }
-        }
-        
-        // Observer 2: Keyboard will hide
-        let _ = NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillHideNotification,  // Notification name
-            object: nil,                                        // No specific object filter
-            queue: .main                                        // Execute on main thread
-        ) { _ in
-            keyboardHeight = 0        // Reset keyboard height
-            keyboardVisible = false   // Mark keyboard as hidden
-        }
-        
         // MARK: Main Layout Stack
         // ZStack layers views on the Z-axis (front to back).
         // Order matters: later views appear on top of earlier ones.
@@ -831,11 +781,15 @@ struct ContentView: View {
     /// **Parameter**:
     /// - url: The incoming URL from another app
     private func handleIncomingURL(_ url: URL) {
+        #if DEBUG
         print("[ContentView] handleIncomingURL called with: \(url.absoluteString)")
+        #endif
         
         // Check if this is from share extension
         if url.scheme == "evoarc" {
+            #if DEBUG
             print("[ContentView] Detected evoarc:// scheme, delegating to EvoArcApp handler")
+            #endif
             // Don't handle custom schemes here - let EvoArcApp handle them
             return
         }
@@ -843,7 +797,9 @@ struct ContentView: View {
         // Check if redirect feature is disabled
         guard settings.redirectExternalSearches else {
             // Redirect is off: just open the URL as-is in a new tab
+            #if DEBUG
             print("[ContentView] Opening URL directly (no redirect): \(url.absoluteString)")
+            #endif
             tabManager.createNewTab(url: url)
             return  // Exit early
         }
@@ -852,11 +808,15 @@ struct ContentView: View {
         if let query = extractSearchQuery(from: url),  // Extract query from URL
            let target = BrowserSettings.shared.searchURL(for: query) {  // Build new search URL
             // Successfully extracted query and built target URL
+            #if DEBUG
             print("[ContentView] Redirecting search query: \(query)")
+            #endif
             tabManager.createNewTab(url: target)  // Open redirected search
         } else {
             // Couldn't extract a query (not a search URL) - open original URL
+            #if DEBUG
             print("[ContentView] Opening URL (not a search): \(url.absoluteString)")
+            #endif
             tabManager.createNewTab(url: url)
         }
     }
@@ -884,7 +844,9 @@ struct ContentView: View {
             return
         }
         
+        #if DEBUG
         print("[ContentView] Found pending shared URL: \(urlString)")
+        #endif
         
         // Clear the pending URL
         sharedDefaults.removeObject(forKey: "pendingSharedURL")
@@ -1035,127 +997,113 @@ struct ContentView: View {
     
     @ViewBuilder
     private var navigationButtonsOverlay: some View {
-        let position = settings.navigationButtonPosition
-        
-        VStack {
-            if position == .topLeft || position == .topRight {
-                HStack(spacing: 12) {
-                    if position == .topLeft {
-                        navigationButtonStack
-                        Spacer()
-                    } else {
-                        Spacer()
-                        navigationButtonStack
+        if let selectedTab = tabManager.selectedTab {
+            let position = settings.navigationButtonPosition
+            
+            VStack {
+                if position == .topLeft || position == .topRight {
+                    HStack(spacing: 12) {
+                        if position == .topLeft {
+                            IPadNavigationButtonsView(tab: selectedTab)
+                            Spacer()
+                        } else {
+                            Spacer()
+                            IPadNavigationButtonsView(tab: selectedTab)
+                        }
                     }
-                }
-                .padding(.horizontal, 15)
-                .padding(.top, 80) // Below sidebar toggle
-                Spacer()
-            } else {
-                Spacer()
-                HStack(spacing: 12) {
-                    if position == .bottomLeft {
-                        navigationButtonStack
-                        Spacer()
-                    } else {
-                        Spacer()
-                        navigationButtonStack
+                    .padding(.horizontal, 15)
+                    .padding(.top, 80) // Below sidebar toggle
+                    Spacer()
+                } else {
+                    Spacer()
+                    HStack(spacing: 12) {
+                        if position == .bottomLeft {
+                            IPadNavigationButtonsView(tab: selectedTab)
+                            Spacer()
+                        } else {
+                            Spacer()
+                            IPadNavigationButtonsView(tab: selectedTab)
+                        }
                     }
+                    .padding(.horizontal, 15)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 15)
-                .padding(.bottom, 20)
             }
         }
     }
     
-    private var navigationButtonStack: some View {
-        HStack(spacing: 8) {
-            if let selectedTab = tabManager.selectedTab {
-                let _ = print("🟫 ContentView: Rendering nav buttons canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
-                // Back button
+    // Dedicated view so we can observe Tab navigation state directly without timers
+    private struct IPadNavigationButtonsView: View {
+        @ObservedObject var tab: Tab
+        
+        var body: some View {
+            HStack(spacing: 8) {
                 navigationButton(
                     systemImage: "chevron.left",
-                    action: { 
-                        print("🟢 Back button tapped")
-                        selectedTab.webView?.goBack() 
-                    },
-                    isEnabled: canGoBack
-                )
+                    isEnabled: tab.canGoBack
+                ) {
+                    tab.webView?.goBack()
+                }
                 
-                // Forward button
                 navigationButton(
                     systemImage: "chevron.right",
-                    action: { 
-                        print("🟢 Forward button tapped")
-                        selectedTab.webView?.goForward() 
-                    },
-                    isEnabled: canGoForward
-                )
+                    isEnabled: tab.canGoForward
+                ) {
+                    tab.webView?.goForward()
+                }
             }
         }
-        .onReceive(tabManager.$selectedTab) { selectedTab in
-            // Update state whenever selectedTab changes
-            canGoBack = selectedTab?.canGoBack ?? false
-            canGoForward = selectedTab?.canGoForward ?? false
-            print("💬 onReceive selectedTab: canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
-        }
-        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-            // Poll for changes every 0.1 seconds as a workaround
-            let newCanGoBack = tabManager.selectedTab?.canGoBack ?? false
-            let newCanGoForward = tabManager.selectedTab?.canGoForward ?? false
-            if newCanGoBack != canGoBack || newCanGoForward != canGoForward {
-                canGoBack = newCanGoBack
-                canGoForward = newCanGoForward
-                print("💬 Timer update: canGoBack=\(canGoBack) canGoForward=\(canGoForward)")
-            }
-        }
-    }
-    
-    private func navigationButton(systemImage: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
-        Button(action: action) {
-            ZStack {
-                // Frosted glass background with gradient tint
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(hex: "8041E6").opacity(isEnabled ? 0.3 : 0.1),
-                                        Color(hex: "A0F2FC").opacity(isEnabled ? 0.3 : 0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+        
+        private func navigationButton(
+            systemImage: String,
+            isEnabled: Bool,
+            action: @escaping () -> Void
+        ) -> some View {
+            Button(action: action) {
+                ZStack {
+                    // Frosted glass background with gradient tint
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 44, height: 44)
+                        .overlay {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(hex: "8041E6").opacity(isEnabled ? 0.3 : 0.1),
+                                            Color(hex: "A0F2FC").opacity(isEnabled ? 0.3 : 0.1)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
+                        }
+                        .overlay {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(isEnabled ? 0.4 : 0.2), lineWidth: 1.5)
+                        }
+                        .shadow(color: .black.opacity(isEnabled ? 0.15 : 0.05), radius: 12, x: 0, y: 4)
+                        .shadow(color: .black.opacity(isEnabled ? 0.1 : 0.03), radius: 4, x: 0, y: 2)
+                    
+                    // Icon with darker color for visibility on light backgrounds
+                    Image(systemName: systemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color.black.opacity(isEnabled ? 0.75 : 0.3),
+                                    Color.black.opacity(isEnabled ? 0.65 : 0.25)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                    }
-                    .overlay {
-                        Circle()
-                            .strokeBorder(Color.white.opacity(isEnabled ? 0.4 : 0.2), lineWidth: 1.5)
-                    }
-                    .shadow(color: .black.opacity(isEnabled ? 0.15 : 0.05), radius: 12, x: 0, y: 4)
-                    .shadow(color: .black.opacity(isEnabled ? 0.1 : 0.03), radius: 4, x: 0, y: 2)
-                
-                // Icon with darker color for visibility on light backgrounds
-                Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color.black.opacity(isEnabled ? 0.75 : 0.3),
-                                Color.black.opacity(isEnabled ? 0.65 : 0.25)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
                         )
-                    )
-                    .shadow(color: .white.opacity(isEnabled ? 0.5 : 0.2), radius: 1, x: 0, y: 1)
+                        .shadow(color: .white.opacity(isEnabled ? 0.5 : 0.2), radius: 1, x: 0, y: 1)
+                }
             }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled)
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
     }
 }
 

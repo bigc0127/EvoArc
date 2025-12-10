@@ -223,7 +223,9 @@ class TabManager: ObservableObject {
             /// Signal that initialization is complete and UI can show tabs.
             /// Views watching isInitialized will update from "loading" to "ready" state.
             self?.isInitialized = true
+            #if DEBUG
             print("✅ TabManager initialization complete with \(self?.tabs.count ?? 0) tabs")
+            #endif
         }
     }
     
@@ -245,7 +247,9 @@ class TabManager: ObservableObject {
     /// - URL? = nil provides a default parameter value
     /// - You can call: createNewTab() or createNewTab(url: someURL)
     func createNewTab(url: URL? = nil) {
+        #if DEBUG
         print("[TabManager] createNewTab called with URL: \(url?.absoluteString ?? "nil")")
+        #endif
         
         /// Create the new tab object with the specified URL.
         /// Tab's initializer handles homepage logic if url is nil.
@@ -261,7 +265,9 @@ class TabManager: ObservableObject {
         /// Make this the visible/active tab.
         /// This triggers UI update to display the new tab's content.
         selectedTab = newTab
+        #if DEBUG
         print("[TabManager] New tab created and selected. Total tabs: \(tabs.count)")
+        #endif
         
         /// Record in browsing history if a URL was provided.
         /// Uses optional binding (if let) to safely unwrap the optional URL.
