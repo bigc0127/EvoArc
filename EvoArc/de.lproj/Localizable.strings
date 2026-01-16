@@ -1,0 +1,301 @@
+/* 
+ * Localizable.strings (Deutsch)
+ * EvoArc Browser
+ */
+
+// MARK: - Allgemein
+"app_name" = "EvoArc";
+"done" = "Fertig";
+"cancel" = "Abbrechen";
+"delete" = "Löschen";
+"save" = "Sichern";
+"create" = "Erstellen";
+"edit" = "Bearbeiten";
+"add" = "Hinzufügen";
+"remove" = "Entfernen";
+"close" = "Schließen";
+"open" = "Öffnen";
+"settings" = "Einstellungen";
+"search" = "Suchen";
+"loading" = "Lädt...";
+"error" = "Fehler";
+"ok" = "OK";
+"yes" = "Ja";
+"no" = "Nein";
+"back" = "Zurück";
+"forward" = "Vor";
+"reload" = "Neu laden";
+"share" = "Teilen";
+
+// MARK: - Neue Tab-Seite
+"new_tab_search_placeholder" = "Suchen oder Website eingeben";
+"bookmarks_title" = "Lesezeichen";
+"new_tab" = "Neuer Tab";
+
+// MARK: - Tabs
+"tabs" = "Tabs";
+"new_tab_button" = "Neuer Tab";
+"close_tab" = "Tab schließen";
+"no_tab_selected" = "Kein Tab ausgewählt";
+"restoring_tabs" = "Tabs werden wiederhergestellt...";
+"pin_tab" = "Tab anheften";
+"unpin_tab" = "Tab loslösen";
+"close_other_tabs" = "Andere Tabs schließen";
+"close_tabs_to_right" = "Tabs rechts schließen";
+
+// MARK: - Lesezeichen
+"bookmarks" = "Lesezeichen";
+"add_bookmark" = "Lesezeichen hinzufügen";
+"edit_bookmark" = "Lesezeichen bearbeiten";
+"delete_bookmark" = "Lesezeichen löschen";
+"bookmark_title" = "Titel";
+"bookmark_url" = "URL";
+"no_bookmarks" = "Noch keine Lesezeichen";
+"no_bookmarks_in_folder" = "Keine Lesezeichen in diesem Ordner";
+"no_matching_bookmarks" = "Keine passenden Lesezeichen";
+"search_bookmarks" = "Lesezeichen durchsuchen";
+"all_bookmarks" = "Alle Lesezeichen";
+
+// MARK: - Lesezeichen-Ordner
+"new_folder" = "Neuer Ordner";
+"folder_name" = "Ordnername";
+"enter_folder_name" = "Ordnername eingeben";
+"rename_folder" = "Ordner umbenennen";
+"delete_folder" = "Ordner löschen";
+"favorites" = "Favoriten";
+"move_bookmarks_to_favorites" = "Lesezeichen zu 'Favoriten' verschieben";
+
+// MARK: - Verlauf
+"history" = "Verlauf";
+"clear_history" = "Verlauf löschen";
+"search_history" = "Verlauf durchsuchen";
+"no_history" = "Kein Browserverlauf";
+"today" = "Heute";
+"yesterday" = "Gestern";
+"this_week" = "Diese Woche";
+"older" = "Älter";
+
+// MARK: - Einstellungen
+"general" = "Allgemein";
+"appearance" = "Darstellung";
+"privacy" = "Datenschutz";
+"advanced" = "Erweitert";
+"about" = "Über";
+
+// Einstellungen - Allgemein
+"homepage" = "Startseite";
+"search_engine" = "Suchmaschine";
+"default_search_engine" = "Standard-Suchmaschine";
+"browser_engine" = "Browser-Engine";
+"desktop_mode" = "Desktop-Ansicht anfordern";
+"desktop_mode_description" = "Desktop-Versionen von Websites anfordern";
+
+// Einstellungen - Suchmaschinen
+"google" = "Google";
+"duckduckgo" = "DuckDuckGo";
+"bing" = "Bing";
+"yahoo" = "Yahoo";
+"qwant" = "Qwant";
+"startpage" = "Startpage";
+"presearch" = "Presearch";
+"ecosia" = "Ecosia";
+"perplexity" = "Perplexity";
+"custom" = "Benutzerdefiniert";
+
+// Einstellungen - Browser-Engine
+"safari_mode" = "Safari-Modus";
+"chrome_mode" = "Chrome-Modus";
+
+// Einstellungen - Datenschutz
+"ad_blocking" = "Werbeblocker";
+"enable_ad_blocking" = "Werbeblocker aktivieren";
+"ad_block_lists" = "Werbeblock-Listen";
+"cookie_banner_blocking" = "Cookie-Banner blockieren";
+"tracking_protection" = "Tracking-Schutz";
+"do_not_track" = "Nicht verfolgen";
+
+// Einstellungen - Werbeblock-Listen
+"easylist" = "EasyList";
+"easylist_privacy" = "EasyList Privacy";
+"peter_lowe" = "Peter Lowe's Liste";
+"adaway" = "AdAway Hosts";
+"onehosts_lite" = "1Hosts (Lite)";
+"steven_black" = "StevenBlack (Basis)";
+
+// Einstellungen - UI
+"auto_hide_url_bar" = "URL-Leiste automatisch ausblenden";
+"auto_hide_url_bar_description" = "URL-Leiste beim Scrollen nach unten ausblenden";
+"show_sidebar" = "Seitenleiste anzeigen";
+"sidebar_position" = "Seitenleistenposition";
+"left" = "Links";
+"right" = "Rechts";
+
+// Einstellungen - Tabs
+"confirm_closing_pinned_tabs" = "Schließen angehefteter Tabs bestätigen";
+"persist_tab_groups" = "Tab-Gruppen beibehalten";
+"hide_empty_tab_groups" = "Leere Tab-Gruppen ausblenden";
+
+// Einstellungen - Downloads
+"downloads" = "Downloads";
+"enable_downloads" = "Downloads aktivieren";
+"show_download_notifications" = "Download-Benachrichtigungen anzeigen";
+"auto_open_downloads" = "Downloads automatisch öffnen";
+
+// MARK: - Erste Einrichtung
+"welcome_to_evoarc" = "Willkommen bei EvoArc";
+"first_run_intro" = "Passen wir dein Browser-Erlebnis an";
+"choose_search_engine" = "Wähle deine Suchmaschine";
+"choose_homepage" = "Wähle deine Startseite";
+"privacy_settings" = "Datenschutz-Einstellungen";
+"get_started" = "Los geht's";
+"skip" = "Überspringen";
+"next" = "Weiter";
+"previous" = "Zurück";
+
+// MARK: - Tab-Gruppen
+"tab_groups" = "Tab-Gruppen";
+"new_group" = "Neue Gruppe";
+"group_name" = "Gruppenname";
+"add_to_group" = "Zu Gruppe hinzufügen";
+"remove_from_group" = "Aus Gruppe entfernen";
+"no_group" = "Keine Gruppe";
+
+// MARK: - Downloads
+"download_complete" = "Download abgeschlossen";
+"download_failed" = "Download fehlgeschlagen";
+"downloading" = "Lädt herunter...";
+"open_file" = "Datei öffnen";
+"download_location" = "Download-Speicherort";
+
+// MARK: - Fehler
+"invalid_url" = "Ungültige URL";
+"cannot_load_page" = "Seite kann nicht geladen werden";
+"network_error" = "Netzwerkfehler";
+"connection_failed" = "Verbindung fehlgeschlagen";
+
+// MARK: - Kontextmenü
+"open_in_new_tab" = "In neuem Tab öffnen";
+"open_in_background" = "Im Hintergrund öffnen";
+"copy_link" = "Link kopieren";
+"copy_image" = "Bild kopieren";
+"save_image" = "Bild sichern";
+"share_link" = "Link teilen";
+
+// MARK: - Lesemodus
+"reader_mode" = "Lesemodus";
+"exit_reader_mode" = "Lesemodus beenden";
+
+// MARK: - Bestätigungs-Dialoge
+"confirm_close_tab" = "Möchten Sie diesen Tab wirklich schließen?";
+"confirm_clear_history" = "Möchten Sie wirklich den gesamten Browserverlauf löschen?";
+"confirm_delete_bookmark" = "Möchten Sie dieses Lesezeichen wirklich löschen?";
+"confirm_delete_folder" = "Was möchten Sie mit den Lesezeichen in '%@' tun?";
+
+// MARK: - Standard-Browser
+"make_default_browser" = "EvoArc als Standard-Browser festlegen";
+"default_browser_description" = "Öffne die iOS-Einstellungen, um EvoArc als Standard-Browser festzulegen. Links von anderen Apps werden dann automatisch hier geöffnet.";
+"open_settings" = "Einstellungen öffnen";
+"not_now" = "Jetzt nicht";
+
+// MARK: - iPad-Navigation
+"navigation_buttons" = "Navigationsschaltflächen";
+"navigation_button_position" = "Position der Navigationsschaltflächen";
+"top_left" = "Oben links";
+"top_right" = "Oben rechts";
+"bottom_left" = "Unten links";
+"bottom_right" = "Unten rechts";
+"hide_navigation_buttons" = "Navigationsschaltflächen auf iPad ausblenden";
+
+// MARK: - Perplexity AI
+"ask_perplexity" = "Perplexity fragen";
+"perplexity_search" = "Perplexity-Suche";
+
+// MARK: - Barrierefreiheit
+"increase_text_size" = "Textgröße erhöhen";
+"decrease_text_size" = "Textgröße verringern";
+"zoom_in" = "Vergrößern";
+"zoom_out" = "Verkleinern";
+
+// MARK: - Unteres Menü
+"home" = "Startseite";
+"new_tab" = "Neuer Tab";
+"request_mobile_website" = "Mobile Website anfordern";
+"request_desktop_website" = "Desktop-Website anfordern";
+"enable_ad_blocking" = "Werbeblocker aktivieren";
+"disable_ad_blocking" = "Werbeblocker deaktivieren";
+"enable_javascript" = "JavaScript aktivieren";
+"disable_javascript" = "JavaScript deaktivieren";
+"enable_reader_mode" = "Lesemodus aktivieren";
+"disable_reader_mode" = "Lesemodus deaktivieren";
+"summarize_with_perplexity" = "Mit Perplexity zusammenfassen";
+"send_to_perplexity" = "An Perplexity senden";
+"search_or_enter_address" = "Suchen oder Adresse eingeben";
+
+// MARK: - Einstellungsseite
+"enter_url" = "URL eingeben";
+"new_tabs_open_description" = "Neue Tabs öffnen auf dieser Seite. Standard: Qwant";
+"rendering_engine" = "Rendering-Engine";
+"chrome_mode_info" = "Chrome-Modus: Erweiterte Kompatibilität";
+"browser_engine_description" = "Wähle zwischen Safari-Modus (WebKit) oder Chrome-Modus (erweitertes WebKit mit Chrome-Funktionen)";
+"website_appearance" = "Website-Darstellung";
+"request_desktop_website" = "Desktop-Website anfordern";
+"desktop_mobile_description" = "Wenn aktiviert, zeigen Websites ihre Desktop-Version an. Wenn deaktiviert, zeigen Websites ihre mobile Version an.";
+"user_interface" = "Benutzeroberfläche";
+"auto_hide_url_bar" = "URL-Leiste automatisch ausblenden";
+"auto_hide_description" = "Automatisches Ausblenden versteckt die URL-Leiste beim Scrollen nach unten. Navigationsschaltflächen können ausgeblendet werden, um Platz bei großen Textgrößen zu sparen.";
+"sidebar_layout" = "Seitenleiste & Layout";
+"sidebar_position" = "Seitenleistenposition";
+"sidebar_width" = "Seitenleistenbreite";
+"auto_hide_sidebar" = "Seitenleiste automatisch ausblenden";
+"hide_navigation_buttons_when_sidebar_hidden" = "Navigationsschaltflächen ausblenden, wenn Seitenleiste versteckt ist";
+"navigation_buttons_position" = "Position der Navigationsschaltflächen";
+"when_sidebar_hidden" = "Wenn Seitenleiste versteckt ist";
+"sidebar_description_ipad" = "Konfiguriere Position, Breite und automatisches Ausblenden der Seitenleiste. Die Seitenleiste zeigt Tabs, Gruppen und Navigation. Wenn die Seitenleiste versteckt ist, erscheinen Vor-/Zurück-Schaltflächen an der gewählten Ecke.";
+"sidebar_description" = "Konfiguriere Position, Breite und automatisches Ausblenden der Seitenleiste. Die Seitenleiste zeigt Tabs, Gruppen und Navigation. Automatisches Ausblenden zeigt die Seitenleiste beim Hovern.";
+"tab_management" = "Tab-Verwaltung";
+"confirm_before_closing_pinned_tabs" = "Bestätigung vor dem Schließen angehefteter Tabs";
+"persist_pinned_tabs_across_launches" = "Angeheftete Tabs über Neustarts hinweg beibehalten";
+"persist_tab_groups_across_launches" = "Tab-Gruppen über Neustarts hinweg beibehalten";
+"manage_tab_groups" = "Tab-Gruppen verwalten";
+"tab" = "Tab";
+"tabs" = "Tabs";
+"tab_management_description" = "Bestätigung für angeheftete Tabs verhindert versehentliches Loslösen. Angeheftete-Tab-Persistenz speichert deine angehefteten Tabs zwischen App-Starts. Tab-Gruppen-Persistenz speichert deine Gruppen zwischen App-Starts. Lösche Gruppen zum Aufräumen - Tabs bleiben erhalten.";
+"search_engine" = "Suchmaschine";
+"private_search_engines" = "Private Suchmaschinen";
+"popular_less_private" = "Beliebt (weniger privat)";
+"custom" = "Benutzerdefiniert";
+"template_use_query" = "Vorlage (verwende {query})";
+"example" = "Beispiel";
+"search_engine_description" = "Wähle deine Standard-Suchmaschine. Private Suchmaschinen verfolgen deinen Suchverlauf nicht. Für benutzerdefinierte Suchmaschinen verwende {query} als Platzhalter für Suchbegriffe.";
+"ad_blocking" = "Werbeblocker";
+"enable_ad_blocking" = "Werbeblocker aktivieren";
+"block_advanced_js_ads" = "Erweiterte JS-injizierte Werbung blockieren";
+"block_obfuscated_class_names" = "Elemente mit verschleierten Klassennamen blockieren";
+"block_cookie_consent_banners" = "Cookie-Zustimmungs-Banner blockieren";
+"subscription_lists" = "Abonnement-Listen";
+"rules" = "Regeln";
+"updated" = "Aktualisiert";
+"never" = "nie";
+"update" = "Aktualisieren";
+"update_lists_on_launch" = "Listen beim Start aktualisieren";
+"ad_blocking_description" = "Blockiere Werbung, Tracker und andere unerwünschte Inhalte. Verschiedene Listen zielen auf verschiedene Arten von Inhalten ab.";
+"advanced_blocking_warning_title" = "Warnung: Erweitertes Werbeblockieren kann einige Websites beeinträchtigen";
+"advanced_blocking_warning_message" = "Das Aktivieren des erweiterten JS-injizierten Werbeblockierens ist aggressiver und kann Teile einiger Websites ausblenden. Du kannst es jederzeit hier deaktivieren.";
+"downloads" = "Downloads";
+"enable_downloads" = "Downloads aktivieren";
+"downloads_enabled_message" = "Downloads aktiviert - du wirst gebeten, jeden Download zu bestätigen";
+"downloads_disabled_message" = "Downloads sind deaktiviert - aktiviere sie, um Dateien von Websites zu speichern";
+"downloads_description" = "Downloads sind standardmäßig für App-Store-Konformität deaktiviert. Wenn aktiviert, wirst du gebeten, jeden Download einzeln zu bestätigen. Downloads sind auf Nicht-Medien-Dokumente und Archivdateien beschränkt; Audio-, Video- und Bild-Downloads werden nicht unterstützt.";
+"perplexity" = "Perplexity";
+"perplexity_integration" = "Perplexity-Integration";
+"enable_perplexity_features" = "Perplexity-Funktionen aktivieren";
+"perplexity_integration_description" = "Die Perplexity-Integration ermöglicht es Ihnen, Webseiten schnell zusammenzufassen oder URLs an Perplexity zur KI-gestützten Analyse zu senden. Melden Sie sich bei Ihrem Perplexity-Konto an, um diese Funktionen über Rechtsklick-Kontextmenüs oder die Browser-Symbolleiste zu aktivieren.";
+"signed_in_to_perplexity" = "Bei Perplexity angemeldet";
+"sign_out" = "Abmelden";
+"sign_in_to_perplexity" = "Bei Perplexity anmelden";
+
+// MARK: - Neue Tab-Gruppe
+"name" = "Name";
+"color" = "Farbe";
+"group_name" = "Gruppenname";
+"new_tab_group" = "Neue Tab-Gruppe";

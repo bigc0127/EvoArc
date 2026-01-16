@@ -17,17 +17,17 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             historyList
-                .searchable(text: $searchText, prompt: "Search history")
-                .navigationTitle("History")
+                .searchable(text: $searchText, prompt: "search_history".localized)
+                .navigationTitle("history".localized)
                 .toolbar {
                     #if os(iOS)
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") { dismiss() }
+                        Button("done".localized) { dismiss() }
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
                         Menu {
                             Button(role: .destructive, action: { historyManager.clearHistory() }) {
-                                Label("Clear History", systemImage: "trash")
+                                Label("clear_history".localized, systemImage: "trash")
                             }
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
@@ -35,12 +35,12 @@ struct HistoryView: View {
                     }
                     #else
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button("done".localized) { dismiss() }
                     }
                     ToolbarItem(placement: .automatic) {
                         Menu {
                             Button(role: .destructive, action: { historyManager.clearHistory() }) {
-                                Label("Clear History", systemImage: "trash")
+                                Label("clear_history".localized, systemImage: "trash")
                             }
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
@@ -87,13 +87,13 @@ struct HistoryView: View {
                 tabManager.createNewTab(url: item.url)
                 dismiss()
             }) {
-                Label("Open in New Tab", systemImage: "plus.square")
+                Label("open_in_new_tab".localized, systemImage: "plus.square")
             }
             
             Button(action: {
                 historyManager.removeEntry(item)
             }) {
-                Label("Delete", systemImage: "trash")
+                Label("delete".localized, systemImage: "trash")
             }
         }
     }

@@ -122,11 +122,9 @@ class Tab: ObservableObject, Identifiable {
     @Published var readerModeEnabled: Bool = false
     
     /// Internal flag indicating this tab needs to load its initial URL.
-    /// private(set) means:
-    /// - External code can READ this value
-    /// - Only THIS class can WRITE to it
-    /// This encapsulation prevents other code from incorrectly setting this flag.
-    @Published private(set) var needsInitialLoad: Bool = false
+    /// This can be set externally when a new URL needs to be loaded
+    /// (e.g., from the new tab page search)
+    @Published var needsInitialLoad: Bool = false
     
     // MARK: - WebView Reference
     
@@ -236,15 +234,16 @@ class Tab: ObservableObject, Identifiable {
             /// Mark that this URL needs to be loaded into the web view later.
             self.needsInitialLoad = true
         } else {
-            /// If no URL was provided, default to the user's configured homepage.
-            /// BrowserSettings.shared is a singleton pattern - one shared instance.
-            self._url = BrowserSettings.shared.homepageURL
+            /// If no URL was provided, use a custom URL scheme for the new tab page.
+            /// This prevents confusion with the actual homepage URL.
+            self._url = URL(string: "evoarc://newtab")
             
             /// Don't show the URL for new tabs - gives a cleaner first impression.
             self.showURLInBar = false
             
-            /// Still need to load the homepage URL.
-            self.needsInitialLoad = true
+            /// Don't set needsInitialLoad for new tabs - we want to show the new tab page
+            /// The URL will be loaded later when user searches or navigates
+            self.needsInitialLoad = false
         }
         
         /// The ?? operator is "nil coalescing" - use left side if not nil, otherwise use right side.
@@ -360,11 +359,13 @@ class Tab: ObservableObject, Identifiable {
         /// 1. needsInitialLoad must be true (we haven't loaded yet)
         /// 2. self.url must not be nil (we have a URL to load)
         /// 3. webView?.url must be nil (webView hasn't loaded anything yet)
+        /// 4. showURLInBar must be true (not showing new tab page overlay)
         /// 
         /// If any condition fails, 'return' exits the function early.
         guard needsInitialLoad,
               let url = self.url,
-              webView?.url == nil else { return }
+              webView?.url == nil,
+              showURLInBar else { return }
         
         /// Create a URL request and tell the web view to load it.
         /// URLRequest wraps a URL with additional loading configuration (caching, etc.).

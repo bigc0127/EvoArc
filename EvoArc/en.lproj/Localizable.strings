@@ -1,0 +1,301 @@
+/* 
+ * Localizable.strings (English)
+ * EvoArc Browser
+ */
+
+// MARK: - General
+"app_name" = "EvoArc";
+"done" = "Done";
+"cancel" = "Cancel";
+"delete" = "Delete";
+"save" = "Save";
+"create" = "Create";
+"edit" = "Edit";
+"add" = "Add";
+"remove" = "Remove";
+"close" = "Close";
+"open" = "Open";
+"settings" = "Settings";
+"search" = "Search";
+"loading" = "Loading...";
+"error" = "Error";
+"ok" = "OK";
+"yes" = "Yes";
+"no" = "No";
+"back" = "Back";
+"forward" = "Forward";
+"reload" = "Reload";
+"share" = "Share";
+
+// MARK: - New Tab Page
+"new_tab_search_placeholder" = "Search or enter website";
+"bookmarks_title" = "Bookmarks";
+"new_tab" = "New Tab";
+
+// MARK: - Tabs
+"tabs" = "Tabs";
+"new_tab_button" = "New Tab";
+"close_tab" = "Close Tab";
+"no_tab_selected" = "No tab selected";
+"restoring_tabs" = "Restoring tabs...";
+"pin_tab" = "Pin Tab";
+"unpin_tab" = "Unpin Tab";
+"close_other_tabs" = "Close Other Tabs";
+"close_tabs_to_right" = "Close Tabs to Right";
+
+// MARK: - Bookmarks
+"bookmarks" = "Bookmarks";
+"add_bookmark" = "Add Bookmark";
+"edit_bookmark" = "Edit Bookmark";
+"delete_bookmark" = "Delete Bookmark";
+"bookmark_title" = "Title";
+"bookmark_url" = "URL";
+"no_bookmarks" = "No bookmarks yet";
+"no_bookmarks_in_folder" = "No bookmarks in this folder";
+"no_matching_bookmarks" = "No matching bookmarks";
+"search_bookmarks" = "Search bookmarks";
+"all_bookmarks" = "All Bookmarks";
+
+// MARK: - Bookmark Folders
+"new_folder" = "New Folder";
+"folder_name" = "Folder Name";
+"enter_folder_name" = "Enter folder name";
+"rename_folder" = "Rename Folder";
+"delete_folder" = "Delete Folder";
+"favorites" = "Favorites";
+"move_bookmarks_to_favorites" = "Move Bookmarks to 'Favorites'";
+
+// MARK: - History
+"history" = "History";
+"clear_history" = "Clear History";
+"search_history" = "Search history";
+"no_history" = "No browsing history";
+"today" = "Today";
+"yesterday" = "Yesterday";
+"this_week" = "This Week";
+"older" = "Older";
+
+// MARK: - Settings
+"general" = "General";
+"appearance" = "Appearance";
+"privacy" = "Privacy";
+"advanced" = "Advanced";
+"about" = "About";
+
+// Settings - General
+"homepage" = "Homepage";
+"search_engine" = "Search Engine";
+"default_search_engine" = "Default Search Engine";
+"browser_engine" = "Browser Engine";
+"desktop_mode" = "Request Desktop Sites";
+"desktop_mode_description" = "Request desktop versions of websites";
+
+// Settings - Search Engines
+"google" = "Google";
+"duckduckgo" = "DuckDuckGo";
+"bing" = "Bing";
+"yahoo" = "Yahoo";
+"qwant" = "Qwant";
+"startpage" = "Startpage";
+"presearch" = "Presearch";
+"ecosia" = "Ecosia";
+"perplexity" = "Perplexity";
+"custom" = "Custom";
+
+// Settings - Browser Engine
+"safari_mode" = "Safari Mode";
+"chrome_mode" = "Chrome Mode";
+
+// Settings - Privacy
+"ad_blocking" = "Ad Blocking";
+"enable_ad_blocking" = "Enable Ad Blocking";
+"ad_block_lists" = "Ad Block Lists";
+"cookie_banner_blocking" = "Block Cookie Banners";
+"tracking_protection" = "Tracking Protection";
+"do_not_track" = "Do Not Track";
+
+// Settings - Ad Block Lists
+"easylist" = "EasyList";
+"easylist_privacy" = "EasyList Privacy";
+"peter_lowe" = "Peter Lowe's List";
+"adaway" = "AdAway Hosts";
+"onehosts_lite" = "1Hosts (Lite)";
+"steven_black" = "StevenBlack (basic)";
+
+// Settings - UI
+"auto_hide_url_bar" = "Auto-hide URL Bar";
+"auto_hide_url_bar_description" = "Hide URL bar when scrolling down";
+"show_sidebar" = "Show Sidebar";
+"sidebar_position" = "Sidebar Position";
+"left" = "Left";
+"right" = "Right";
+
+// Settings - Tabs
+"confirm_closing_pinned_tabs" = "Confirm Closing Pinned Tabs";
+"persist_tab_groups" = "Persist Tab Groups";
+"hide_empty_tab_groups" = "Hide Empty Tab Groups";
+
+// Settings - Downloads
+"downloads" = "Downloads";
+"enable_downloads" = "Enable Downloads";
+"show_download_notifications" = "Show Download Notifications";
+"auto_open_downloads" = "Auto-open Downloads";
+
+// MARK: - First Run Setup
+"welcome_to_evoarc" = "Welcome to EvoArc";
+"first_run_intro" = "Let's customize your browsing experience";
+"choose_search_engine" = "Choose Your Search Engine";
+"choose_homepage" = "Choose Your Homepage";
+"privacy_settings" = "Privacy Settings";
+"get_started" = "Get Started";
+"skip" = "Skip";
+"next" = "Next";
+"previous" = "Previous";
+
+// MARK: - Tab Groups
+"tab_groups" = "Tab Groups";
+"new_group" = "New Group";
+"group_name" = "Group Name";
+"add_to_group" = "Add to Group";
+"remove_from_group" = "Remove from Group";
+"no_group" = "No Group";
+
+// MARK: - Downloads
+"download_complete" = "Download Complete";
+"download_failed" = "Download Failed";
+"downloading" = "Downloading...";
+"open_file" = "Open File";
+"download_location" = "Download Location";
+
+// MARK: - Errors
+"invalid_url" = "Invalid URL";
+"cannot_load_page" = "Cannot load page";
+"network_error" = "Network Error";
+"connection_failed" = "Connection Failed";
+
+// MARK: - Context Menu
+"open_in_new_tab" = "Open in New Tab";
+"open_in_background" = "Open in Background";
+"copy_link" = "Copy Link";
+"copy_image" = "Copy Image";
+"save_image" = "Save Image";
+"share_link" = "Share Link";
+
+// MARK: - Reader Mode
+"reader_mode" = "Reader Mode";
+"exit_reader_mode" = "Exit Reader Mode";
+
+// MARK: - Confirmation Dialogs
+"confirm_close_tab" = "Are you sure you want to close this tab?";
+"confirm_clear_history" = "Are you sure you want to clear all browsing history?";
+"confirm_delete_bookmark" = "Are you sure you want to delete this bookmark?";
+"confirm_delete_folder" = "What would you like to do with the bookmarks in '%@'?";
+
+// MARK: - Default Browser
+"make_default_browser" = "Make EvoArc your default browser";
+"default_browser_description" = "Open iOS Settings to set EvoArc as your Default Browser App. This lets links from other apps open here automatically.";
+"open_settings" = "Open Settings";
+"not_now" = "Not now";
+
+// MARK: - iPad Navigation
+"navigation_buttons" = "Navigation Buttons";
+"navigation_button_position" = "Navigation Button Position";
+"top_left" = "Top Left";
+"top_right" = "Top Right";
+"bottom_left" = "Bottom Left";
+"bottom_right" = "Bottom Right";
+"hide_navigation_buttons" = "Hide Navigation Buttons on iPad";
+
+// MARK: - Perplexity AI
+"ask_perplexity" = "Ask Perplexity";
+"perplexity_search" = "Perplexity Search";
+
+// MARK: - Accessibility
+"increase_text_size" = "Increase Text Size";
+"decrease_text_size" = "Decrease Text Size";
+"zoom_in" = "Zoom In";
+"zoom_out" = "Zoom Out";
+
+// MARK: - Bottom Bar Menu
+"home" = "Home";
+"new_tab" = "New Tab";
+"request_mobile_website" = "Request Mobile Website";
+"request_desktop_website" = "Request Desktop Website";
+"enable_ad_blocking" = "Enable Ad Blocking";
+"disable_ad_blocking" = "Disable Ad Blocking";
+"enable_javascript" = "Enable JavaScript";
+"disable_javascript" = "Disable JavaScript";
+"enable_reader_mode" = "Enable Reader Mode";
+"disable_reader_mode" = "Disable Reader Mode";
+"summarize_with_perplexity" = "Summarize with Perplexity";
+"send_to_perplexity" = "Send to Perplexity";
+"search_or_enter_address" = "Search or enter address";
+
+// MARK: - Settings Page
+"enter_url" = "Enter URL";
+"new_tabs_open_description" = "New tabs will open to this page. Default: Qwant";
+"rendering_engine" = "Rendering Engine";
+"chrome_mode_info" = "Chrome mode: Enhanced compatibility";
+"browser_engine_description" = "Choose between Safari mode (WebKit) or Chrome mode (enhanced WebKit with Chrome features)";
+"website_appearance" = "Website Appearance";
+"request_desktop_website" = "Request Desktop Website";
+"desktop_mobile_description" = "When enabled, websites will display their desktop version. When disabled, websites will display their mobile version.";
+"user_interface" = "User Interface";
+"auto_hide_url_bar" = "Auto-hide URL Bar";
+"auto_hide_description" = "Auto-hide hides the URL bar when scrolling down. Navigation buttons can be hidden to save space with large text sizes.";
+"sidebar_layout" = "Sidebar & Layout";
+"sidebar_position" = "Sidebar Position";
+"sidebar_width" = "Sidebar Width";
+"auto_hide_sidebar" = "Auto-hide Sidebar";
+"hide_navigation_buttons_when_sidebar_hidden" = "Hide navigation buttons when sidebar is hidden";
+"navigation_buttons_position" = "Navigation Buttons Position";
+"when_sidebar_hidden" = "When sidebar is hidden";
+"sidebar_description_ipad" = "Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. When sidebar is hidden, back/forward navigation buttons appear at your chosen corner position.";
+"sidebar_description" = "Configure the sidebar position, width, and auto-hide behavior. The sidebar shows tabs, groups, and navigation. Auto-hide reveals sidebar on hover.";
+"tab_management" = "Tab Management";
+"confirm_before_closing_pinned_tabs" = "Confirm before closing pinned tabs";
+"persist_pinned_tabs_across_launches" = "Persist pinned tabs across launches";
+"persist_tab_groups_across_launches" = "Persist tab groups across launches";
+"manage_tab_groups" = "Manage Tab Groups";
+"tab" = "tab";
+"tabs" = "tabs";
+"tab_management_description" = "Pinned tab confirmation prevents accidental unpinning. Pinned tab persistence saves your pinned tabs between app launches. Tab group persistence saves your groups between app launches. Delete groups to clean up organization - tabs will be kept.";
+"search_engine" = "Search Engine";
+"private_search_engines" = "Private search engines";
+"popular_less_private" = "Popular (less private)";
+"custom" = "Custom";
+"template_use_query" = "Template (use {query})";
+"example" = "Example";
+"search_engine_description" = "Choose your default search engine. Private engines don't track your search history. For custom engines, use {query} as placeholder for search terms.";
+"ad_blocking" = "Ad Blocking";
+"enable_ad_blocking" = "Enable Ad Blocking";
+"block_advanced_js_ads" = "Block advanced JS-injected ads";
+"block_obfuscated_class_names" = "Block elements with obfuscated class names";
+"block_cookie_consent_banners" = "Block cookie consent banners";
+"subscription_lists" = "Subscription Lists";
+"rules" = "Rules";
+"updated" = "Updated";
+"never" = "never";
+"update" = "Update";
+"update_lists_on_launch" = "Update lists on launch";
+"ad_blocking_description" = "Block ads, trackers, and other unwanted content. Different lists target different types of content.";
+"advanced_blocking_warning_title" = "Warning: Advanced ad blocking may break some websites";
+"advanced_blocking_warning_message" = "Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.";
+"downloads" = "Downloads";
+"enable_downloads" = "Enable Downloads";
+"downloads_enabled_message" = "Downloads enabled - you will be asked to confirm each download";
+"downloads_disabled_message" = "Downloads are disabled - enable to save files from websites";
+"downloads_description" = "Downloads are disabled by default for App Store compliance. When enabled, you will be asked to confirm each download individually. Downloads are limited to non-media document and archive files; audio, video, and image media downloads are not supported.";
+"perplexity" = "Perplexity";
+"perplexity_integration" = "Perplexity Integration";
+"enable_perplexity_features" = "Enable Perplexity Features";
+"perplexity_integration_description" = "Perplexity integration allows you to quickly summarize web pages or send URLs to Perplexity for AI-powered analysis. Sign in to your Perplexity account to enable these features via right-click context menus or the browser toolbar.";
+"signed_in_to_perplexity" = "Signed in to Perplexity";
+"sign_out" = "Sign Out";
+"sign_in_to_perplexity" = "Sign in to Perplexity";
+
+// MARK: - New Tab Group
+"name" = "Name";
+"color" = "Color";
+"group_name" = "Group name";
+"new_tab_group" = "New Tab Group";

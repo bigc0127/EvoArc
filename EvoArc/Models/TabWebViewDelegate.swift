@@ -64,15 +64,34 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
             tab.canGoBack = webView.canGoBack
             tab.canGoForward = webView.canGoForward
             
-            // Capture initial thumbnail after a short delay to ensure content is rendered
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
-            ThumbnailManager.shared.captureThumbnail(for: webView, tab: tab)
+            // Only capture thumbnail if showing normal web content (not new tab page)
+            // When we have the custom newtab URL, the new tab page is visible
+            let isShowingNewTabPage = tab.url?.absoluteString == "evoarc://newtab"
             
-            // Set up periodic thumbnail updates
-            tab.thumbnailUpdateTimer?.invalidate()
-            tab.thumbnailUpdateTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak tab] _ in
-                guard let tab = tab else { return }
+            if !isShowingNewTabPage {
+                // Capture initial thumbnail after a short delay to ensure content is rendered
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
                 ThumbnailManager.shared.captureThumbnail(for: webView, tab: tab)
+                
+                // Set up periodic thumbnail updates
+                tab.thumbnailUpdateTimer?.invalidate()
+                let capturedWebView = webView
+                tab.thumbnailUpdateTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak tab] _ in
+                    Task { @MainActor [weak tab] in
+                        guard let tab = tab else { return }
+                        // Only capture if not showing new tab page
+                        let isShowingNewTabPage = tab.url?.absoluteString == "evoarc://newtab"
+                        if !isShowingNewTabPage {
+                            ThumbnailManager.shared.captureThumbnail(for: capturedWebView, tab: tab)
+                        }
+                    }
+                }
+            } else {
+                // Generate custom thumbnail for new tab page
+                ThumbnailManager.shared.generateNewTabPageThumbnail(for: tab)
+                
+                // Stop any existing thumbnail timer when showing new tab page
+                tab.thumbnailUpdateTimer?.invalidate()
             }
         }
     }
@@ -100,6 +119,14 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         // Update URL as soon as navigation starts
         if let url = navigationAction.request.url {
+            // Check if this is the custom newtab URL - don't actually navigate to it
+            if url.absoluteString == "evoarc://newtab" {
+                #if DEBUG
+                print("[TabWebViewDelegate] Ignoring navigation to evoarc://newtab")
+                #endif
+                return .cancel
+            }
+            
             await MainActor.run {
                 tab?.url = url
                 // Show URL in bar for all navigations except homepage

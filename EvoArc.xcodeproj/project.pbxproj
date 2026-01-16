@@ -51,11 +51,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		031635AD3B90221056A98473 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = ShareExtension.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
+		031635AD3B90221056A98473 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		29BF21F9DCA05DC776ED9768 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		6536061AE59B00EBD1E1522A /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		82F6584CFF0AF8D0E49CC655 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
-		B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShareViewController.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		82F6584CFF0AF8D0E49CC655 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		C8F6D9022E6A00220001783A /* EvoArc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvoArc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8F6D9162E6A00280001783A /* EvoArcTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EvoArcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8F6D9202E6A00280001783A /* EvoArcUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EvoArcUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,15 +83,11 @@
 		};
 		C8F6D9192E6A00280001783A /* EvoArcTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = EvoArcTests;
 			sourceTree = "<group>";
 		};
 		C8F6D9232E6A00280001783A /* EvoArcUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = EvoArcUITests;
 			sourceTree = "<group>";
 		};
@@ -146,7 +142,6 @@
 				031635AD3B90221056A98473 /* ShareExtension.entitlements */,
 				FEE2698FF3FAA6BD4C1032C2 /* MainInterface.storyboard */,
 			);
-			name = ShareExtension;
 			path = ShareExtension;
 			sourceTree = "<group>";
 		};
@@ -295,6 +290,7 @@
 				en,
 				Base,
 				English,
+				de,
 			);
 			mainGroup = C8F6D8F92E6A00220001783A;
 			minimizedProjectReferenceProxies = 1;

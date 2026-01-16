@@ -51,7 +51,7 @@ struct BookmarksView: View {
                             HStack {
                                 Image(systemName: "folder")
                                     .foregroundColor(.accentColor)
-                                Text(selectedFolder?.name ?? "All Bookmarks")
+                                Text(selectedFolder?.name ?? "all_bookmarks".localized)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
@@ -106,7 +106,7 @@ struct BookmarksView: View {
                             Image(systemName: "bookmark")
                                 .font(.system(size: 48))
                                 .foregroundColor(.secondary.opacity(0.6))
-                            Text(selectedFolder != nil ? "No bookmarks in this folder" : searchText.isEmpty ? "No bookmarks yet" : "No matching bookmarks")
+                            Text(selectedFolder != nil ? "no_bookmarks_in_folder".localized : searchText.isEmpty ? "no_bookmarks".localized : "no_matching_bookmarks".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -117,33 +117,33 @@ struct BookmarksView: View {
                 }
                 .listStyle(PlainListStyle())
             }
-            .navigationTitle("Bookmarks")
+            .navigationTitle("bookmarks".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button(action: { showingAddFolder = true }) {
-                            Label("New Folder", systemImage: "folder.badge.plus")
+                            Label("new_folder".localized, systemImage: "folder.badge.plus")
                         }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("done".localized) { dismiss() }
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Search bookmarks")
+        .searchable(text: $searchText, prompt: "search_bookmarks".localized)
         .sheet(isPresented: $showingAddFolder) { addFolderSheet }
         .sheet(isPresented: $showingFolderRename) { renameFolderSheet }
         .sheet(isPresented: $showingFolders) { folderSelectionSheet }
-        .confirmationDialog("Delete Folder", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-            Button("Move Bookmarks to 'Favorites'") {
+        .confirmationDialog("delete_folder".localized, isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+            Button("move_bookmarks_to_favorites".localized) {
                 if let folder = folderToDelete { let favoritesID = bookmarkManager.favoritesFolder?.id; bookmarkManager.removeFolder(folder, moveBookmarksToFolder: favoritesID) }
             }
-            Button("Delete", role: .destructive) { if let folder = folderToDelete { bookmarkManager.removeFolder(folder) } }
-            Button("Cancel", role: .cancel) {}
+            Button("delete".localized, role: .destructive) { if let folder = folderToDelete { bookmarkManager.removeFolder(folder) } }
+            Button("cancel".localized, role: .cancel) {}
         } message: {
             if let folder = folderToDelete { Text("What would you like to do with the bookmarks in '\(folder.name)'?") }
         }
@@ -153,17 +153,17 @@ struct BookmarksView: View {
         NavigationView {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Folder Name").font(.headline)
-                    TextField("Enter folder name", text: $newFolderName).textFieldStyle(.roundedBorder)
+                    Text("folder_name".localized).font(.headline)
+                    TextField("enter_folder_name".localized, text: $newFolderName).textFieldStyle(.roundedBorder)
                 }.padding()
                 Spacer()
             }
-            .navigationTitle("New Folder")
+            .navigationTitle("new_folder".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { Button("Cancel") { showingAddFolder = false; newFolderName = "" } }
+                ToolbarItem(placement: .navigationBarLeading) { Button("cancel".localized) { showingAddFolder = false; newFolderName = "" } }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
+                    Button("create".localized) {
                         if !newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             _ = bookmarkManager.createFolder(name: newFolderName.trimmingCharacters(in: .whitespacesAndNewlines))
                             showingAddFolder = false; newFolderName = ""
@@ -179,17 +179,17 @@ struct BookmarksView: View {
         NavigationView {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Folder Name").font(.headline)
-                    TextField("Enter folder name", text: $newFolderName).textFieldStyle(.roundedBorder)
+                    Text("folder_name".localized).font(.headline)
+                    TextField("enter_folder_name".localized, text: $newFolderName).textFieldStyle(.roundedBorder)
                 }.padding()
                 Spacer()
             }
-            .navigationTitle("Rename Folder")
+            .navigationTitle("rename_folder".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { Button("Cancel") { showingFolderRename = false; renamingFolder = nil; newFolderName = "" } }
+                ToolbarItem(placement: .navigationBarLeading) { Button("cancel".localized) { showingFolderRename = false; renamingFolder = nil; newFolderName = "" } }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("save".localized) {
                         if let folder = renamingFolder, !newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             bookmarkManager.renameFolder(folder, newName: newFolderName.trimmingCharacters(in: .whitespacesAndNewlines))
                             showingFolderRename = false; renamingFolder = nil; newFolderName = ""

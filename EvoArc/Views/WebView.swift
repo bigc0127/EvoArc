@@ -159,7 +159,8 @@ struct WebView: UIViewRepresentable {
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.canGoForward), options: .new, context: nil)
         
         // Load the tab's current URL if one exists (handles tab restoration)
-        if let url = tab.url {
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if let url = tab.url, tab.showURLInBar {
             webView.load(URLRequest(url: url))
         }
         
@@ -188,7 +189,8 @@ struct WebView: UIViewRepresentable {
         }
         
         // Only sync tab URL to WebView if the WebView has no URL loaded
-        if webView.url == nil, let tabURL = tab.url {
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if webView.url == nil, let tabURL = tab.url, tab.showURLInBar {
             var request = URLRequest(url: tabURL)
             request.cachePolicy = .reloadIgnoringLocalCacheData
             webView.load(request)

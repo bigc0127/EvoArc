@@ -311,6 +311,78 @@ class ThumbnailManager: ObservableObject {
         thumbnailCache[tabID]
     }
     
+    /// Generates a custom thumbnail for the new tab page.
+    ///
+    /// **Purpose**: Instead of showing the homepage URL (DuckDuckGo) in the tab thumbnail,
+    /// we generate a clean, branded thumbnail representing the new tab page.
+    ///
+    /// **Design**: Simple gradient background with a centered icon.
+    ///
+    /// **Parameter**:
+    /// - tab: The tab to generate a new tab page thumbnail for
+    func generateNewTabPageThumbnail(for tab: Tab) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Use portrait aspect ratio (2:3) to match TabThumbnailView
+            let targetSize = CGSize(width: 400, height: 600)
+            let renderer = UIGraphicsImageRenderer(size: targetSize)
+            
+            let thumbnail = renderer.image { context in
+                // Create gradient background
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let colors: [CGFloat]
+                
+                // Use system colors for light/dark mode compatibility
+                if UITraitCollection.current.userInterfaceStyle == .dark {
+                    colors = [0.0, 0.0, 0.0, 1.0, 0.05, 0.05, 0.05, 1.0]  // Dark gradient
+                } else {
+                    colors = [0.98, 0.98, 0.98, 1.0, 1.0, 1.0, 1.0, 1.0]  // Light gradient
+                }
+                
+                if let gradient = CGGradient(colorSpace: colorSpace, colorComponents: colors, locations: [0.0, 1.0], count: 2) {
+                    context.cgContext.drawLinearGradient(
+                        gradient,
+                        start: CGPoint(x: targetSize.width / 2, y: 0),
+                        end: CGPoint(x: targetSize.width / 2, y: targetSize.height),
+                        options: []
+                    )
+                }
+                
+                // Draw centered icon
+                let iconSize: CGFloat = 200
+                let iconRect = CGRect(
+                    x: (targetSize.width - iconSize) / 2,
+                    y: (targetSize.height - iconSize) / 2 - 50,  // Slightly above center
+                    width: iconSize,
+                    height: iconSize
+                )
+                
+                // Draw a simple browser icon representation
+                if let safariIcon = UIImage(systemName: "safari")?.withConfiguration(
+                    UIImage.SymbolConfiguration(pointSize: iconSize, weight: .ultraLight)
+                ) {
+                    let tintColor = UIColor.systemBlue.withAlphaComponent(0.3)
+                    tintColor.setFill()
+                    
+                    safariIcon.draw(in: iconRect, blendMode: .normal, alpha: 0.3)
+                }
+            }
+            
+            // Store in cache
+            self.thumbnailCache[tab.id] = thumbnail
+            
+            // Notify UI
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .thumbnailDidUpdate,
+                    object: nil,
+                    userInfo: ["tabID": tab.id]
+                )
+            }
+        }
+    }
+    
     // MARK: - Cache Management
     
     /// Removes a single thumbnail from the cache.

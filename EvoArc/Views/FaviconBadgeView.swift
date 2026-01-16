@@ -15,7 +15,13 @@ struct FaviconBadgeView: View {
 
     var body: some View {
         Group {
-            if let image {
+            // Check if this is the custom new tab page URL
+            if url?.absoluteString == "evoarc://newtab" {
+                // Show Safari icon for new tab page
+                Image(systemName: "safari")
+                    .font(.system(size: size * 0.8, weight: .regular))
+                    .foregroundColor(.accentColor)
+            } else if let image {
                 #if os(iOS)
                 Image(uiImage: image)
                     .resizable()
@@ -32,9 +38,17 @@ struct FaviconBadgeView: View {
             }
         }
         .frame(width: size, height: size)
-        .onAppear { FaviconManager.shared.image(for: url) { self.image = $0 } }
+        .onAppear {
+            // Don't try to fetch favicon for new tab page
+            if url?.absoluteString != "evoarc://newtab" {
+                FaviconManager.shared.image(for: url) { self.image = $0 }
+            }
+        }
         .onChange(of: url?.host ?? "") { oldValue, newValue in
-            FaviconManager.shared.image(for: url) { self.image = $0 }
+            // Don't try to fetch favicon for new tab page
+            if url?.absoluteString != "evoarc://newtab" {
+                FaviconManager.shared.image(for: url) { self.image = $0 }
+            }
         }
     }
 }

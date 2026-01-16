@@ -128,7 +128,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         context.coordinator.webView = webView
         
         // Load initial URL if available
-        if let url = tab.url {
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if let url = tab.url, tab.showURLInBar {
             webView.load(URLRequest(url: url))
         }
         
@@ -150,7 +151,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         }
         
         // Load tab URL if webView has no URL loaded
-        if webView.url == nil, let tabURL = tab.url {
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if webView.url == nil, let tabURL = tab.url, tab.showURLInBar {
             var request = URLRequest(url: tabURL)
             request.cachePolicy = .reloadIgnoringLocalCacheData
             webView.load(request)

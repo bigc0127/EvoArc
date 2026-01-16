@@ -179,7 +179,9 @@ struct ScrollAwareWebView: UIViewRepresentable {
         print("🔵 iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         context.coordinator.setupObservers()
         
-        if let url = tab.url {
+        // Load initial URL if available
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if let url = tab.url, tab.showURLInBar {
             let request = URLRequest(url: url)
             webView.load(request)
         }
@@ -204,7 +206,9 @@ struct ScrollAwareWebView: UIViewRepresentable {
             }
         }
         
-        if webView.url == nil, let tabURL = tab.url {
+        // Load tab URL if webView has no URL loaded
+        // But don't load if we're showing the new tab page (showURLInBar is false)
+        if webView.url == nil, let tabURL = tab.url, tab.showURLInBar {
             var request = URLRequest(url: tabURL)
             request.cachePolicy = .reloadIgnoringLocalCacheData
             webView.load(request)

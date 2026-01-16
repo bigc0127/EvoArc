@@ -36,16 +36,16 @@ struct SettingsView: View {
             Form {
                 settingsContent
             }
-            .navigationTitle("Settings")
+            .navigationTitle("settings".localized)
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Warning: Advanced ad blocking may break some websites", isPresented: $showAdvancedJSAdblockWarning) {
-                Button("OK", role: .cancel) { }
+            .alert("advanced_blocking_warning_title".localized, isPresented: $showAdvancedJSAdblockWarning) {
+                Button("ok".localized, role: .cancel) { }
             } message: {
-                Text("Turning on advanced JS-injected ad blocking is more aggressive and can hide parts of some websites. You can disable it here anytime.")
+                Text("advanced_blocking_warning_message".localized)
             }
             .toolbar {
                 ToolbarItem(placement: toolbarPlacement) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
@@ -61,9 +61,9 @@ struct SettingsView: View {
                 // General Section
                 Section {
                     HStack {
-                        Text("Homepage")
+                        Text("homepage".localized)
                         Spacer()
-                        TextField("Enter URL", text: $homepageText)
+                        TextField("enter_url".localized, text: $homepageText)
                             .textFieldStyle(.roundedBorder)
                             .autocorrectionDisabled(true)
                             .textInputAutocapitalization(.never)
@@ -75,29 +75,29 @@ struct SettingsView: View {
                     
                     if homepageText != settings.homepage {
                         HStack {
-                            Button("Save") {
+                            Button("save".localized) {
                                 saveHomepage()
                             }
                             .foregroundColor(.accentColor)
                             
                             Spacer()
                             
-                            Button("Cancel") {
+                            Button("cancel".localized) {
                                 homepageText = settings.homepage
                             }
                             .foregroundColor(.secondary)
                         }
                     }
                 } header: {
-                    Text("General")
+                    Text("general".localized)
                 } footer: {
-                    Text("New tabs will open to this page. Default: Qwant")
+                    Text("new_tabs_open_description".localized)
                         .font(.caption)
                 }
                 
                 // Engine Section
                 Section {
-                    Picker("Rendering Engine", selection: $settings.browserEngine) {
+                    Picker("rendering_engine".localized, selection: $settings.browserEngine) {
 ForEach(BrowserEngine.allCases, id: \.self) { engine in
                             Text(engine.displayName).tag(engine)
                         }
@@ -107,21 +107,21 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                     if settings.browserEngine == .blink {
                         HStack {
                             Image(systemName: "info.circle")
-                            Text("Chrome mode: Enhanced compatibility")
+                            Text("chrome_mode_info".localized)
                                 .font(.caption)
                         }
                         .foregroundColor(.blue)
                     }
                 } header: {
-                    Text("Browser Engine")
+                    Text("browser_engine".localized)
                 } footer: {
-                    Text("Choose between Safari mode (WebKit) or Chrome mode (enhanced WebKit with Chrome features)")
+                    Text("browser_engine_description".localized)
                         .font(.caption)
                 }
                 
                 // Website Appearance Section
                 Section {
-                    Toggle("Request Desktop Website", isOn: $settings.useDesktopMode)
+                    Toggle("request_desktop_website".localized, isOn: $settings.useDesktopMode)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     
                     Text(currentModeDescription)
@@ -129,21 +129,21 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         .foregroundColor(.secondary)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 } header: {
-                    Text("Website Appearance")
+                    Text("website_appearance".localized)
                 } footer: {
-                    Text("When enabled, websites will display their desktop version. When disabled, websites will display their mobile version.")
+                    Text("desktop_mobile_description".localized)
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
                 
                 // User Interface Section (iPhone only)
                 Section {
-                    Toggle("Auto-hide URL Bar", isOn: $settings.autoHideURLBar)
+                    Toggle("auto_hide_url_bar".localized, isOn: $settings.autoHideURLBar)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 } header: {
-                    Text("User Interface")
+                    Text("user_interface".localized)
                 } footer: {
-                    Text("Auto-hide hides the URL bar when scrolling down. Navigation buttons can be hidden to save space with large text sizes.")
+                    Text("auto_hide_description".localized)
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
@@ -215,14 +215,16 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                 
                 // Tab Management Section
                 Section {
-                    Toggle("Confirm before closing pinned tabs", isOn: $settings.confirmClosingPinnedTabs)
+                    Toggle("confirm_before_closing_pinned_tabs".localized, isOn: $settings.confirmClosingPinnedTabs)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                    Toggle("Persist tab groups across launches", isOn: $settings.persistTabGroups)
+                    Toggle("persist_pinned_tabs_across_launches".localized, isOn: $settings.persistPinnedTabs)
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                    Toggle("persist_tab_groups_across_launches".localized, isOn: $settings.persistTabGroups)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     
                     if let tabManager = tabManager, !tabManager.tabGroups.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Manage Tab Groups")
+                            Text("manage_tab_groups".localized)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .padding(.top, 8)
@@ -238,7 +240,7 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                                     
                                     let tabCount = tabManager.getTabsInGroup(group).count
-                                    Text("(\(tabCount) \(tabCount == 1 ? "tab" : "tabs"))")
+                                    Text("(\(tabCount) \(tabCount == 1 ? "tab".localized : "tabs".localized))")
                                         .font(.system(size: 13))
                                         .foregroundColor(.secondary)
                                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -260,9 +262,9 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                         }
                     }
                 } header: {
-                    Text("Tab Management")
+                    Text("tab_management".localized)
                 } footer: {
-                    Text("Pinned tab confirmation prevents accidental unpinning. Tab group persistence saves your groups between app launches. Delete groups to clean up organization - tabs will be kept.")
+                    Text("tab_management_description".localized)
                         .font(.caption)
                         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                 }
@@ -271,7 +273,7 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                 Section {
                     // Private engines
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Private search engines")
+                        Text("private_search_engines".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
 ForEach([SearchEngine.qwant, .startpage, .presearch, .duckduckgo, .ecosia], id: \.self) { engine in
@@ -290,7 +292,7 @@ ForEach([SearchEngine.qwant, .startpage, .presearch, .duckduckgo, .ecosia], id: 
                     // Less private engines
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Text("Popular (less private)")
+                            Text("popular_less_private".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.yellow)
@@ -310,7 +312,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                     
                     // Custom search engine
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Custom")
+                        Text("custom".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
@@ -326,7 +328,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         
                         if settings.defaultSearchEngine == .custom {
                             VStack(alignment: .leading, spacing: 6) {
-                                TextField("Template (use {query})", text: $settings.customSearchTemplate)
+                                TextField("template_use_query".localized, text: $settings.customSearchTemplate)
                                     .textFieldStyle(.roundedBorder)
                                     .autocorrectionDisabled(true)
                                     .textInputAutocapitalization(.never)
@@ -336,7 +338,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                                         .font(.caption)
                                         .foregroundColor(.red)
                                 } else if let example = settings.exampleCustomSearchURL() {
-                                    Text("Example: \(example.absoluteString)")
+                                    Text("\("example".localized): \(example.absoluteString)")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -345,18 +347,18 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         }
                     }
                 } header: {
-                    Text("Search Engine")
+                    Text("search_engine".localized)
                 } footer: {
-                    Text("Choose your default search engine. Private engines don't track your search history. For custom engines, use {query} as placeholder for search terms.")
+                    Text("search_engine_description".localized)
                         .font(.caption)
                 }
                 
                 // Ad Blocking Section
                 Section {
-                    Toggle("Enable Ad Blocking", isOn: $settings.adBlockEnabled)
+                    Toggle("enable_ad_blocking".localized, isOn: $settings.adBlockEnabled)
                     
                     // Advanced JS ad blocking toggle with warning
-                    Toggle("Block advanced JS-injected ads", isOn: Binding(
+                    Toggle("block_advanced_js_ads".localized, isOn: Binding(
                         get: { settings.adBlockAdvancedJS },
                         set: { newValue in
                             settings.adBlockAdvancedJS = newValue
@@ -370,19 +372,19 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                     .tint(.red)
                     
                     // Aggressive obfuscated class blocking
-                    Toggle("Block elements with obfuscated class names", isOn: $settings.adBlockObfuscatedClass)
+                    Toggle("block_obfuscated_class_names".localized, isOn: $settings.adBlockObfuscatedClass)
                         .tint(.red)
                         .disabled(settings.adBlockAdvancedJS)
                         .help(settings.adBlockAdvancedJS ? "Included with Advanced blocking" : "Hides elements whose class names look auto-generated (e.g., 'gbqfwaabe'). May over-block on some sites.")
                     
                     // Cookie consent blocking
-                    Toggle("Block cookie consent banners", isOn: $settings.adBlockCookieBanners)
+                    Toggle("block_cookie_consent_banners".localized, isOn: $settings.adBlockCookieBanners)
                         .tint(.red)
                         .help("Hides cookie consent popups, overlays, and banners. May hide legitimate site notices.")
                     
                     if settings.adBlockEnabled {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Subscription Lists")
+                            Text("subscription_lists".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .padding(.top, 4)
@@ -406,7 +408,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                                 HStack(spacing: 6) {
                                 Image(systemName: adBlockManager.isUpdating ? "arrow.triangle.2.circlepath" : "checkmark.shield")
                                     .foregroundColor(.green)
-                                Text("Rules: \(adBlockManager.activeRuleCount)  Updated: \(adBlockManager.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "never")")
+                                Text("\("rules".localized): \(adBlockManager.activeRuleCount)  \("updated".localized): \(adBlockManager.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "never".localized)")
                                     .font(.caption)
                                     .fontWeight(.semibold)
                                 }
@@ -415,7 +417,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                                 
                                 if !adBlockManager.isUpdating {
                                     Button(action: { Task { await adBlockManager.updateSubscriptions(force: true) } }) {
-                                        Label("Update", systemImage: "arrow.clockwise")
+                                        Label("update".localized, systemImage: "arrow.clockwise")
                                             .font(.caption)
                                             .fontWeight(.semibold)
                                     }
@@ -424,27 +426,27 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                             }
                             .padding(.vertical, 2)
                             
-                            Toggle("Update lists on launch", isOn: $settings.adBlockAutoUpdateOnLaunch)
+                            Toggle("update_lists_on_launch".localized, isOn: $settings.adBlockAutoUpdateOnLaunch)
                                 .font(.caption)
                                 .padding(.top, 4)
                         }
                     }
                 } header: {
-                    Text("Ad Blocking")
+                    Text("ad_blocking".localized)
                 } footer: {
-                    Text("Block ads, trackers, and other unwanted content. Different lists target different types of content.")
+                    Text("ad_blocking_description".localized)
                         .font(.caption)
                 }
                 
                 // Downloads Section
                 Section {
-                    Toggle("Enable Downloads", isOn: $settings.downloadsEnabled)
+                    Toggle("enable_downloads".localized, isOn: $settings.downloadsEnabled)
                     
                     if settings.downloadsEnabled {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
-                            Text("Downloads enabled - you will be asked to confirm each download")
+                            Text("downloads_enabled_message".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -453,7 +455,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
-                            Text("Downloads are disabled - enable to save files from websites")
+                            Text("downloads_disabled_message".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -464,31 +466,31 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                     
                     DownloadSettingsView()
                 } header: {
-                    Text("Downloads")
+                    Text("downloads".localized)
                 } footer: {
-                    Text("Downloads are disabled by default for App Store compliance. When enabled, you will be asked to confirm each download individually. Downloads are limited to non-media document and archive files; audio, video, and image media downloads are not supported.")
+                    Text("downloads_description".localized)
                         .font(.caption)
                 }
                 
                 // Perplexity Section
                 Section {
-                    Toggle("Enable Perplexity Features", isOn: $perplexityManager.isEnabled)
+                    Toggle("enable_perplexity_features".localized, isOn: $perplexityManager.isEnabled)
                     
                     if perplexityManager.isEnabled {
                         if perplexityManager.isAuthenticated {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
-                                Text("Signed in to Perplexity")
+                                Text("signed_in_to_perplexity".localized)
                                     .foregroundColor(.green)
                             }
                             
-                            Button("Sign Out") {
+                            Button("sign_out".localized) {
                                 perplexityManager.signOut()
                             }
                             .foregroundColor(.red)
                         } else {
-                            Button("Sign in to Perplexity") {
+                            Button("sign_in_to_perplexity".localized) {
                                 if let tabManager = tabManager {
                                     dismiss()
                                     tabManager.createNewTab(url: perplexityManager.loginURL)
@@ -498,9 +500,9 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         }
                     }
                 } header: {
-                    Text("Perplexity Integration")
+                    Text("perplexity_integration".localized)
                 } footer: {
-                    Text("Perplexity integration allows you to quickly summarize web pages or send URLs to Perplexity for AI-powered analysis. Sign in to your Perplexity account to enable these features via right-click context menus or the browser toolbar.")
+                    Text("perplexity_integration_description".localized)
                         .font(.caption)
                 }
                 

@@ -356,6 +356,14 @@ class BrowserSettings: ObservableObject {
         }
     }
     
+    // Persistence for pinned tabs across app launches
+    @Published var persistPinnedTabs: Bool {
+        didSet {
+            UserDefaults.standard.set(persistPinnedTabs, forKey: "persistPinnedTabs")
+            NotificationCenter.default.post(name: .browserSettingsChanged, object: nil)
+        }
+    }
+    
     // Hide empty tab groups from the UI
     @Published var hideEmptyTabGroups: Bool {
         didSet {
@@ -600,6 +608,13 @@ class BrowserSettings: ObservableObject {
             self.hideEmptyTabGroups = UserDefaults.standard.bool(forKey: "hideEmptyTabGroups")
         } else {
             self.hideEmptyTabGroups = false
+        }
+        
+        // Load persist pinned tabs setting with default to true (on by default)
+        if UserDefaults.standard.object(forKey: "persistPinnedTabs") != nil {
+            self.persistPinnedTabs = UserDefaults.standard.bool(forKey: "persistPinnedTabs")
+        } else {
+            self.persistPinnedTabs = true
         }
         
         // Load AdBlock enabled setting (default true)

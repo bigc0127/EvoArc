@@ -48,6 +48,7 @@ private func saveDisk(_ img: PlatformImage, for url: URL) {
 struct TabThumbnailView: View {
     let tab: Tab
     @State private var image: PlatformImage?
+    @StateObject private var thumbnailManager = ThumbnailManager.shared
     
     private var systemBackgroundColor: Color {
         #if os(iOS)
@@ -55,6 +56,11 @@ struct TabThumbnailView: View {
         #else
         Color(NSColor.windowBackgroundColor)
         #endif
+    }
+    
+    // Check if this is the custom new tab URL
+    private var isNewTabPage: Bool {
+        tab.url?.absoluteString == "evoarc://newtab"
     }
     
     var body: some View {
@@ -75,19 +81,42 @@ struct TabThumbnailView: View {
             }
         }
         .clipped()
+        .onAppear {
+            // For new tab page, load from ThumbnailManager instead of trying to load URL
+            if isNewTabPage {
+                if let thumbnail = thumbnailManager.getThumbnail(for: tab.id) {
+                    self.image = thumbnail
+                }
+            }
+        }
         #if os(iOS)
         .background(
-            HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
-                .frame(width: 400, height: 600)
-                .opacity(0.001)
+            Group {
+                // Only use HiddenLoader for real URLs, not for new tab page
+                if !isNewTabPage {
+                    HiddenLoader(urlString: tab.url?.absoluteString ?? "") { self.image = $0 }
+                        .frame(width: 400, height: 600)
+                        .opacity(0.001)
+                }
+            }
         )
         #endif
-        .onReceive(NotificationCenter.default.publisher(for: .snapshotDidUpdate)) { note in
-            guard let s = note.object as? String,
-                  s == tab.url?.absoluteString,
-                  let url = tab.url,
-                  let fresh = loadDisk(for: url) else { return }
-            self.image = fresh
+        .onReceive(NotificationCenter.default.publisher(for: .thumbnailDidUpdate)) { note in
+            if isNewTabPage {
+                // For new tab page, load from ThumbnailManager
+                if let tabID = note.userInfo?["tabID"] as? String, tabID == tab.id {
+                    if let thumbnail = thumbnailManager.getThumbnail(for: tab.id) {
+                        self.image = thumbnail
+                    }
+                }
+            } else {
+                // For regular URLs, load from disk
+                guard let s = note.object as? String,
+                      s == tab.url?.absoluteString,
+                      let url = tab.url,
+                      let fresh = loadDisk(for: url) else { return }
+                self.image = fresh
+            }
         }
     }
 }

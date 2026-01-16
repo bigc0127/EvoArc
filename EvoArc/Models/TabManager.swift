@@ -220,6 +220,15 @@ class TabManager: ObservableObject {
             /// This must happen after tabs are created.
             self?.restoreTabGroupAssignments()
             
+            /// Regenerate thumbnails for any tabs showing the new tab page
+            /// (in case old thumbnails are cached)
+            for tab in self?.tabs ?? [] {
+                if tab.url?.absoluteString == "evoarc://newtab" {
+                    ThumbnailManager.shared.removeThumbnail(for: tab.id)
+                    ThumbnailManager.shared.generateNewTabPageThumbnail(for: tab)
+                }
+            }
+            
             /// Signal that initialization is complete and UI can show tabs.
             /// Views watching isInitialized will update from "loading" to "ready" state.
             self?.isInitialized = true
@@ -258,6 +267,15 @@ class TabManager: ObservableObject {
         /// Hide URL in the address bar for new tabs (cleaner look).
         /// The URL will show once the page loads.
         newTab.showURLInBar = false
+        
+        /// Clear any existing thumbnail first, then generate custom thumbnail for new tab page
+        /// (before webView loads, so users see the new tab page thumbnail)
+        if url == nil || url?.absoluteString == "evoarc://newtab" {
+            // Clear any cached thumbnail first
+            ThumbnailManager.shared.removeThumbnail(for: newTab.id)
+            // Generate new custom thumbnail
+            ThumbnailManager.shared.generateNewTabPageThumbnail(for: newTab)
+        }
         
         /// Add to our master list of tabs.
         tabs.append(newTab)
@@ -515,6 +533,14 @@ class TabManager: ObservableObject {
     /// Restores pinned tabs from persistent storage on app launch.
     /// Creates Tab objects from saved pinned tab entities.
     private func restorePinnedTabs() {
+        /// Check if user wants pinned tabs to persist across launches.
+        guard BrowserSettings.shared.persistPinnedTabs else {
+            #if DEBUG
+            print("[TabManager] Pinned tab persistence is disabled, skipping restore")
+            #endif
+            return
+        }
+        
         /// Get pinned tabs sorted by their saved order.
         /// .sorted creates a new sorted array without modifying original.
         let pinnedTabEntities = pinnedTabManager.pinnedTabs

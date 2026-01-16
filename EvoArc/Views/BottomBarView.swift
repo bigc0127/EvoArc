@@ -661,7 +661,7 @@ struct BottomBarView: View {
             // Menu button with all actions
             Menu {
                 Button(action: { tabManager.createNewTab() }) {
-                    Label("New Tab", systemImage: "plus.square")
+                    Label("new_tab".localized, systemImage: "plus.square")
                 }
                 
                 Button(action: {
@@ -669,14 +669,14 @@ struct BottomBarView: View {
                         selectedTab.webView?.load(URLRequest(url: homepage))
                     }
                 }) {
-                    Label("Home", systemImage: "house")
+                    Label("home".localized, systemImage: "house")
                 }
                 
                 Divider()
                 
                 Button(action: { settings.useDesktopMode.toggle() }) {
                     Label(
-                        settings.useDesktopMode ? "Request Mobile Website" : "Request Desktop Website",
+                        settings.useDesktopMode ? "request_mobile_website".localized : "request_desktop_website".localized,
                         systemImage: settings.useDesktopMode ? "iphone" : "desktopcomputer"
                     )
                 }
@@ -686,7 +686,7 @@ struct BottomBarView: View {
                     selectedTab.webView?.reload()
                 }) {
                     Label(
-                        settings.adBlockEnabled ? "Disable Ad Blocking" : "Enable Ad Blocking",
+                        settings.adBlockEnabled ? "disable_ad_blocking".localized : "enable_ad_blocking".localized,
                         systemImage: settings.adBlockEnabled ? "eye.slash" : "eye"
                     )
                 }
@@ -698,7 +698,7 @@ struct BottomBarView: View {
                     }) {
                         let isBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: currentURL)
                         Label(
-                            isBlocked ? "Enable JavaScript" : "Disable JavaScript",
+                            isBlocked ? "enable_javascript".localized : "disable_javascript".localized,
                             systemImage: isBlocked ? "play.fill" : "stop.fill"
                         )
                     }
@@ -709,7 +709,7 @@ struct BottomBarView: View {
                 // Share action
                 if let url = selectedTab.url {
                     Button(action: { presentShareSheet(for: url) }) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label("share".localized, systemImage: "square.and.arrow.up")
                     }
                 }
                 
@@ -718,13 +718,13 @@ struct BottomBarView: View {
                 // Reader mode toggle
                 Button(action: { toggleReaderMode() }) {
                     Label(
-                        selectedTab.readerModeEnabled ? "Disable Reader Mode" : "Enable Reader Mode",
+                        selectedTab.readerModeEnabled ? "disable_reader_mode".localized : "enable_reader_mode".localized,
                         systemImage: "textformat.size"
                     )
                 }
                 
                 Button(action: { showingSettings = true }) {
-                    Label("Settings", systemImage: "gear")
+                    Label("settings".localized, systemImage: "gear")
                 }
                 
                 if PerplexityManager.shared.isAuthenticated, let currentURL = selectedTab.url {
@@ -732,12 +732,12 @@ struct BottomBarView: View {
                     Button(action: {
                         PerplexityManager.shared.performAction(.summarize, for: currentURL, title: selectedTab.title)
                     }) {
-                        Label("Summarize with Perplexity", systemImage: "doc.text.magnifyingglass")
+                        Label("summarize_with_perplexity".localized, systemImage: "doc.text.magnifyingglass")
                     }
                     Button(action: {
                         PerplexityManager.shared.performAction(.sendToPerplexity, for: currentURL, title: selectedTab.title)
                     }) {
-                        Label("Send to Perplexity", systemImage: "arrow.up.right.square")
+                        Label("send_to_perplexity".localized, systemImage: "arrow.up.right.square")
                     }
                 }
             } label: {
@@ -767,7 +767,7 @@ struct BottomBarView: View {
     
     private var urlField: some View {
         Group {
-            TextField("Search or enter address", text: $urlEditingText)
+            TextField("search_or_enter_address".localized, text: $urlEditingText)
                 .font(.body)
                 .textFieldStyle(PlainTextFieldStyle())
                 .frame(height: 32)

@@ -18,12 +18,12 @@ struct NewTabGroupView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Name").font(.headline)
-                    TextField("Group name", text: $name)
+                    Text("name".localized).font(.headline)
+                    TextField("group_name".localized, text: $name)
                         .textFieldStyle(.roundedBorder)
                         .textInputAutocapitalization(.words)
                     
-                    Text("Color").font(.headline)
+                    Text("color".localized).font(.headline)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: 12)], spacing: 12) {
                         ForEach(TabGroupColor.allCases) { c in
                             Button(action: { withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) { color = c } }) {
@@ -39,14 +39,14 @@ struct NewTabGroupView: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("New Tab Group")
+            .navigationTitle("new_tab_group".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button("cancel".localized, action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create", action: onCreate)
+                    Button("create".localized, action: onCreate)
                         .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

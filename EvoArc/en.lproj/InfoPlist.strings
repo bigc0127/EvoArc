@@ -1,0 +1,10 @@
+/* 
+ * InfoPlist.strings (English)
+ * App metadata localization
+ */
+
+"CFBundleName" = "EvoArc";
+"CFBundleDisplayName" = "EvoArc";
+"NSCameraUsageDescription" = "EvoArc needs access to your camera to upload photos";
+"NSPhotoLibraryUsageDescription" = "EvoArc needs access to your photo library to upload images";
+"NSLocationWhenInUseUsageDescription" = "Websites may request your location";
