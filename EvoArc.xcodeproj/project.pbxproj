@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 6536061AE59B00EBD1E1522A /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6536061AE59B00EBD1E1522A /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		89681BED86412599E4B8EB82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29BF21F9DCA05DC776ED9768 /* Foundation.framework */; };
 		C97355F14F9AC0E31B13C140 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55EBAD1D3C6B343C12B8054 /* ShareViewController.swift */; };
 /* End PBXBuildFile section */
@@ -37,15 +37,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		A4165996A094E6B3F4CD301D /* Embed App Extensions */ = {
+		A4165996A094E6B3F4CD301D /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed App Extensions */,
+				725F78125578AE01E2B20EEB /* ShareExtension.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -203,7 +203,7 @@
 				C8F6D8FE2E6A00220001783A /* Sources */,
 				C8F6D8FF2E6A00220001783A /* Frameworks */,
 				C8F6D9002E6A00220001783A /* Resources */,
-				A4165996A094E6B3F4CD301D /* Embed App Extensions */,
+				A4165996A094E6B3F4CD301D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -268,7 +268,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					C8F6D9012E6A00220001783A = {
 						CreatedOnToolsVersion = 26.0;
@@ -289,7 +289,6 @@
 			knownRegions = (
 				en,
 				Base,
-				English,
 				de,
 			);
 			mainGroup = C8F6D8F92E6A00220001783A;
@@ -518,6 +517,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -547,6 +547,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 69LLXLJW63;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -570,6 +571,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -580,6 +582,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -609,6 +612,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 69LLXLJW63;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -625,6 +629,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
