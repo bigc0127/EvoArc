@@ -132,30 +132,15 @@ class ShareViewController: UIViewController {
     
     
     private func handleUrl(_ url: URL) {
-        print("[ShareExtension] Handling URL via responder chain...")
+        print("[ShareExtension] Opening URL: \(url.absoluteString)")
         
-        // Responder chain trick to bypass iOS restrictions
-        // From http://stackoverflow.com/questions/24297273/openurl-not-work-in-action-extension
-        // Updated to use modern application.open() method
-        var responder = self as UIResponder?
-        while let currentResponder = responder {
-            if let application = currentResponder as? UIApplication {
-                print("[ShareExtension] Found UIApplication, opening URL")
-                DispatchQueue.main.async {
-                    application.open(url, options: [:], completionHandler: { success in
-                        print("[ShareExtension] application.open completed with success: \(success)")
-                    })
-                }
-                break
-            }
-            responder = currentResponder.next
-        }
-        
-        // Close the extension after a brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("[ShareExtension] Closing extension")
+        // Use the official API to open the host app
+        extensionContext?.open(url, completionHandler: { success in
+            print("[ShareExtension] Open URL completed: success=\(success)")
+            
+            // Close the extension
             self.cancel()
-        }
+        })
     }
     
 }

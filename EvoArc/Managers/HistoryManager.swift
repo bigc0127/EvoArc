@@ -210,7 +210,18 @@ final class HistoryManager: ObservableObject {
     /// Complete history array (all entries, sorted by relevance).
     private var allHistory: [HistoryEntry] = []
     
-    /// UserDefaults key for persistence.
+    /// File URL for persisting history JSON.
+    private var historyFileURL: URL {
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let directory = paths[0].appendingPathComponent("EvoArc", isDirectory: true)
+        
+        // Ensure directory exists
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        
+        return directory.appendingPathComponent("history.json")
+    }
+    
+    /// UserDefaults key for legacy history persistence (used during migration).
     private let historyKey = "browserHistory"
     
     /// Private initializer (singleton pattern).
@@ -218,7 +229,10 @@ final class HistoryManager: ObservableObject {
     /// **Why private?**: Prevents external code from creating multiple instances.
     /// Forces use of `.shared` singleton.
     private init() {
-        loadHistory()  // Load persisted history on initialization
+        // Load on background to avoid blocking main thread (though this runs on MainActor,
+        // so we just load synchronously for now to keep API simple.
+        // In a real app, you'd likely load asynchronously and show a loading state).
+        loadHistory()
     }
     
     // MARK: - Public Methods
@@ -679,51 +693,42 @@ final class HistoryManager: ObservableObject {
     /// This is acceptable for first app launch or corrupt data.
     private func loadHistory() {
         isLoading = true
-        
-        /// defer block runs when function exits (any return path).
-        /// Guarantees isLoading is reset.
         defer { isLoading = false }
         
-        /// Try to load and decode history.
-        /// Returns early if data missing or decode fails.
-        guard let data = UserDefaults.standard.data(forKey: historyKey),
-              let history = try? JSONDecoder().decode([HistoryEntry].self, from: data) else {
-            return  // No saved history or corrupted data
+        // 1. Try loading from file (new method)
+        if let data = try? Data(contentsOf: historyFileURL),
+           let history = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
+            allHistory = history
+            sortHistory()
+            updateRecentHistory()
+            return
         }
         
-        /// Successfully loaded - update state.
-        allHistory = history
-        sortHistory()           // Sort by relevance
-        updateRecentHistory()   // Update cache
+        // 2. Fallback: Try loading from UserDefaults (migration)
+        if let data = UserDefaults.standard.data(forKey: historyKey),
+           let history = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
+            
+            print("🔄 Migrating history from UserDefaults to File System...")
+            allHistory = history
+            sortHistory()
+            updateRecentHistory()
+            
+            // Save to file immediately
+            saveHistory()
+            
+            // Optional: Clear UserDefaults to free space
+            // UserDefaults.standard.removeObject(forKey: historyKey)
+            return
+        }
     }
     
-    /// Persists current history to UserDefaults.
-    ///
-    /// **Called**: After every history modification.
-    ///
-    /// **Process**:
-    /// 1. Encode allHistory array to JSON
-    /// 2. Save to UserDefaults with key "browserHistory"
-    ///
-    /// **Codable magic**: JSONEncoder automatically converts
-    /// [HistoryEntry] to JSON. No manual serialization needed.
-    ///
-    /// **Failure handling**: Silent failure (print nothing).
-    /// If encoding fails, keeps old persisted state.
-    ///
-    /// **Performance**: Synchronous write to disk.
-    /// For 10,000 entries: ~100-200ms. Acceptable for user actions.
-    ///
-    /// **UserDefaults limit**: ~4MB typically.
-    /// 10,000 entries ≈ 2-3MB. Well within limits.
     private func saveHistory() {
-        /// Try to encode history to JSON data.
-        /// Returns early if encoding fails (shouldn't happen).
-        guard let data = try? JSONEncoder().encode(allHistory) else { return }
-        
-        /// Save to persistent storage.
-        /// Survives app termination and device restart.
-        UserDefaults.standard.set(data, forKey: historyKey)
+        do {
+            let data = try JSONEncoder().encode(allHistory)
+            try data.write(to: historyFileURL, options: .atomic)
+        } catch {
+            print("❌ Failed to save history: \(error)")
+        }
     }
 }
 

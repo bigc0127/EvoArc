@@ -275,27 +275,41 @@ final class AdBlockManager: ObservableObject {
     
     // MARK: - Private helpers
     private func fetchHostsList(url: URL) async throws -> Set<String> {
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // Security check: Enforce HTTPS
+        guard url.scheme?.lowercased() == "https" else {
+            print("⚠️ AdBlock: Skipped non-HTTPS URL: \(url.absoluteString)")
+            return []
+        }
+
+        let (bytes, response) = try await URLSession.shared.bytes(from: url)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
-        guard let text = String(data: data, encoding: .utf8) else { return [] }
+        
         var domains = Set<String>()
-        for rawLine in text.components(separatedBy: .newlines) {
-            var line = rawLine.trimmingCharacters(in: .whitespaces)
+        
+        // Use AsyncSequence to read lines one by one without loading whole file into memory
+        for try await rawLine in bytes.lines {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.isEmpty { continue }
             if line.hasPrefix("#") { continue }
+            
             // Normalize tabs to space
-            line = line.replacingOccurrences(of: "\t", with: " ")
+            let normalizedLine = line.replacingOccurrences(of: "\t", with: " ")
+            
             // Expected formats:
             // 0.0.0.0 domain.com
             // 127.0.0.1 domain.com
             // 0.0.0.0 domain.com # comment
-            let parts = line.split(separator: " ")
+            let parts = normalizedLine.split(separator: " ")
             if parts.count >= 2, parts[0].contains(".") {
                 var host = String(parts[1])
-                if let hashIndex = host.firstIndex(of: "#") { host = String(host[..<hashIndex]).trimmingCharacters(in: .whitespaces) }
-                if let clean = sanitizeDomain(host) { domains.insert(clean) }
+                if let hashIndex = host.firstIndex(of: "#") { 
+                    host = String(host[..<hashIndex]).trimmingCharacters(in: .whitespaces) 
+                }
+                if let clean = sanitizeDomain(host) { 
+                    domains.insert(clean) 
+                }
             }
         }
         return domains

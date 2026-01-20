@@ -774,9 +774,17 @@ class TabManager: ObservableObject {
     
     private func saveTabGroupsIfNeeded() {
         if BrowserSettings.shared.persistTabGroups {
+            // Define file URLs
+            let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            let directory = paths[0].appendingPathComponent("EvoArc", isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            
+            let groupsURL = directory.appendingPathComponent("savedTabGroups.json")
+            let statesURL = directory.appendingPathComponent("savedTabStates.json")
+            
             // Save tab groups
             if let encoded = try? JSONEncoder().encode(tabGroups) {
-                UserDefaults.standard.set(encoded, forKey: "savedTabGroups")
+                try? encoded.write(to: groupsURL, options: .atomic)
             }
             
             // Save comprehensive tab states
@@ -791,39 +799,32 @@ class TabManager: ObservableObject {
             }
             
             if let encoded = try? JSONEncoder().encode(tabStates) {
-                UserDefaults.standard.set(encoded, forKey: "savedTabStates")
-            }
-            
-            // Keep backward compatibility - save simple group assignments as fallback
-            var tabGroupAssignments: [String: String] = [:]
-            
-            for tab in tabs {
-                guard let groupID = tab.groupID?.uuidString else { continue }
-                
-                // Only save URL-based mapping for tabs with URLs (these can be restored)
-                if let url = tab.url?.absoluteString {
-                    tabGroupAssignments["url_" + url] = groupID
-                }
-                
-                // Also save tab ID-based mapping as fallback for current session
-                tabGroupAssignments["id_" + tab.id] = groupID
-            }
-            
-            if let encoded = try? JSONEncoder().encode(tabGroupAssignments) {
-                UserDefaults.standard.set(encoded, forKey: "savedTabGroupAssignments")
+                try? encoded.write(to: statesURL, options: .atomic)
             }
         }
     }
     
     private func loadTabGroups() {
         if BrowserSettings.shared.persistTabGroups {
-            // Load tab groups first
+            // Define file URLs
+            let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            let directory = paths[0].appendingPathComponent("EvoArc", isDirectory: true)
+            let groupsURL = directory.appendingPathComponent("savedTabGroups.json")
+            
+            // Try to load from file (new method)
+            if let data = try? Data(contentsOf: groupsURL),
+               let decoded = try? JSONDecoder().decode([TabGroup].self, from: data) {
+                tabGroups = decoded.sorted { $0.createdAt < $1.createdAt }
+                print("📂 Loaded \(tabGroups.count) tab groups from file")
+                return
+            }
+            
+            // Fallback: Load from UserDefaults (migration)
             if let data = UserDefaults.standard.data(forKey: "savedTabGroups"),
                let decoded = try? JSONDecoder().decode([TabGroup].self, from: data) {
-                // Sort tab groups by creation date to maintain consistent order
                 tabGroups = decoded.sorted { $0.createdAt < $1.createdAt }
+                print("🔄 Migrated \(tabGroups.count) tab groups from UserDefaults")
             }
-            print("📂 Loaded \(tabGroups.count) tab groups")
         }
     }
     
@@ -832,15 +833,29 @@ class TabManager: ObservableObject {
             // First ensure we have all necessary groups loaded
             loadTabGroups()
             
-            // Load comprehensive tab states first (new format)
+            // Define file URLs
+            let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            let directory = paths[0].appendingPathComponent("EvoArc", isDirectory: true)
+            let statesURL = directory.appendingPathComponent("savedTabStates.json")
+            
+            // Try to load from file (new method)
+            if let data = try? Data(contentsOf: statesURL),
+               let tabStates = try? JSONDecoder().decode([String: TabState].self, from: data) {
+                print("📂 Restoring \(tabStates.count) tab states from file")
+                restoreFromTabStates(tabStates)
+                repositionGroupedTabs()
+                return
+            }
+            
+            // Fallback: Load from UserDefaults (migration)
             if let data = UserDefaults.standard.data(forKey: "savedTabStates"),
                let tabStates = try? JSONDecoder().decode([String: TabState].self, from: data) {
                 
-                print("📂 Restoring \(tabStates.count) tab states")
+                print("🔄 Migrating \(tabStates.count) tab states from UserDefaults")
                 restoreFromTabStates(tabStates)
                 
             } else {
-                // Fallback to old format for backward compatibility
+                // Final fallback to legacy format
                 print("⚠️ Using legacy format for tab group restoration")
                 restoreFromLegacyFormat()
             }

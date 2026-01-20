@@ -63,29 +63,23 @@ class ThumbnailManager: ObservableObject {
     
     // MARK: - Private Properties
     
-    /// In-memory cache of tab thumbnails.
+    /// In-memory cache of tab thumbnails using NSCache for memory management.
     ///
-    /// **Dictionary**: [Tab ID → Thumbnail Image]
-    ///
-    /// **didSet**: Runs after the value changes.
-    /// We use it to notify observers, ensuring we're on the main thread.
-    ///
-    /// **Thread safety**: The didSet ensures notifications only fire
-    /// on the main thread (required for UI updates).
-    ///
-    /// **Why dictionary?**: O(1) lookup by tab ID (fast).
-    private var thumbnailCache: [String: PlatformImage] = [:] {
-        didSet {
-            /// Check if we're on the main thread.
-            if Thread.isMainThread {
-                /// Already on main thread - notify immediately.
+    /// **NSCache**: Automatically evicts objects when memory is low.
+    /// Key must be NSString (bridged from String).
+    private let thumbnailCache: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
+        cache.countLimit = 50 // Keep max 50 thumbnails to prevent memory issues
+        return cache
+    }()
+    
+    /// Helper to notify observers of changes
+    private func notifyChange() {
+        if Thread.isMainThread {
+            objectWillChange.send()
+        } else {
+            DispatchQueue.main.async { [objectWillChange] in
                 objectWillChange.send()
-            } else {
-                /// On background thread - switch to main before notifying.
-                /// [objectWillChange] captures the publisher strongly.
-                DispatchQueue.main.async { [objectWillChange] in
-                    objectWillChange.send()
-                }
             }
         }
     }
@@ -193,9 +187,10 @@ class ThumbnailManager: ObservableObject {
             
             /// Store in cache on background queue.
             self?.queue.async {
-                /// Add to cache dictionary.
+                /// Add to cache.
                 if let processedImage = processedImage {
-                    self?.thumbnailCache[tab.id] = processedImage
+                    self?.thumbnailCache.setObject(processedImage, forKey: tab.id as NSString)
+                    self?.notifyChange()
                 }
                 
                 /// Notify UI that thumbnail is ready.
@@ -308,7 +303,7 @@ class ThumbnailManager: ObservableObject {
     /// }
     /// ```
     func getThumbnail(for tabID: String) -> PlatformImage? {
-        thumbnailCache[tabID]
+        thumbnailCache.object(forKey: tabID as NSString)
     }
     
     /// Generates a custom thumbnail for the new tab page.
@@ -370,7 +365,8 @@ class ThumbnailManager: ObservableObject {
             }
             
             // Store in cache
-            self.thumbnailCache[tab.id] = thumbnail
+            self.thumbnailCache.setObject(thumbnail, forKey: tab.id as NSString)
+            self.notifyChange()
             
             // Notify UI
             DispatchQueue.main.async {
@@ -395,7 +391,8 @@ class ThumbnailManager: ObservableObject {
     /// - tabID: The tab whose thumbnail should be removed
     func removeThumbnail(for tabID: String) {
         queue.async { [weak self] in
-            self?.thumbnailCache.removeValue(forKey: tabID)
+            self?.thumbnailCache.removeObject(forKey: tabID as NSString)
+            self?.notifyChange()
         }
     }
     
@@ -411,7 +408,8 @@ class ThumbnailManager: ObservableObject {
     /// **Note**: Thumbnails will regenerate when tabs are viewed again.
     func clearCache() {
         queue.async { [weak self] in
-            self?.thumbnailCache.removeAll()
+            self?.thumbnailCache.removeAllObjects()
+            self?.notifyChange()
         }
     }
     
@@ -433,16 +431,10 @@ class ThumbnailManager: ObservableObject {
     /// ThumbnailManager.shared.cleanupOldThumbnails(keepingTabs: activeIDs)
     /// ```
     func cleanupOldThumbnails(keepingTabs activeTabIDs: Set<String>) {
-        queue.async { [weak self] in
-            guard let self = self else { return }
-            
-            /// Find thumbnails for tabs that no longer exist.
-            /// filter returns only keys NOT in activeTabIDs.
-            let keysToRemove = self.thumbnailCache.keys.filter { !activeTabIDs.contains($0) }
-            
-            /// Remove each orphaned thumbnail.
-            keysToRemove.forEach { self.thumbnailCache.removeValue(forKey: $0) }
-        }
+        // NSCache automatically handles memory pressure and eviction.
+        // We rely on removeThumbnail(for:) being called when tabs are closed
+        // and NSCache's countLimit/memory mechanism for the rest.
+        // No manual iteration needed/possible with NSCache.
     }
 }
 

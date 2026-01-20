@@ -15,23 +15,39 @@ class SafePinnedTabManager: ObservableObject {
     
     @Published var pinnedTabs: [String] = [] // Just store URLs as strings for now
     
+    private let persistenceKey = "safe_pinned_tabs"
+    
     private init() {
-        // Minimal, crash-safe initialization
+        loadPinnedTabs()
     }
     
     func pinTab(url: URL, title: String) {
         if !pinnedTabs.contains(url.absoluteString) {
             pinnedTabs.append(url.absoluteString)
+            savePinnedTabs()
             print("✅ Pinned tab: \(title)")
         }
     }
     
     func unpinTab(url: URL) {
         pinnedTabs.removeAll { $0 == url.absoluteString }
+        savePinnedTabs()
         print("📌 Unpinned tab: \(url.absoluteString)")
     }
     
     func isTabPinned(url: URL) -> Bool {
         return pinnedTabs.contains(url.absoluteString)
+    }
+    
+    // MARK: - Persistence
+    
+    private func savePinnedTabs() {
+        UserDefaults.standard.set(pinnedTabs, forKey: persistenceKey)
+    }
+    
+    private func loadPinnedTabs() {
+        if let saved = UserDefaults.standard.array(forKey: persistenceKey) as? [String] {
+            pinnedTabs = saved
+        }
     }
 }
