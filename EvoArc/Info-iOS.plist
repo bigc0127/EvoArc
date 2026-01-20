@@ -66,9 +66,13 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<!-- Allows EvoArc to open and handle documents in place, enabling document browsing capabilities -->
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<!-- Document types that EvoArc can handle as a browser. Declares support for HTML, web content, and other browser-compatible file types -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>UISupportsDocumentBrowser</key>
+    <true/>
+    <!-- Document types that EvoArc can handle as a browser. Declares support for HTML, web content, and other browser-compatible file types -->
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<!-- HTML documents -->

@@ -711,6 +711,12 @@ struct BottomBarView: View {
                     Button(action: { presentShareSheet(for: url) }) {
                         Label("share".localized, systemImage: "square.and.arrow.up")
                     }
+                    
+                    if isDownloadableFile(url) {
+                        Button(action: { downloadManager.downloadFile(from: url) }) {
+                            Label("Download File", systemImage: "arrow.down.circle")
+                        }
+                    }
                 }
                 
                 Divider()
@@ -1059,6 +1065,15 @@ struct BottomBarView: View {
             })();
             """, completionHandler: nil)
         }
+    }
+    
+    private func isDownloadableFile(_ url: URL) -> Bool {
+        let extensions = [
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+            "txt", "rtf", "csv", "pages", "numbers", "key",
+            "zip", "tar", "gz", "7z", "rar", "dmg", "pkg", "iso"
+        ]
+        return extensions.contains(url.pathExtension.lowercased())
     }
     
     private func presentShareSheet(for url: URL) {

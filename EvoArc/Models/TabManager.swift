@@ -265,8 +265,12 @@ class TabManager: ObservableObject {
         let newTab = Tab(url: url)
         
         /// Hide URL in the address bar for new tabs (cleaner look).
-        /// The URL will show once the page loads.
-        newTab.showURLInBar = false
+        /// Only if it's actually a new blank tab.
+        if url == nil || url?.absoluteString == "evoarc://newtab" {
+            newTab.showURLInBar = false
+        } else {
+            newTab.showURLInBar = true
+        }
         
         /// Clear any existing thumbnail first, then generate custom thumbnail for new tab page
         /// (before webView loads, so users see the new tab page thumbnail)
@@ -283,6 +287,10 @@ class TabManager: ObservableObject {
         /// Make this the visible/active tab.
         /// This triggers UI update to display the new tab's content.
         selectedTab = newTab
+        
+        /// Close the tab drawer to reveal the new tab.
+        isTabDrawerVisible = false
+        
         #if DEBUG
         print("[TabManager] New tab created and selected. Total tabs: \(tabs.count)")
         #endif

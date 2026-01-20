@@ -138,56 +138,59 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         /// Guard ensures we have it - if not, can't track this download.
         guard let url = downloadTask.originalRequest?.url else { return }
         
-        /// Switch to main actor for UI updates and file operations.
-        Task { @MainActor in
-            /// Get filename from server's suggestion or URL's last component.
-            /// Example: "document.pdf" from "https://example.com/files/document.pdf"
-            let fileName = downloadTask.response?.suggestedFilename ?? url.lastPathComponent
-            
-            /// Build full destination path in Documents directory.
-            let destinationURL = manager.downloadDirectory.appendingPathComponent(fileName)
+        // CRITICAL FIX: The file at `location` is DELETED automatically when this delegate method returns.
+        // We MUST move it immediately, synchronously, on this background thread.
+        // We cannot use Task { @MainActor } here for the file move because the task runs later.
+        
+        let fileName = downloadTask.response?.suggestedFilename ?? url.lastPathComponent
+        
+        // We need to access manager properties. Since this is nonisolated, we can access the manager reference.
+        // However, accessing `downloadDirectory` (which accesses UserDefaults) from background thread is technically safe (thread-safe API).
+        // But `saveDownloadedFile` might touch UI-related things? No, it just does FileManager ops.
+        // But `manager` is isolated to MainActor. We can't call isolated methods from here synchronously.
+        
+        // Solution: Create a persistent temporary location that WE control, move it there synchronously,
+        // then notify MainActor to move it to the final destination.
+        
+        let tempDir = FileManager.default.temporaryDirectory
+        let safeTempURL = tempDir.appendingPathComponent(UUID().uuidString).appendingPathExtension(url.pathExtension)
         
         do {
-            /// Ensure the destination directory exists.
-            /// withIntermediateDirectories: true = create parent folders if needed
-            let destDir = destinationURL.deletingLastPathComponent()
-            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
-            
-            /// If file already exists, delete it first.
-            /// This handles re-downloading the same file.
-            if FileManager.default.fileExists(atPath: destinationURL.path) {
-                try FileManager.default.removeItem(at: destinationURL)
+            // Move from system temp (deleting soon) to our temp (persistent until we delete)
+            if FileManager.default.fileExists(atPath: safeTempURL.path) {
+                try FileManager.default.removeItem(at: safeTempURL)
             }
+            try FileManager.default.moveItem(at: location, to: safeTempURL)
             
-            /// Move file from temporary location to permanent location.
-            /// This is atomic - file appears all at once, not partially.
-            try FileManager.default.moveItem(at: location, to: destinationURL)
-            
-            /// Success! Update download status on main thread.
+            // Now dispatch to main thread to handle the final save logic safely
             Task { @MainActor in
-                /// Find this download in the active downloads array.
+                let destinationURL: URL
+                do {
+                    destinationURL = try manager.saveDownloadedFile(sourceURL: safeTempURL, filename: fileName)
+                } catch {
+                    Task { @MainActor in
+                        manager.handleDownloadError(url: url, error: error)
+                        // Clean up our temp file if final move failed
+                        try? FileManager.default.removeItem(at: safeTempURL)
+                    }
+                    return
+                }
+                
+                // Success!
                 if let index = manager.activeDownloads.firstIndex(where: { $0.url == url }) {
-                    /// Mark as completed and store final file location.
                     manager.activeDownloads[index].status = .completed
                     manager.activeDownloads[index].localURL = destinationURL
                     
-                    /// Add to recent downloads list (FIFO queue, max 10).
-                    manager.recentDownloads.insert(destinationURL, at: 0)  // Add to front
+                    manager.recentDownloads.insert(destinationURL, at: 0)
                     if manager.recentDownloads.count > 10 {
-                        manager.recentDownloads.removeLast()  // Remove oldest
+                        manager.recentDownloads.removeLast()
                     }
-                    
-                    /// Persist recent downloads to UserDefaults.
-                    /// map(\.absoluteString) converts [URL] to [String] for storage.
                     UserDefaults.standard.set(manager.recentDownloads.map(\.absoluteString), forKey: "recentDownloads")
                 }
-                
-                /// Broadcast completion to other app components.
-                /// Other parts of the app can observe this notification.
                 NotificationCenter.default.post(name: .downloadCompleted, object: nil, userInfo: ["url": destinationURL])
             }
         } catch {
-            /// File operation failed (disk full, permissions, etc.)
+            print("❌ Critical error moving temp file: \(error)")
             Task { @MainActor in
                 manager.handleDownloadError(url: url, error: error)
             }
@@ -237,7 +240,6 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         /// Report error to manager on main thread.
         Task { @MainActor in
             manager.handleDownloadError(url: url, error: error)
-        }
         }
     }
 }
@@ -333,28 +335,123 @@ final class DownloadManager: NSObject, ObservableObject {
     ///
     /// **Customizable**: User can change download location in settings.
     ///
-    /// **Persistence**: Saved to UserDefaults.
+    /// **Persistence**: Saved to UserDefaults using Security-Scoped Bookmarks.
     ///
     /// **Path example**: 
     /// `/Users/.../Documents/` (iOS)
     var downloadDirectory: URL {
         get {
-            /// Try to load custom directory from UserDefaults.
+            // 1. Try to load bookmark data
+            if let bookmarkData = UserDefaults.standard.data(forKey: "downloadDirectoryBookmark") {
+                var isStale = false
+                do {
+                    // 2. Resolve bookmark to URL
+                    let url = try URL(resolvingBookmarkData: bookmarkData,
+                                    options: [],
+                                    relativeTo: nil,
+                                    bookmarkDataIsStale: &isStale)
+                    
+                    if isStale {
+                        print("⚠️ Download directory bookmark is stale")
+                    }
+                    return url
+                } catch {
+                    print("❌ Failed to resolve download directory bookmark: \(error)")
+                }
+            }
+            
+            // Fallback: Try legacy path string (migration)
             if let storedPath = UserDefaults.standard.string(forKey: "downloadDirectory"),
                let url = URL(string: storedPath) {
                 return url
             }
             
-            /// Default to iOS Documents directory.
-            /// .first! is safe - every iOS app has a Documents directory.
+            // Default to iOS Documents directory
             return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         }
-        set {
-            /// Save new directory to UserDefaults.
-            UserDefaults.standard.set(newValue.absoluteString, forKey: "downloadDirectory")
+    }
+    
+    /// Safely saves a downloaded file to the configured download directory.
+    /// Handles security-scoped resources if necessary.
+    func saveDownloadedFile(sourceURL: URL, filename: String) throws -> URL {
+        let directory: URL
+        var isSecurityScoped = false
+        
+        // Resolve directory and check if it needs security scope access
+        if let bookmarkData = UserDefaults.standard.data(forKey: "downloadDirectoryBookmark") {
+            var isStale = false
+            directory = try URL(resolvingBookmarkData: bookmarkData, options: [], relativeTo: nil, bookmarkDataIsStale: &isStale)
+            isSecurityScoped = true
+        } else {
+            directory = self.downloadDirectory
+        }
+        
+        // Start accessing if needed - DO THIS FIRST
+        if isSecurityScoped {
+            guard directory.startAccessingSecurityScopedResource() else {
+                throw NSError(domain: "DownloadManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to access security scoped directory"])
+            }
+        }
+        
+        defer {
+            if isSecurityScoped {
+                directory.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        // Construct destination AFTER gaining access
+        // (Just in case the URL construction itself accesses the filesystem internally)
+        let destinationURL = directory.appendingPathComponent(filename)
+        
+        // Perform move
+        let destDir = destinationURL.deletingLastPathComponent()
+        
+        // Check if we can write here
+        if !FileManager.default.isWritableFile(atPath: destDir.path) {
+            print("⚠️ Destination directory is not writable: \(destDir.path)")
+            // If it's the Documents directory, it should be writable.
+            // If it's a security scoped URL, maybe we need to verify write access?
+        }
+        
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+        }
+        
+        try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
+        
+        return destinationURL
+    }
+    
+    /// Sets the download directory and persists it as a security-scoped bookmark.
+    ///
+    /// **Parameters**:
+    /// - url: The new directory URL (must be security-scoped if external)
+    func setDownloadDirectory(_ url: URL) {
+        do {
+            // 1. Start accessing to ensure we have permission to create bookmark
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
             
-            /// Notify other components that settings changed.
+            // 2. Create security-scoped bookmark
+            // Use minimalBookmark for iOS compatibility
+            let bookmarkData = try url.bookmarkData(options: .minimalBookmark,
+                                                  includingResourceValuesForKeys: nil,
+                                                  relativeTo: nil)
+            
+            // 3. Save bookmark to UserDefaults
+            UserDefaults.standard.set(bookmarkData, forKey: "downloadDirectoryBookmark")
+            
+            // 4. Also save string path for UI display/legacy support
+            UserDefaults.standard.set(url.absoluteString, forKey: "downloadDirectory")
+            
+            // 5. Notify UI
             NotificationCenter.default.post(name: .downloadSettingsChanged, object: nil)
+            print("✅ Saved download directory bookmark")
+            
+        } catch {
+            print("❌ Failed to create bookmark for download directory: \(error)")
         }
     }
     

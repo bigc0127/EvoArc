@@ -152,6 +152,14 @@ struct DownloadProgressOverlay: View {
                         .foregroundColor(.accentColor)
                 }
                 .buttonStyle(.plain)
+                
+                Button {
+                    downloadManager.dismissDownload(id: download.id)
+                } label: {
+                    Image(systemName: "xmark.circle")
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

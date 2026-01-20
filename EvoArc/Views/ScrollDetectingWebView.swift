@@ -374,9 +374,42 @@ struct ScrollAwareWebView: UIViewRepresentable {
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
             print("🎯 Response policy requested for: \(navigationResponse.response.url?.absoluteString ?? "unknown URL")")
+            
             if let httpResponse = navigationResponse.response as? HTTPURLResponse {
                 print("🎯 HTTP Status: \(httpResponse.statusCode)")
+                
+                // Check if this is a download (MIME type or Content-Disposition)
+                if !navigationResponse.canShowMIMEType {
+                    print("⬇️ Detected non-displayable MIME type: \(navigationResponse.response.mimeType ?? "unknown")")
+                    
+                    if let url = navigationResponse.response.url {
+                        // Hand off to DownloadManager
+                        Task { @MainActor in
+                            DownloadManager.shared.downloadFile(from: url, suggestedFilename: navigationResponse.response.suggestedFilename)
+                        }
+                    }
+                    
+                    decisionHandler(.cancel)
+                    return
+                }
+                
+                // Check Content-Disposition header for "attachment"
+                if let contentDisposition = httpResponse.allHeaderFields["Content-Disposition"] as? String,
+                   contentDisposition.lowercased().contains("attachment") {
+                    print("⬇️ Detected Content-Disposition attachment")
+                    
+                    if let url = navigationResponse.response.url {
+                        // Hand off to DownloadManager
+                        Task { @MainActor in
+                            DownloadManager.shared.downloadFile(from: url, suggestedFilename: navigationResponse.response.suggestedFilename)
+                        }
+                    }
+                    
+                    decisionHandler(.cancel)
+                    return
+                }
             }
+            
             decisionHandler(.allow)
         }
         

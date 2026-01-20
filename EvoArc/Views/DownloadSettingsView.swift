@@ -30,16 +30,9 @@ struct DocumentPickerView: UIViewControllerRepresentable {
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let selectedURL = urls.first else { return }
             
-            // Grant security-scoped resource access
-            let accessGranted = selectedURL.startAccessingSecurityScopedResource()
-            defer {
-                if accessGranted {
-                    selectedURL.stopAccessingSecurityScopedResource()
-                }
-            }
-            
-            // Update download directory
-            parent.downloadManager.downloadDirectory = selectedURL
+            // Pass the security-scoped URL directly to DownloadManager
+            // DownloadManager will handle creating the bookmark and persisting access
+            parent.downloadManager.setDownloadDirectory(selectedURL)
         }
     }
 }
@@ -216,16 +209,9 @@ extension DownloadSettingsView {
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let selectedURL = urls.first else { return }
             
-            // Grant security-scoped resource access
-            let accessGranted = selectedURL.startAccessingSecurityScopedResource()
-            defer {
-                if accessGranted {
-                    selectedURL.stopAccessingSecurityScopedResource()
-                }
-            }
-            
-            // Update download directory
-            parent.downloadManager.downloadDirectory = selectedURL
+            // Pass the security-scoped URL directly to DownloadManager
+            // DownloadManager will handle creating the bookmark and persisting access
+            parent.downloadManager.setDownloadDirectory(selectedURL)
         }
     }
     
