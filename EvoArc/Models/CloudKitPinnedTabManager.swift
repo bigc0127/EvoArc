@@ -108,18 +108,32 @@ class CloudKitPinnedTabManager: ObservableObject {
             }
             return
         }
-        
+
         dlog("🚀 Initializing CloudKit PinnedTabManager...")
-        
-        // Set up Core Data observer
+
         setupCoreDataObserver()
-        
-        // Load existing data
         loadPinnedTabs()
-        
-        // Mark as ready
+        migrateLegacyUserDefaultsPins()
+
         isReady = true
         dlog("✅ CloudKit PinnedTabManager ready")
+    }
+
+    /// One-shot migration of pins stored under the old `safe_pinned_tabs` UserDefaults
+    /// key (from the deprecated SafePinnedTabManager). Imports each URL, then clears
+    /// the key so this runs at most once.
+    private func migrateLegacyUserDefaultsPins() {
+        let legacyKey = "safe_pinned_tabs"
+        guard let legacy = UserDefaults.standard.array(forKey: legacyKey) as? [String],
+              !legacy.isEmpty else { return }
+
+        let existing = Set(pinnedTabs.map { $0.urlString })
+        for urlString in legacy where !existing.contains(urlString) {
+            guard let url = URL(string: urlString) else { continue }
+            pinTab(url: url, title: url.host ?? urlString)
+        }
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+        dlog("🔁 Migrated \(legacy.count) legacy pinned tabs to CloudKit store")
     }
     
     private func loadPinnedTabs() {
