@@ -170,7 +170,14 @@ class TabManager: ObservableObject {
     /// - When TabManager is deallocated, these subscriptions auto-cancel
     /// - This prevents memory leaks from dangling observers
     private var cancellables = Set<AnyCancellable>()
-    
+
+    /// Whether initial restoration of pinned tabs from persistent storage
+    /// has been attempted. CloudKit-backed Core Data loads asynchronously
+    /// on launch, so the eager call from `init()` may run before the data
+    /// is available. The pinned-tab observer uses this flag to perform a
+    /// one-shot restore the first time pinned-tab entities arrive.
+    private var hasAttemptedInitialPinRestore: Bool = false
+
     // MARK: - Initialization
     
     /// Initializes the TabManager and restores previous session state.
@@ -532,14 +539,33 @@ class TabManager: ObservableObject {
             .sink { [weak self] _ in
                 /// Always update on main thread (UI requirement).
                 DispatchQueue.main.async {
-                    self?.updateTabPinnedStates()
+                    self?.handlePinnedTabsUpdate()
                 }
             }
             .store(in: &cancellables)
     }
-    
+
+    /// Handles emissions from the pinned-tab manager's published list.
+    /// Performs a one-shot restoration the first time entities arrive
+    /// (handles the launch race against async CloudKit/Core Data load),
+    /// then keeps existing tabs' `isPinned` flags in sync.
+    private func handlePinnedTabsUpdate() {
+        if !hasAttemptedInitialPinRestore {
+            let entities = pinnedTabManager.pinnedTabs
+            if !entities.isEmpty {
+                hasAttemptedInitialPinRestore = true
+                if BrowserSettings.shared.persistPinnedTabs {
+                    createMissingPinnedTabs(from: entities)
+                }
+            }
+        }
+        updateTabPinnedStates()
+    }
+
     /// Restores pinned tabs from persistent storage on app launch.
-    /// Creates Tab objects from saved pinned tab entities.
+    /// Creates Tab objects from saved pinned tab entities. Safe to call
+    /// from `init()` even if the underlying store has not finished loading
+    /// yet — the observer will retry once entities are available.
     private func restorePinnedTabs() {
         /// Check if user wants pinned tabs to persist across launches.
         guard BrowserSettings.shared.persistPinnedTabs else {
@@ -548,23 +574,34 @@ class TabManager: ObservableObject {
             #endif
             return
         }
-        
-        /// Get pinned tabs sorted by their saved order.
-        /// .sorted creates a new sorted array without modifying original.
-        let pinnedTabEntities = pinnedTabManager.pinnedTabs
-            .sorted { $0.pinnedOrder < $1.pinnedOrder }
-        
-        /// Create a Tab for each pinned entity.
-        for entity in pinnedTabEntities {
-            let url = entity.url
-            /// _ = discards the return value (we don't need it here).
-            _ = createRestoredTab(title: entity.title, url: url, isPinned: true, groupID: nil)
+
+        let entities = pinnedTabManager.pinnedTabs
+        guard !entities.isEmpty else {
+            #if DEBUG
+            dlog("[TabManager] Pinned tab store empty at init; deferring to observer")
+            #endif
+            return
         }
-        
+
+        hasAttemptedInitialPinRestore = true
+        createMissingPinnedTabs(from: entities)
+
         /// Auto-select the first tab so user sees content immediately.
         if let firstTab = tabs.first {
             selectedTab = firstTab
         }
+    }
+
+    /// Creates Tab objects for any pinned entities that don't already
+    /// have a corresponding tab. Idempotent: safe to call multiple times.
+    private func createMissingPinnedTabs(from entities: [PinnedTabEntity]) {
+        let sorted = entities.sorted { $0.pinnedOrder < $1.pinnedOrder }
+        let existingURLs = Set(tabs.compactMap { $0.url?.absoluteString })
+
+        for entity in sorted where !existingURLs.contains(entity.urlString) {
+            _ = createRestoredTab(title: entity.title, url: entity.url, isPinned: true, groupID: nil)
+        }
+        repositionPinnedTabs()
     }
     
     /// Synchronizes tab pinned states with the pinned tab manager.

@@ -425,28 +425,30 @@ struct ContentView: View {
         .gesture(
             DragGesture(minimumDistance: 20)
                 .onEnded { value in
-                    // Only process gesture if BottomBarView gesture is not active
-                    if !tabManager.isGestureActive {
-                        let startY = value.startLocation.y
-                        let screenHeight = UIScreen.main.bounds.height
-                        let verticalTranslation = value.translation.height
-                        
-                        // Check if gesture started in bottom 20% of screen
-                        if startY > screenHeight * 0.8 {
-                            // Swipe up: either show bar or toggle tab drawer
-                            if verticalTranslation < -50 {
-                                // Short swipe up: show bottom bar if hidden
-                                if settings.autoHideURLBar && !urlBarVisible {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        urlBarVisible = true
-                                    }
-                                }
-                            } else if verticalTranslation < -100 {
-                                // Long swipe up: toggle tab drawer
-                                withAnimation(.spring()) {
-                                    tabManager.toggleTabDrawer()
-                                }
-                            }
+                    guard !tabManager.isGestureActive else { return }
+                    let verticalTranslation = value.translation.height
+                    let horizontalTranslation = value.translation.width
+                    // Predominantly vertical, upward gesture
+                    guard verticalTranslation < -30,
+                          abs(verticalTranslation) > abs(horizontalTranslation) * 1.5 else { return }
+
+                    // If the bar is hidden, any upward swipe (anywhere on screen)
+                    // brings it back. This was previously gated on bottom-20%
+                    // and a 50pt threshold, which made recovery hard.
+                    if settings.autoHideURLBar && !urlBarVisible {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            urlBarVisible = true
+                        }
+                        return
+                    }
+
+                    // Bar is visible: a strong upward swipe from the bottom
+                    // of the screen toggles the tab drawer.
+                    let startY = value.startLocation.y
+                    let screenHeight = UIScreen.main.bounds.height
+                    if startY > screenHeight * 0.75 && verticalTranslation < -100 {
+                        withAnimation(.spring()) {
+                            tabManager.toggleTabDrawer()
                         }
                     }
                 }
