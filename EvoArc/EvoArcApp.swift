@@ -168,9 +168,23 @@ struct EvoArcApp: App {
             #if DEBUG
             dlog("[EvoArcApp] Standard URL scheme: \(url.scheme ?? "none")")
             #endif
-            /// For standard http:// or https:// URLs, open directly.
+            // Default-browser hygiene: only accept web URLs from other apps.
+            // Schemes like javascript: and data: from external sources are
+            // common phishing vectors and not something a default browser
+            // should silently navigate to.
+            guard isAcceptableExternalScheme(url.scheme) else {
+                #if DEBUG
+                dlog("[EvoArcApp] Rejecting external URL with disallowed scheme: \(url.scheme ?? "nil")")
+                #endif
+                return
+            }
             tabManager.createNewTab(url: url)
         }
+    }
+
+    private func isAcceptableExternalScheme(_ scheme: String?) -> Bool {
+        guard let scheme = scheme?.lowercased() else { return false }
+        return scheme == "http" || scheme == "https" || scheme == "file"
     }
     
     /// Checks App Group UserDefaults for pending shared URL from share extension

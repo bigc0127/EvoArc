@@ -793,13 +793,23 @@ struct ContentView: View {
         #if DEBUG
         dlog("[ContentView] handleIncomingURL called with: \(url.absoluteString)")
         #endif
-        
+
         // Check if this is from share extension
         if url.scheme == "evoarc" {
             #if DEBUG
             dlog("[ContentView] Detected evoarc:// scheme, delegating to EvoArcApp handler")
             #endif
             // Don't handle custom schemes here - let EvoArcApp handle them
+            return
+        }
+
+        // Default-browser hygiene: reject schemes that shouldn't be silently
+        // navigated to from another app (javascript:, data:, etc.).
+        let scheme = url.scheme?.lowercased()
+        guard scheme == "http" || scheme == "https" || scheme == "file" else {
+            #if DEBUG
+            dlog("[ContentView] Rejecting external URL with disallowed scheme: \(url.scheme ?? "nil")")
+            #endif
             return
         }
         
