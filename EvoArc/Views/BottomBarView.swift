@@ -1023,6 +1023,59 @@ struct BottomBarView: View {
     }
 }
 
+// MARK: - Collapsed URL Bar Pill
+
+/// A compact, always-visible affordance shown when auto-hide has hidden
+/// the full bottom bar. Tapping it restores the full bar. Mirrors Safari
+/// iOS's behavior of shrinking — but never fully removing — the URL bar.
+struct CollapsedURLBarPill: View {
+    @ObservedObject var tab: Tab
+    let onTap: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var displayText: String {
+        if let host = tab.url?.host, !host.isEmpty {
+            return host
+        }
+        if !tab.title.isEmpty {
+            return tab.title
+        }
+        return "search_or_enter_address".localized
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Text(displayText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color(uiColor: .systemBackground).opacity(0.55))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.gray.opacity(0.25), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityLabel(Text("Show URL bar"))
+        .accessibilityHint(Text("Double tap to restore the full address bar"))
+    }
+}
+
 // MARK: - Rainbow Border Modifier for Loading Animation
 
 /// A conditional wrapper that only applies the rainbow border when loading is true.

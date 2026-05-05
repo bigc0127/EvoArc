@@ -299,11 +299,13 @@ struct ContentView: View {
                 }
             }
             
-            // Bottom URL bar
-            if urlBarVisible || !settings.autoHideURLBar {
-                VStack {
-                    Spacer()
-                    if let selected = tabManager.selectedTab {
+            // Bottom URL bar — full bar when visible or auto-hide is off,
+            // small tappable pill when auto-hidden so the user can always
+            // bring it back (mirrors Safari's collapsed URL bar behavior).
+            VStack {
+                Spacer()
+                if let selected = tabManager.selectedTab {
+                    if urlBarVisible || !settings.autoHideURLBar {
                         BottomBarView(
                             urlString: $urlString,
                             isURLBarFocused: $isURLBarFocused,
@@ -314,10 +316,17 @@ struct ContentView: View {
                             tabManager: tabManager
                         )
                         .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
+                    } else {
+                        CollapsedURLBarPill(tab: selected) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                urlBarVisible = true
+                            }
+                        }
+                        .transition(.opacity)
                     }
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
             
             // Tab drawer overlay
             if tabManager.isTabDrawerVisible {
