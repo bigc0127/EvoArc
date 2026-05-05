@@ -232,7 +232,15 @@ struct ScrollAwareWebView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         var parent: ScrollAwareWebView
         weak var webView: WKWebView?
-        private var lastContentOffset: CGFloat = 0
+        // Offset at the time of the most recent reported direction change.
+        // We compare against this (not every frame) so the threshold reflects
+        // sustained scrolling in one direction, not jitter.
+        private var lastReportedOffset: CGFloat = 0
+        // Asymmetric thresholds: hiding requires deliberate scrolling, while
+        // any small upward gesture brings the bar back. This matches Safari's
+        // behavior and fixes "hides too easily, hard to recover" complaints.
+        private let hideThreshold: CGFloat = 60
+        private let showThreshold: CGFloat = 8
         
         init(_ parent: ScrollAwareWebView) {
             self.parent = parent
@@ -275,15 +283,25 @@ struct ScrollAwareWebView: UIViewRepresentable {
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let currentOffset = scrollView.contentOffset.y
-            let difference = currentOffset - lastContentOffset
-            
-            if abs(difference) > 10 { // Threshold to prevent jitter
-                if difference > 0 {
-                    parent.onScrollChange(.down)
-                } else {
-                    parent.onScrollChange(.up)
-                }
-                lastContentOffset = currentOffset
+            let topInset = scrollView.adjustedContentInset.top
+            // Distance from the top of the content (0 when at the very top).
+            let distanceFromTop = currentOffset + topInset
+
+            // Always reveal the bar near the top of the page so users aren't
+            // stuck without it after a short scroll up.
+            if distanceFromTop <= 10 {
+                parent.onScrollChange(.up)
+                lastReportedOffset = currentOffset
+                return
+            }
+
+            let difference = currentOffset - lastReportedOffset
+            if difference > hideThreshold {
+                parent.onScrollChange(.down)
+                lastReportedOffset = currentOffset
+            } else if difference < -showThreshold {
+                parent.onScrollChange(.up)
+                lastReportedOffset = currentOffset
             }
         }
         
