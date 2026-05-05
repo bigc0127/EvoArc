@@ -131,7 +131,7 @@ struct BottomBarView: View {
     // @StateObject is used for objects that THIS VIEW creates and owns.
     // SwiftUI manages the lifecycle - the object persists across view updates.
     //
-    // Most of these are singletons (shared), except SuggestionManager and KeyboardHeightManager.
+    // Most of these are singletons (shared), except SuggestionManager.
     
     /// The app's settings manager (singleton).
     ///
@@ -154,12 +154,6 @@ struct BottomBarView: View {
     /// **Not a singleton**: Each BottomBarView gets its own SuggestionManager.
     /// Manages search suggestions displayed below the URL bar.
     @StateObject private var suggestionManager = SuggestionManager()
-    
-    /// The keyboard height manager (created by this view).
-    ///
-    /// **Not a singleton**: Observes keyboard show/hide notifications and tracks height.
-    /// Used to adjust bottom bar position when keyboard appears.
-    @StateObject private var keyboardManager = KeyboardHeightManager()
     
     /// The download manager (singleton).
     ///
@@ -339,141 +333,74 @@ struct BottomBarView: View {
     /// The main body of BottomBarView - defines the complete UI structure.
     ///
     /// **Layout Strategy**:
-    /// - **GeometryReader**: Provides size information for responsive layout
-    /// - **ZStack**: Layers views vertically (background, then content)
-    /// - **VStack**: Stacks suggestions and toolbar vertically
+    /// - **VStack**: Stacks suggestions and toolbar vertically with stable intrinsic size.
     ///
-    /// **Keyboard Behavior**: The entire view lifts above the keyboard when
-    /// the URL field is focused. This is handled by `.padding(.bottom, ...)`
-    /// combined with `keyboardManager.keyboardHeight`.
+    /// **Keyboard Behavior**: SwiftUI's built-in keyboard avoidance lifts the
+    /// entire bar above the keyboard when the URL field is focused, and lowers
+    /// it back when the keyboard dismisses. We do not need GeometryReader or
+    /// manual keyboard padding for this.
     ///
     /// **Gestures**: Multiple simultaneous gestures are attached at the end:
     /// - Horizontal swipe: Navigate history
     /// - Vertical swipe: Toggle tab drawer
     /// - Tap: Various element interactions
     var body: some View {
-        // GeometryReader gives us access to the view's size and position
-        GeometryReader { geometry in
-            // Compute a dynamic gap between keyboard and bottom bar based on
-            // screen height and Dynamic Type size (larger text → slightly
-            // larger gap for comfort).
-            let keyboardGap: CGFloat = {
-                let screenHeight = geometry.size.height
-                let baseGap: CGFloat
-                if screenHeight < 700 {         // smaller phones
-                    baseGap = 6
-                } else if screenHeight < 850 {  // mid-size phones
-                    baseGap = 8
-                } else {                        // large phones / Plus / Max
-                    baseGap = 10
-                }
-                let accessibilityExtra: CGFloat = dynamicTypeSize >= .accessibility1 ? 4 : 0
-                return baseGap + accessibilityExtra
-            }()
-            
-            // ZStack layers views on the Z-axis (front to back)
-            // alignment: .bottom means child views align to the bottom
-            ZStack(alignment: .bottom) {
-                // Invisible background to capture taps and define the interactive area
-                Color.clear
-                    .ignoresSafeArea()  // Extend beyond safe area for full-screen gestures
-                
-                // Main content stack (suggestions + toolbar)
-                VStack(spacing: baseRowSpacing) {
-                    // MARK: Search Suggestions (conditional)
-                    // Only show suggestions when:
-                    // 1. URL bar is focused (user is typing)
-                    // 2. User has typed something
-                    // 3. Suggestions are available
-                    if isURLBarFocused && !urlEditingText.isEmpty && !suggestionManager.suggestions.isEmpty {
-                        suggestionList  // Computed property defined below
-                    }
-                    
-                    // MARK: Main toolbar container
-                    // This VStack contains the two-row toolbar design:
-                    // 1. Top row: Navigation buttons, tab indicator, browser controls
-                    // 2. Bottom row: Security indicator, URL field, action buttons
-                VStack(spacing: baseRowSpacing) {
-                        // MARK: Top Controls Row
-                        // Layout: [Navigation] [Spacer] [Tab Count] [Spacer] [Controls]
-                        // Navigation and controls hide when URL bar is focused to save space.
-                        HStack {
-                            // Left side: Back and forward buttons
-                            if !isURLBarFocused {
-                                navigationButtons  // Computed property (defined below)
-                            }
-                            
-                            // Push content to edges
-                            Spacer()
-                            
-                            // Center: Tab count indicator (always visible)
-                            tabIndicator  // Computed property (defined below)
-                            
-                            // Push content to edges
-                            Spacer()
-                            
-                            // Right side: Pin, reader mode, menu buttons
-                            if !isURLBarFocused {
-                                browserControls  // Computed property (defined below)
-                            }
-                        }
-                        .padding(.horizontal, 12)  // Horizontal padding inside toolbar
-                        
-                        // MARK: Bottom URL Bar Row
-                        // Layout: [Lock Icon] [URL TextField] [Bookmark/Clear/Refresh]
-                        // This is the primary interaction area for navigation.
-                        HStack(spacing: 8) {
-                            securityIndicator  // Lock icon or stop button
-                            urlField          // Text field for URL/search input
-                            urlBarButtons     // Context-sensitive action buttons
-                        }
-                        .padding(.horizontal, 12)
-                        .frame(height: baseURLBarHeight)  // Fixed height for consistency
-                    }
-                    // Apply styling to the entire toolbar container
-                    .padding(.vertical, bottomBarVerticalPadding)
-                    .background(bottomFillBackground)  // Rounded rectangle background
-                    .padding(.horizontal, bottomBarHorizontalPadding)  // Space from screen edges
-                    .padding(.bottom, 8)  // Space above bottom edge when keyboard is hidden
-                }
-                
-                // MARK: Keyboard Avoidance
-                // When URL bar is focused, lift the entire view above the keyboard.
-                // We subtract a dynamic gap so the bar visually hugs the keyboard
-                // while still leaving a comfortable buffer that scales with device
-                // size and Dynamic Type.
-                .padding(
-                    .bottom,
-                    isURLBarFocused
-                        ? max(keyboardManager.keyboardHeight - keyboardGap, 0)
-                        : 8
-                )
-                .animation(.easeOut(duration: keyboardManager.keyboardAnimationDuration), value: keyboardManager.keyboardHeight)
+        // Use a plain VStack (no GeometryReader) so the view has a stable
+        // intrinsic size. SwiftUI's built-in keyboard avoidance lifts this
+        // bar above the keyboard automatically when the URL field is focused,
+        // and lowers it back when the keyboard dismisses. Using GeometryReader
+        // combined with manual keyboard padding produced an unstable layout
+        // that occasionally left the bar off-screen after dismissal.
+        VStack(spacing: baseRowSpacing) {
+            // MARK: Search Suggestions (conditional)
+            if isURLBarFocused && !urlEditingText.isEmpty && !suggestionManager.suggestions.isEmpty {
+                suggestionList
             }
+
+            // MARK: Main toolbar container
+            VStack(spacing: baseRowSpacing) {
+                // Top Controls Row
+                HStack {
+                    if !isURLBarFocused {
+                        navigationButtons
+                    }
+                    Spacer()
+                    tabIndicator
+                    Spacer()
+                    if !isURLBarFocused {
+                        browserControls
+                    }
+                }
+                .padding(.horizontal, 12)
+
+                // Bottom URL Bar Row
+                HStack(spacing: 8) {
+                    securityIndicator
+                    urlField
+                    urlBarButtons
+                }
+                .padding(.horizontal, 12)
+                .frame(height: baseURLBarHeight)
+            }
+            .padding(.vertical, bottomBarVerticalPadding)
+            .background(bottomFillBackground)
+            .padding(.horizontal, bottomBarHorizontalPadding)
+            .padding(.bottom, 8)
         }
+        .frame(maxWidth: .infinity)
         // MARK: Gesture Handlers
-        // Multiple gestures can be active simultaneously.
-        // .simultaneousGesture allows gestures to coexist without conflict.
-        .simultaneousGesture(horizontalSwipeGesture)  // Back/forward navigation
-        .simultaneousGesture(verticalSwipeGesture)    // Tab drawer toggle
-        .gesture(readerModeGesture)                    // Reader mode toggle
-        
+        .simultaneousGesture(horizontalSwipeGesture)
+        .simultaneousGesture(verticalSwipeGesture)
+        .gesture(readerModeGesture)
         // MARK: Animations
-        // Different animations for different state changes.
-        // Each .animation modifier targets specific value changes.
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: keyboardManager.keyboardHeight)
         .animation(.easeInOut(duration: 0.2), value: selectedTab.isLoading)
         .animation(.easeInOut(duration: 0.2), value: isURLBarFocused)
-        .animation(.easeInOut(duration: keyboardManager.keyboardAnimationDuration), value: suggestionManager.suggestions)
-        
-        // MARK: Safe Area and Lifecycle
-        .ignoresSafeArea(.keyboard, edges: .bottom)  // Extend below keyboard
+        .animation(.easeInOut(duration: 0.25), value: suggestionManager.suggestions)
+        // MARK: Lifecycle
         .onAppear {
-            // Initialize editing text when view appears
             urlEditingText = urlString
         }
         .onDisappear {
-            // Clean up timer to prevent memory leaks
             searchTimer?.invalidate()
         }
     }
@@ -978,7 +905,7 @@ struct BottomBarView: View {
     // MARK: - Helper Methods
     
     private func handleSuggestion(_ item: SuggestionItem) {
-        withAnimation(.easeInOut(duration: keyboardManager.keyboardAnimationDuration)) {
+        withAnimation(.easeInOut(duration: 0.25)) {
             switch item.type {
             case .history, .url:
                 if let url = item.url {

@@ -228,9 +228,9 @@ struct ContentView: View {
     /// 2. Middle layer: Bottom URL bar (BottomBarView)
     /// 3. Top layers: Tab drawer overlay, default browser tip, gesture areas
     ///
-    /// **Keyboard Handling**: On iPhone, keyboard avoidance is handled inside
-    /// `BottomBarView` via `KeyboardHeightManager`, so no additional observers
-    /// are needed at this root level.
+    /// **Keyboard Handling**: SwiftUI's built-in keyboard avoidance lifts the
+    /// `BottomBarView` above the keyboard automatically when the URL field is
+    /// focused, so no additional observers are needed at this root level.
     ///
     /// **Parameter**:
     /// - geometry: Provides screen size for responsive layout calculations
@@ -315,8 +315,6 @@ struct ContentView: View {
                         )
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .animation(.easeInOut(duration: 0.3), value: urlBarVisible)
-                        .ignoresSafeArea(.keyboard)
-                        .ignoresSafeArea(.container, edges: .bottom)
                     }
                 }
             }
