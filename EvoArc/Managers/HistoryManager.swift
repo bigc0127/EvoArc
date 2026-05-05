@@ -708,7 +708,7 @@ final class HistoryManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let history = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
             
-            print("🔄 Migrating history from UserDefaults to File System...")
+            dlog("🔄 Migrating history from UserDefaults to File System...")
             allHistory = history
             sortHistory()
             updateRecentHistory()
@@ -727,7 +727,7 @@ final class HistoryManager: ObservableObject {
             let data = try JSONEncoder().encode(allHistory)
             try data.write(to: historyFileURL, options: .atomic)
         } catch {
-            print("❌ Failed to save history: \(error)")
+            dlog("❌ Failed to save history: \(error)")
         }
     }
 }
@@ -773,7 +773,7 @@ extension HistoryManager {
     /// Returns statistics about browsing history.
     ///
     /// **Tuple return**: Returns multiple values as a named tuple.
-    /// Access like: `let stats = getHistoryStats(); print(stats.totalEntries)`
+    /// Access like: `let stats = getHistoryStats(); dlog(stats.totalEntries)`
     ///
     /// **reduce()**: Functional programming pattern. Combines all elements
     /// into a single value. Here: sums all visit counts.

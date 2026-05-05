@@ -36,13 +36,13 @@ class CloudKitPinnedTabManager: ObservableObject {
     
     func pinTab(url: URL, title: String) {
         guard isReady else {
-            print("CloudKit manager not ready, skipping pin operation")
+            dlog("CloudKit manager not ready, skipping pin operation")
             return
         }
         
         // Check if already pinned
         if pinnedTabs.contains(where: { $0.urlString == url.absoluteString }) {
-            print("Tab already pinned: \(url.absoluteString)")
+            dlog("Tab already pinned: \(url.absoluteString)")
             return
         }
         
@@ -63,12 +63,12 @@ class CloudKitPinnedTabManager: ObservableObject {
             self?.persistToCore(entity: entity)
         }
         
-        print("✅ Pinned tab: \(title)")
+        dlog("✅ Pinned tab: \(title)")
     }
     
     func unpinTab(url: URL) {
         guard isReady else {
-            print("CloudKit manager not ready, skipping unpin operation")
+            dlog("CloudKit manager not ready, skipping unpin operation")
             return
         }
         
@@ -80,7 +80,7 @@ class CloudKitPinnedTabManager: ObservableObject {
             self?.removeFromCore(urlString: url.absoluteString)
         }
         
-        print("📌 Unpinned tab: \(url.absoluteString)")
+        dlog("📌 Unpinned tab: \(url.absoluteString)")
     }
     
     func isTabPinned(url: URL) -> Bool {
@@ -109,7 +109,7 @@ class CloudKitPinnedTabManager: ObservableObject {
             return
         }
         
-        print("🚀 Initializing CloudKit PinnedTabManager...")
+        dlog("🚀 Initializing CloudKit PinnedTabManager...")
         
         // Set up Core Data observer
         setupCoreDataObserver()
@@ -119,7 +119,7 @@ class CloudKitPinnedTabManager: ObservableObject {
         
         // Mark as ready
         isReady = true
-        print("✅ CloudKit PinnedTabManager ready")
+        dlog("✅ CloudKit PinnedTabManager ready")
     }
     
     private func loadPinnedTabs() {
@@ -136,11 +136,11 @@ class CloudKitPinnedTabManager: ObservableObject {
                 
                 DispatchQueue.main.async {
                     self.pinnedTabs = entities
-                    print("📂 Loaded \(entities.count) pinned tabs from CloudKit")
+                    dlog("📂 Loaded \(entities.count) pinned tabs from CloudKit")
                 }
                 
             } catch {
-                print("❌ Failed to load pinned tabs: \(error)")
+                dlog("❌ Failed to load pinned tabs: \(error)")
                 DispatchQueue.main.async {
                     self.pinnedTabs = []
                 }
@@ -164,21 +164,30 @@ class CloudKitPinnedTabManager: ObservableObject {
     }
     
     private func persistToCore(entity: PinnedTabEntity) {
+        let context = persistenceController.container.viewContext
+        guard let description = NSEntityDescription.entity(forEntityName: entityName, in: context) else {
+            #if DEBUG
+            dlog("❌ CloudKit pinned tab: entity '\(entityName)' missing from model")
+            #endif
+            return
+        }
+        let managedObject = NSManagedObject(entity: description, insertInto: context)
+        managedObject.setValue(entity.urlString, forKey: "urlString")
+        managedObject.setValue(entity.title, forKey: "title")
+        managedObject.setValue(entity.isPinned, forKey: "isPinned")
+        managedObject.setValue(entity.createdAt, forKey: "createdAt")
+        managedObject.setValue(entity.pinnedOrder, forKey: "pinnedOrder")
+
         do {
-            let context = persistenceController.container.viewContext
-            let managedObject = NSManagedObject(entity: NSEntityDescription.entity(forEntityName: entityName, in: context)!, insertInto: context)
-            
-            managedObject.setValue(entity.urlString, forKey: "urlString")
-            managedObject.setValue(entity.title, forKey: "title")
-            managedObject.setValue(entity.isPinned, forKey: "isPinned")
-            managedObject.setValue(entity.createdAt, forKey: "createdAt")
-            managedObject.setValue(entity.pinnedOrder, forKey: "pinnedOrder")
-            
             try context.save()
-            print("💾 Persisted pinned tab to CloudKit")
-            
+            #if DEBUG
+            dlog("💾 Persisted pinned tab to CloudKit")
+            #endif
         } catch {
-            print("❌ Failed to persist to Core Data: \(error)")
+            #if DEBUG
+            dlog("❌ Failed to persist to Core Data: \(error)")
+            #endif
+            context.rollback()
         }
     }
     
@@ -192,10 +201,10 @@ class CloudKitPinnedTabManager: ObservableObject {
             results.forEach { context.delete($0) }
             
             try context.save()
-            print("🗑️ Removed pinned tab from CloudKit")
+            dlog("🗑️ Removed pinned tab from CloudKit")
             
         } catch {
-            print("❌ Failed to remove from Core Data: \(error)")
+            dlog("❌ Failed to remove from Core Data: \(error)")
         }
     }
     
@@ -213,10 +222,10 @@ class CloudKitPinnedTabManager: ObservableObject {
             }
             
             try context.save()
-            print("🔄 Updated pinned tab order in CloudKit")
+            dlog("🔄 Updated pinned tab order in CloudKit")
             
         } catch {
-            print("❌ Failed to update order in Core Data: \(error)")
+            dlog("❌ Failed to update order in Core Data: \(error)")
         }
     }
     

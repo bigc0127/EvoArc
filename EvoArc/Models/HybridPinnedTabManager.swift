@@ -109,7 +109,7 @@ class HybridPinnedTabManager: ObservableObject {
     }
     
     private func switchToCloudKit() {
-        print("🔄 Switching to CloudKit sync...")
+        dlog("🔄 Switching to CloudKit sync...")
         
         // Migrate existing data from safe manager to CloudKit
         migrateToCloudKit()
@@ -118,7 +118,7 @@ class HybridPinnedTabManager: ObservableObject {
         isUsingCloudKit = true
         pinnedTabs = cloudKitManager.pinnedTabs
         
-        print("✅ Now using CloudKit sync")
+        dlog("✅ Now using CloudKit sync")
     }
     
     private func migrateToCloudKit() {
@@ -130,7 +130,7 @@ class HybridPinnedTabManager: ObservableObject {
         for urlString in existingURLs {
             if !cloudKitURLs.contains(urlString), let url = URL(string: urlString) {
                 cloudKitManager.pinTab(url: url, title: "Migrated Tab")
-                print("🔄 Migrated tab to CloudKit: \(urlString)")
+                dlog("🔄 Migrated tab to CloudKit: \(urlString)")
             }
         }
     }

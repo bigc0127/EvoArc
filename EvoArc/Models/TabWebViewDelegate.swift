@@ -102,7 +102,7 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
             tab?.estimatedProgress = 0
             tab?.stopLoadingTimeout()
             tab?.thumbnailUpdateTimer?.invalidate()
-            print("Navigation failed: \(error.localizedDescription)")
+            dlog("Navigation failed: \(error.localizedDescription)")
         }
     }
     
@@ -112,7 +112,7 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
             tab?.estimatedProgress = 0
             tab?.stopLoadingTimeout()
             tab?.thumbnailUpdateTimer?.invalidate()
-            print("Navigation failed: \(error.localizedDescription)")
+            dlog("Navigation failed: \(error.localizedDescription)")
         }
     }
     
@@ -122,7 +122,7 @@ class TabWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
             // Check if this is the custom newtab URL - don't actually navigate to it
             if url.absoluteString == "evoarc://newtab" {
                 #if DEBUG
-                print("[TabWebViewDelegate] Ignoring navigation to evoarc://newtab")
+                dlog("[TabWebViewDelegate] Ignoring navigation to evoarc://newtab")
                 #endif
                 return .cancel
             }

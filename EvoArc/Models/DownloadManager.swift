@@ -190,7 +190,7 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
                 NotificationCenter.default.post(name: .downloadCompleted, object: nil, userInfo: ["url": destinationURL])
             }
         } catch {
-            print("❌ Critical error moving temp file: \(error)")
+            dlog("❌ Critical error moving temp file: \(error)")
             Task { @MainActor in
                 manager.handleDownloadError(url: url, error: error)
             }
@@ -352,11 +352,11 @@ final class DownloadManager: NSObject, ObservableObject {
                                     bookmarkDataIsStale: &isStale)
                     
                     if isStale {
-                        print("⚠️ Download directory bookmark is stale")
+                        dlog("⚠️ Download directory bookmark is stale")
                     }
                     return url
                 } catch {
-                    print("❌ Failed to resolve download directory bookmark: \(error)")
+                    dlog("❌ Failed to resolve download directory bookmark: \(error)")
                 }
             }
             
@@ -408,7 +408,7 @@ final class DownloadManager: NSObject, ObservableObject {
         
         // Check if we can write here
         if !FileManager.default.isWritableFile(atPath: destDir.path) {
-            print("⚠️ Destination directory is not writable: \(destDir.path)")
+            dlog("⚠️ Destination directory is not writable: \(destDir.path)")
             // If it's the Documents directory, it should be writable.
             // If it's a security scoped URL, maybe we need to verify write access?
         }
@@ -448,10 +448,10 @@ final class DownloadManager: NSObject, ObservableObject {
             
             // 5. Notify UI
             NotificationCenter.default.post(name: .downloadSettingsChanged, object: nil)
-            print("✅ Saved download directory bookmark")
+            dlog("✅ Saved download directory bookmark")
             
         } catch {
-            print("❌ Failed to create bookmark for download directory: \(error)")
+            dlog("❌ Failed to create bookmark for download directory: \(error)")
         }
     }
     
@@ -796,7 +796,7 @@ final class DownloadManager: NSObject, ObservableObject {
 ///     queue: .main
 /// ) { notification in
 ///     if let url = notification.userInfo?["url"] as? URL {
-///         print("Download completed: \(url.lastPathComponent)")
+///         dlog("Download completed: \(url.lastPathComponent)")
 ///     }
 /// }
 /// ```

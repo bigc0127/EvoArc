@@ -84,11 +84,11 @@ struct PerplexityWebViewiOS: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         weak var webView: WKWebView?
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("Started loading Perplexity page")
+            dlog("Started loading Perplexity page")
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("Finished loading Perplexity page")
+            dlog("Finished loading Perplexity page")
             
             // Simplified authentication check - only on perplexity.ai domains
             if let url = webView.url, url.host?.contains("perplexity.ai") == true {
@@ -97,7 +97,7 @@ struct PerplexityWebViewiOS: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("Failed to load Perplexity page: \(error.localizedDescription)")
+            dlog("Failed to load Perplexity page: \(error.localizedDescription)")
         }
         
         deinit {

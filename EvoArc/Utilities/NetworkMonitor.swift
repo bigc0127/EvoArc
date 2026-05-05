@@ -275,7 +275,7 @@ final class NetworkMonitor {
 //     init() {
 //         NetworkMonitor.shared.$isOnline
 //             .sink { isOnline in
-//                 print("Network status changed: \(isOnline)")
+//                 dlog("Network status changed: \(isOnline)")
 //                 // React to change
 //             }
 //             .store(in: &cancellables)
@@ -332,9 +332,9 @@ final class NetworkMonitor {
 //     let url = URL(string: "https://www.apple.com")!
 //     URLSession.shared.dataTask(with: url) { data, response, error in
 //         if error == nil {
-//             print("Internet actually works!")
+//             dlog("Internet actually works!")
 //         } else {
-//             print("Network connected but no internet (captive portal?)")
+//             dlog("Network connected but no internet (captive portal?)")
 //         }
 //     }.resume()
 // }

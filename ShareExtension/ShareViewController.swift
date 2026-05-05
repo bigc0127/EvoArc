@@ -9,6 +9,13 @@
 import UIKit
 import UniformTypeIdentifiers
 
+@inlinable
+nonisolated func dlog(_ message: @autoclosure () -> Any) {
+    #if DEBUG
+    Swift.print(message())
+    #endif
+}
+
 extension String {
     /// The first URL found within this String, or nil if no URL is found
     var firstURL: URL? {
@@ -26,7 +33,7 @@ class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        print("[ShareExtension] viewDidLoad called")
+        dlog("[ShareExtension] viewDidLoad called")
         
         // Hide the view immediately
         view.alpha = 0
@@ -35,17 +42,17 @@ class ShareViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        print("[ShareExtension] viewDidAppear called")
+        dlog("[ShareExtension] viewDidAppear called")
         
         // Process when the view is in the responder chain
         processSharedContent()
     }
     
     private func processSharedContent() {
-        print("[ShareExtension] processSharedContent called")
+        dlog("[ShareExtension] processSharedContent called")
         
         guard let inputItems = extensionContext?.inputItems as? [NSExtensionItem] else {
-            print("[ShareExtension] No input items")
+            dlog("[ShareExtension] No input items")
             cancel()
             return
         }
@@ -59,28 +66,28 @@ class ShareViewController: UIViewController {
         // Look for the first URL the host application is sharing.
         // If there isn't a URL grab the first text item
         guard let provider = attachments.first(where: { $0.isUrl }) ?? attachments.first(where: { $0.isText }) else {
-            print("[ShareExtension] No URL or text found, cancelling")
+            dlog("[ShareExtension] No URL or text found, cancelling")
             cancel()
             return
         }
         
-        print("[ShareExtension] Found provider, loading item...")
+        dlog("[ShareExtension] Found provider, loading item...")
         
         provider.loadItem(forTypeIdentifier: provider.isUrl ? UTType.url.identifier : UTType.text.identifier) { item, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("[ShareExtension] Error loading item: \(error)")
+                    dlog("[ShareExtension] Error loading item: \(error)")
                     self.cancel()
                     return
                 }
                 
                 guard let item = item, let schemeUrl = Scheme(item: item)?.schemeUrl else {
-                    print("[ShareExtension] Failed to create scheme URL")
+                    dlog("[ShareExtension] Failed to create scheme URL")
                     self.cancel()
                     return
                 }
                 
-                print("[ShareExtension] Created scheme URL: \(schemeUrl.absoluteString)")
+                dlog("[ShareExtension] Created scheme URL: \(schemeUrl.absoluteString)")
                 self.handleUrl(schemeUrl)
             }
         }
@@ -132,11 +139,11 @@ class ShareViewController: UIViewController {
     
     
     private func handleUrl(_ url: URL) {
-        print("[ShareExtension] Opening URL: \(url.absoluteString)")
+        dlog("[ShareExtension] Opening URL: \(url.absoluteString)")
         
         // Use the official API to open the host app
         extensionContext?.open(url, completionHandler: { success in
-            print("[ShareExtension] Open URL completed: success=\(success)")
+            dlog("[ShareExtension] Open URL completed: success=\(success)")
             
             // Close the extension
             self.cancel()

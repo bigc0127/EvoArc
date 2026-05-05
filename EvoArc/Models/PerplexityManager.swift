@@ -229,7 +229,7 @@ final class PerplexityManager: ObservableObject {
                 let cookiesData = try NSKeyedArchiver.archivedData(withRootObject: cookies, requiringSecureCoding: true)
                 UserDefaults.standard.set(cookiesData, forKey: self.perplexityCookiesKey)
             } catch {
-                print("Failed to save cookies: \(error)")
+                dlog("Failed to save cookies: \(error)")
             }
         }
     }
@@ -271,7 +271,7 @@ final class PerplexityManager: ObservableObject {
             cookie.domain.contains("perplexity.ai")
         }
         
-        print("🔄 Syncing \(perplexityCookies.count) Perplexity cookies from WebKit to HTTPCookieStorage")
+        dlog("🔄 Syncing \(perplexityCookies.count) Perplexity cookies from WebKit to HTTPCookieStorage")
         
         for cookie in perplexityCookies {
             cookieStore.setCookie(cookie)
@@ -285,14 +285,14 @@ final class PerplexityManager: ObservableObject {
         // Check if we have valid session cookies
         guard let perplexityURL = URL(string: "https://www.perplexity.ai"),
               let cookies = cookieStore.cookies(for: perplexityURL) else {
-            print("🔍 No cookies found for Perplexity")
+            dlog("🔍 No cookies found for Perplexity")
             self.isAuthenticated = false
             return
         }
         
-        print("🔍 Found \(cookies.count) cookies for Perplexity:")
+        dlog("🔍 Found \(cookies.count) cookies for Perplexity:")
         for cookie in cookies {
-            print("  - \(cookie.name): \(cookie.value.prefix(20))...")
+            dlog("  - \(cookie.name): \(cookie.value.prefix(20))...")
         }
         
         // Look for session-related cookies that indicate authentication
@@ -312,11 +312,11 @@ final class PerplexityManager: ObservableObject {
         let wasAuthenticated = self.isAuthenticated
         self.isAuthenticated = !sessionCookies.isEmpty
         
-        print("🔍 Found \(sessionCookies.count) potential session cookies")
-        print("🔍 Authentication status: \(self.isAuthenticated ? "✅ Authenticated" : "❌ Not authenticated")")
+        dlog("🔍 Found \(sessionCookies.count) potential session cookies")
+        dlog("🔍 Authentication status: \(self.isAuthenticated ? "✅ Authenticated" : "❌ Not authenticated")")
         
         if !wasAuthenticated && self.isAuthenticated {
-            print("🎉 Authentication status changed to authenticated!")
+            dlog("🎉 Authentication status changed to authenticated!")
         }
     }
     
@@ -343,9 +343,9 @@ final class PerplexityManager: ObservableObject {
         performAuthenticationCheck()
         
         if isAuthenticated {
-            print("✅ Successfully authenticated with Perplexity")
+            dlog("✅ Successfully authenticated with Perplexity")
         } else {
-            print("⚠️ Login may not have completed successfully - user should try refreshing or logging in again")
+            dlog("⚠️ Login may not have completed successfully - user should try refreshing or logging in again")
         }
     }
     
@@ -358,12 +358,12 @@ final class PerplexityManager: ObservableObject {
         // Clear saved cookies asynchronously
         clearSavedCookies()
         
-        print("Signed out of Perplexity")
+        dlog("Signed out of Perplexity")
     }
     
     // Public method to refresh authentication status
     func refreshAuthenticationStatus() {
-        print("🔄 Manually refreshing Perplexity authentication status...")
+        dlog("🔄 Manually refreshing Perplexity authentication status...")
         checkAuthenticationStatus()
     }
     
@@ -381,7 +381,7 @@ final class PerplexityManager: ObservableObject {
             
             // If authentication status changed, notify user
             if !wasAuthenticated && self.isAuthenticated {
-                print("✅ Successfully authenticated with Perplexity!")
+                dlog("✅ Successfully authenticated with Perplexity!")
             }
         }
     }
@@ -389,7 +389,7 @@ final class PerplexityManager: ObservableObject {
     // MARK: - Action Methods
     func performAction(_ action: PerplexityAction, for url: URL, title: String? = nil) {
         guard isAuthenticated else {
-            print("Perplexity not authenticated")
+            dlog("Perplexity not authenticated")
             return
         }
         

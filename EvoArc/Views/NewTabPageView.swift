@@ -223,32 +223,32 @@ struct NewTabPageView: View {
         guard !trimmed.isEmpty else { return }
         
         #if DEBUG
-        print("[NewTabPage] performSearch called with: \(trimmed)")
+        dlog("[NewTabPage] performSearch called with: \(trimmed)")
         #endif
         
         // Format the input as a URL or search query
         guard let formattedURL = formatURL(from: trimmed) else {
             #if DEBUG
-            print("[NewTabPage] Failed to format URL from: \(trimmed)")
+            dlog("[NewTabPage] Failed to format URL from: \(trimmed)")
             #endif
             return
         }
         
         #if DEBUG
-        print("[NewTabPage] Formatted URL: \(formattedURL.absoluteString)")
+        dlog("[NewTabPage] Formatted URL: \(formattedURL.absoluteString)")
         #endif
         
         // Mark that we should now show URLs in the bar (transitioning from new tab page)
         guard let selectedTab = tabManager.selectedTab else {
             #if DEBUG
-            print("[NewTabPage] No selected tab found")
+            dlog("[NewTabPage] No selected tab found")
             #endif
             return
         }
         
         #if DEBUG
-        print("[NewTabPage] Selected tab ID: \(selectedTab.id)")
-        print("[NewTabPage] WebView exists: \(selectedTab.webView != nil)")
+        dlog("[NewTabPage] Selected tab ID: \(selectedTab.id)")
+        dlog("[NewTabPage] WebView exists: \(selectedTab.webView != nil)")
         #endif
         
         // Transition from new tab page to normal browsing
@@ -257,12 +257,12 @@ struct NewTabPageView: View {
         // Navigate to the formatted URL
         if let webView = selectedTab.webView {
             #if DEBUG
-            print("[NewTabPage] Loading URL in webView: \(formattedURL.absoluteString)")
+            dlog("[NewTabPage] Loading URL in webView: \(formattedURL.absoluteString)")
             #endif
             webView.load(URLRequest(url: formattedURL))
         } else {
             #if DEBUG
-            print("[NewTabPage] WebView is nil, setting tab.url instead")
+            dlog("[NewTabPage] WebView is nil, setting tab.url instead")
             #endif
             // If webView doesn't exist yet, set the URL on the tab
             // The webView will load it when it's created

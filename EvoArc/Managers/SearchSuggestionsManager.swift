@@ -402,7 +402,7 @@ final class SearchSuggestionsManager: ObservableObject {
         } catch {
             /// Network or parsing error.
             /// Log and return empty (graceful degradation).
-            print("Failed to fetch search suggestions: \(error)")
+            dlog("Failed to fetch search suggestions: \(error)")
             return []
         }
     }
@@ -457,7 +457,7 @@ final class SearchSuggestionsManager: ObservableObject {
             
         } catch {
             /// JSON parsing failed.
-            print("Failed to parse search suggestions: \(error)")
+            dlog("Failed to parse search suggestions: \(error)")
             return []
         }
     }

@@ -25,14 +25,14 @@ class SafePinnedTabManager: ObservableObject {
         if !pinnedTabs.contains(url.absoluteString) {
             pinnedTabs.append(url.absoluteString)
             savePinnedTabs()
-            print("✅ Pinned tab: \(title)")
+            dlog("✅ Pinned tab: \(title)")
         }
     }
     
     func unpinTab(url: URL) {
         pinnedTabs.removeAll { $0 == url.absoluteString }
         savePinnedTabs()
-        print("📌 Unpinned tab: \(url.absoluteString)")
+        dlog("📌 Unpinned tab: \(url.absoluteString)")
     }
     
     func isTabPinned(url: URL) -> Bool {

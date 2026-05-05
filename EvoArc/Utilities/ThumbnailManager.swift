@@ -176,7 +176,7 @@ class ThumbnailManager: ObservableObject {
             guard let image = image else {
                 /// Snapshot failed - log error and return.
                 if let error = error {
-                    print("Thumbnail capture failed: \(error.localizedDescription)")
+                    dlog("Thumbnail capture failed: \(error.localizedDescription)")
                 }
                 return
             }

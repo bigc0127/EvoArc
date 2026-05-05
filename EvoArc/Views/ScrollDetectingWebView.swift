@@ -176,7 +176,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
         tab.webView = webView
         
         context.coordinator.webView = webView
-        print("🔵 iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
+        dlog("🔵 iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         context.coordinator.setupObservers()
         
         // Load initial URL if available
@@ -255,17 +255,17 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 switch keyPath {
                 case #keyPath(WKWebView.isLoading):
                     self.parent.tab.isLoading = webView.isLoading
-                    print("ℹ️ iOS KVO isLoading=\(webView.isLoading) URL=\(webView.url?.absoluteString ?? "unknown")")
+                    dlog("ℹ️ iOS KVO isLoading=\(webView.isLoading) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.estimatedProgress):
                     self.parent.tab.estimatedProgress = webView.estimatedProgress
-                    print("📈 iOS progress=\(String(format: "%.2f", webView.estimatedProgress)) URL=\(webView.url?.absoluteString ?? "unknown")")
+                    dlog("📈 iOS progress=\(String(format: "%.2f", webView.estimatedProgress)) URL=\(webView.url?.absoluteString ?? "unknown")")
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
-                    print("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
+                    dlog("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
-                    print("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
+                    dlog("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -289,13 +289,13 @@ struct ScrollAwareWebView: UIViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 parent.tab.isLoading = true
                 parent.tab.estimatedProgress = 0.0
                 parent.tab.startLoadingTimeout()
-                print("💪 iOS: Started loading timeout for tab: \(parent.tab.id)")
+                dlog("💪 iOS: Started loading timeout for tab: \(parent.tab.id)")
                 
                 // Record navigation start time for tap intent detection
                 // This helps determine if a tap triggered navigation (clicked a link)
@@ -311,8 +311,8 @@ struct ScrollAwareWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 // Ensure we're scrolled to the real top, accounting for adjusted content inset
                 let topInset = webView.scrollView.adjustedContentInset.top
@@ -324,7 +324,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 1.0
                 parent.tab.stopLoadingTimeout()
-                print("🚫 iOS: Stopped loading timeout for tab: \(parent.tab.id)")
+                dlog("🚫 iOS: Stopped loading timeout for tab: \(parent.tab.id)")
                 if let url = webView.url {
                     parent.tab.url = url
                     // Show URL unless it's the homepage
@@ -336,7 +336,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
                     HistoryManager.shared.addEntry(url: url, title: title)
-                    print("📚 iOS: Added to history: \(title) - \(url.absoluteString)")
+                    dlog("📚 iOS: Added to history: \(title) - \(url.absoluteString)")
                     
                     // Apply JavaScript blocking settings for the new URL
                     let jsBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: url)
@@ -354,33 +354,33 @@ struct ScrollAwareWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             let nsError = error as NSError
             if nsError.code == NSURLErrorCancelled {
-                print("💫 iOS: Navigation cancelled (expected)")
+                dlog("💫 iOS: Navigation cancelled (expected)")
                 return
             }
             Task { @MainActor in
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 0.0
                 parent.tab.stopLoadingTimeout()
-                print("🚫 iOS: Stopped loading timeout for failed nav: \(parent.tab.id)")
+                dlog("🚫 iOS: Stopped loading timeout for failed nav: \(parent.tab.id)")
             }
-            print("😨 iOS: didFailProvisionalNavigation - URL=\(webView.url?.absoluteString ?? "unknown") code=\(nsError.code) domain=\(nsError.domain) desc=\(nsError.localizedDescription)")
+            dlog("😨 iOS: didFailProvisionalNavigation - URL=\(webView.url?.absoluteString ?? "unknown") code=\(nsError.code) domain=\(nsError.domain) desc=\(nsError.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            print("🎯 Navigation policy requested for: \(navigationAction.request.url?.absoluteString ?? "unknown URL")")
-            print("🎯 Navigation type: \(navigationAction.navigationType.rawValue)")
+            dlog("🎯 Navigation policy requested for: \(navigationAction.request.url?.absoluteString ?? "unknown URL")")
+            dlog("🎯 Navigation type: \(navigationAction.navigationType.rawValue)")
             decisionHandler(.allow)
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-            print("🎯 Response policy requested for: \(navigationResponse.response.url?.absoluteString ?? "unknown URL")")
+            dlog("🎯 Response policy requested for: \(navigationResponse.response.url?.absoluteString ?? "unknown URL")")
             
             if let httpResponse = navigationResponse.response as? HTTPURLResponse {
-                print("🎯 HTTP Status: \(httpResponse.statusCode)")
+                dlog("🎯 HTTP Status: \(httpResponse.statusCode)")
                 
                 // Check if this is a download (MIME type or Content-Disposition)
                 if !navigationResponse.canShowMIMEType {
-                    print("⬇️ Detected non-displayable MIME type: \(navigationResponse.response.mimeType ?? "unknown")")
+                    dlog("⬇️ Detected non-displayable MIME type: \(navigationResponse.response.mimeType ?? "unknown")")
                     
                     if let url = navigationResponse.response.url {
                         // Hand off to DownloadManager
@@ -396,7 +396,7 @@ struct ScrollAwareWebView: UIViewRepresentable {
                 // Check Content-Disposition header for "attachment"
                 if let contentDisposition = httpResponse.allHeaderFields["Content-Disposition"] as? String,
                    contentDisposition.lowercased().contains("attachment") {
-                    print("⬇️ Detected Content-Disposition attachment")
+                    dlog("⬇️ Detected Content-Disposition attachment")
                     
                     if let url = navigationResponse.response.url {
                         // Hand off to DownloadManager

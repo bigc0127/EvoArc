@@ -216,10 +216,10 @@ class BookmarkManager: ObservableObject {
             userDefaults.set(bookmarksData, forKey: bookmarksKey)
             userDefaults.set(foldersData, forKey: foldersKey)
             
-            print("📚 Saved \(bookmarks.count) bookmarks and \(folders.count) folders")
+            dlog("📚 Saved \(bookmarks.count) bookmarks and \(folders.count) folders")
         } catch {
             /// Encoding failed (very rare - would indicate corrupt data structures).
-            print("❌ Failed to save bookmarks: \(error)")
+            dlog("❌ Failed to save bookmarks: \(error)")
         }
     }
     
@@ -259,7 +259,7 @@ class BookmarkManager: ObservableObject {
                 folders = try JSONDecoder().decode([BookmarkFolder].self, from: foldersData)
             } catch {
                 /// Decoding failed (corrupt data, schema change, etc.).
-                print("❌ Failed to load bookmark folders: \(error)")
+                dlog("❌ Failed to load bookmark folders: \(error)")
                 folders = []  // Reset to empty on error
             }
         }
@@ -269,12 +269,12 @@ class BookmarkManager: ObservableObject {
             do {
                 bookmarks = try JSONDecoder().decode([Bookmark].self, from: bookmarksData)
             } catch {
-                print("❌ Failed to load bookmarks: \(error)")
+                dlog("❌ Failed to load bookmarks: \(error)")
                 bookmarks = []  // Reset to empty on error
             }
         }
         
-        print("📚 Loaded \(bookmarks.count) bookmarks and \(folders.count) folders")
+        dlog("📚 Loaded \(bookmarks.count) bookmarks and \(folders.count) folders")
         
         /// Create default "Favorites" folder on first launch.
         /// 
@@ -327,7 +327,7 @@ class BookmarkManager: ObservableObject {
         /// For better performance with 1000s of bookmarks,
         /// could maintain a Set<URL> for O(1) lookup.
         if bookmarks.contains(where: { $0.url == url }) {
-            print("📚 Bookmark already exists for URL: \(url)")
+            dlog("📚 Bookmark already exists for URL: \(url)")
             return
         }
         
@@ -344,7 +344,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist to disk
         
-        print("📚 Added bookmark: \(title) -> \(url)")
+        dlog("📚 Added bookmark: \(title) -> \(url)")
     }
     
     /// Removes a bookmark.
@@ -360,7 +360,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist change
         
-        print("📚 Removed bookmark: \(bookmark.title)")
+        dlog("📚 Removed bookmark: \(bookmark.title)")
     }
     
     /// Updates a bookmark's title or folder.
@@ -394,7 +394,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist changes
         
-        print("📚 Updated bookmark: \(bookmarks[index].title)")
+        dlog("📚 Updated bookmark: \(bookmarks[index].title)")
     }
     
     /// Checks if a URL is bookmarked.
@@ -446,7 +446,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist new folder
         
-        print("📚 Created folder: \(name)")
+        dlog("📚 Created folder: \(name)")
         return folder
     }
     
@@ -485,7 +485,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist changes
         
-        print("📚 Removed folder: \(folder.name)")
+        dlog("📚 Removed folder: \(folder.name)")
     }
     
     /// Renames a folder.
@@ -505,7 +505,7 @@ class BookmarkManager: ObservableObject {
         
         saveBookmarks()  // Persist change
         
-        print("📚 Renamed folder to: \(newName)")
+        dlog("📚 Renamed folder to: \(newName)")
     }
     
     // MARK: - Query Operations
@@ -571,34 +571,6 @@ class BookmarkManager: ObservableObject {
     /// **Returns**: The Favorites folder, or nil if it doesn't exist (unlikely).
     var favoritesFolder: BookmarkFolder? {
         return folders.first { $0.name == "Favorites" }
-    }
-    
-    // MARK: - Import/Export (Future enhancement)
-    // Placeholder methods for importing/exporting bookmarks.
-    
-    /// Exports bookmarks to HTML format (standard browser bookmark format).
-    ///
-    /// **Future implementation**: Will generate HTML compatible with
-    /// Chrome, Firefox, Safari bookmark exports.
-    ///
-    /// **Returns**: HTML string if successful, nil otherwise
-    func exportBookmarks() -> String? {
-        // TODO: Implement HTML bookmarks format
-        // Standard format: <DT><A HREF="url">title</A>
-        return nil
-    }
-    
-    /// Imports bookmarks from HTML or JSON data.
-    ///
-    /// **Future implementation**: Will parse:
-    /// 1. HTML bookmark files (from other browsers)
-    /// 2. JSON bookmark files (from app backups)
-    ///
-    /// **Parameter**:
-    /// - data: Raw bookmark file data
-    func importBookmarks(from data: Data) {
-        // TODO: Implement import from HTML or JSON
-        // Should merge with existing bookmarks (avoid duplicates)
     }
 }
 

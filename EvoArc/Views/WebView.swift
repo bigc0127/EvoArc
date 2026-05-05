@@ -149,7 +149,7 @@ struct WebView: UIViewRepresentable {
         // Give coordinator access to web view for delegate method implementation
         context.coordinator.webView = webView
         
-        print("🔵 iOS WebView: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
+        dlog("🔵 iOS WebView: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Set up Key-Value Observing (KVO) for automatic UI updates
         // These observers automatically update the tab state when WebView properties change
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
@@ -234,10 +234,10 @@ struct WebView: UIViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
-                    print("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
+                    dlog("🔙 iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
-                    print("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
+                    dlog("🔜 iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -246,14 +246,14 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 iOS WebView: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("🔄 iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 iOS WebView: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             // We only update the UI state when navigation actually starts
             Task { @MainActor in
                 // Force loading state to true when navigation starts
                 // Loading state is handled by KVO
                 parent.tab.startLoadingTimeout()
-                print("💪 Started loading timeout for tab: \(parent.tab.id)")
+                dlog("💪 Started loading timeout for tab: \(parent.tab.id)")
                 
                 if let url = webView.url {
                     parent.tab.url = url
@@ -266,8 +266,8 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 iOS WebView: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 iOS WebView: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 // Ensure we're scrolled to the real top, accounting for adjusted content inset
                 let topInset = webView.scrollView.adjustedContentInset.top
@@ -280,7 +280,7 @@ struct WebView: UIViewRepresentable {
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 1.0
                 parent.tab.stopLoadingTimeout()
-                print("🚫 Stopped loading timeout for tab: \(parent.tab.id)")
+                dlog("🚫 Stopped loading timeout for tab: \(parent.tab.id)")
                 
                 if let url = webView.url {
                     parent.tab.url = url
@@ -293,7 +293,7 @@ struct WebView: UIViewRepresentable {
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
                     HistoryManager.shared.addEntry(url: url, title: title)
-                    print("📚 Added to history: \(title) - \(url.absoluteString)")
+                    dlog("📚 Added to history: \(title) - \(url.absoluteString)")
                     
                     // Apply JavaScript blocking settings for the new URL
                     let jsBlocked = JavaScriptBlockingManager.shared.isJavaScriptBlocked(for: url)
@@ -314,24 +314,24 @@ struct WebView: UIViewRepresentable {
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             let nsError = error as NSError
-            print("😨 iOS: didFailProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown") - Error: \(nsError.code)")
+            dlog("😨 iOS: didFailProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown") - Error: \(nsError.code)")
             
             Task { @MainActor in
                 // Force loading state to false when navigation fails
                 parent.tab.isLoading = false
                 parent.tab.estimatedProgress = 0.0
                 parent.tab.stopLoadingTimeout()
-                print("🚫 Stopped loading timeout for failed navigation: \(parent.tab.id)")
+                dlog("🚫 Stopped loading timeout for failed navigation: \(parent.tab.id)")
             }
             
             // Handle canceled requests (error code -999) gracefully
             if nsError.code == NSURLErrorCancelled {
-                print("💫 Navigation cancelled (expected)")
+                dlog("💫 Navigation cancelled (expected)")
                 return
             }
             
             // For other errors, we might want to show an error page or message
-            print("Navigation failed: \(error)")
+            dlog("Navigation failed: \(error)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {

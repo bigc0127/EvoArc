@@ -38,7 +38,7 @@ import UIKit             // iOS/macOS UI framework - provides UIDevice for devic
 /// if iOSVersionHelper.isVersion(atLeast: 17) {
 ///     // Use iOS 17+ features
 /// }
-/// print(iOSVersionHelper.versionString) // "17.2.1"
+/// dlog(iOSVersionHelper.versionString) // "17.2.1"
 /// ```
 ///
 /// **Design Pattern**: Static utility class (all methods/properties are static,
