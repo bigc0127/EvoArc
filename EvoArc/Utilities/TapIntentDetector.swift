@@ -164,7 +164,7 @@ struct TapIntentDetector {
                 
                 // Check for errors
                 if let error = error {
-                    print("⚠️ TapIntentDetector: JS evaluation failed - \(error.localizedDescription)")
+                    dlog("⚠️ TapIntentDetector: JS evaluation failed - \(error.localizedDescription)")
                     // On error, assume non-interactive (safe default: show bar)
                     completion(false)
                     return
@@ -172,11 +172,11 @@ struct TapIntentDetector {
                 
                 // Parse result: JavaScript returns a boolean
                 if let isInteractive = result as? Bool {
-                    print("ℹ️ TapIntentDetector: Tap at (\(Int(pageX)), \(Int(pageY))) is \(isInteractive ? "INTERACTIVE" : "empty area")")
+                    dlog("ℹ️ TapIntentDetector: Tap at (\(Int(pageX)), \(Int(pageY))) is \(isInteractive ? "INTERACTIVE" : "empty area")")
                     completion(isInteractive)
                 } else {
                     // Unexpected result type
-                    print("⚠️ TapIntentDetector: Unexpected JS result type: \(String(describing: result))")
+                    dlog("⚠️ TapIntentDetector: Unexpected JS result type: \(String(describing: result))")
                     completion(false)
                 }
             }

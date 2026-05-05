@@ -53,7 +53,7 @@ import Combine     // Reactive framework - ObservableObject
 ///
 /// // Check if blocked
 /// if manager.isJavaScriptBlocked(for: url) {
-///     print("JS is blocked on this site")
+///     dlog("JS is blocked on this site")
 /// }
 ///
 /// // Unblock

@@ -782,13 +782,13 @@ struct ContentView: View {
     /// - url: The incoming URL from another app
     private func handleIncomingURL(_ url: URL) {
         #if DEBUG
-        print("[ContentView] handleIncomingURL called with: \(url.absoluteString)")
+        dlog("[ContentView] handleIncomingURL called with: \(url.absoluteString)")
         #endif
         
         // Check if this is from share extension
         if url.scheme == "evoarc" {
             #if DEBUG
-            print("[ContentView] Detected evoarc:// scheme, delegating to EvoArcApp handler")
+            dlog("[ContentView] Detected evoarc:// scheme, delegating to EvoArcApp handler")
             #endif
             // Don't handle custom schemes here - let EvoArcApp handle them
             return
@@ -798,7 +798,7 @@ struct ContentView: View {
         guard settings.redirectExternalSearches else {
             // Redirect is off: just open the URL as-is in a new tab
             #if DEBUG
-            print("[ContentView] Opening URL directly (no redirect): \(url.absoluteString)")
+            dlog("[ContentView] Opening URL directly (no redirect): \(url.absoluteString)")
             #endif
             tabManager.createNewTab(url: url)
             return  // Exit early
@@ -809,13 +809,13 @@ struct ContentView: View {
            let target = BrowserSettings.shared.searchURL(for: query) {  // Build new search URL
             // Successfully extracted query and built target URL
             #if DEBUG
-            print("[ContentView] Redirecting search query: \(query)")
+            dlog("[ContentView] Redirecting search query: \(query)")
             #endif
             tabManager.createNewTab(url: target)  // Open redirected search
         } else {
             // Couldn't extract a query (not a search URL) - open original URL
             #if DEBUG
-            print("[ContentView] Opening URL (not a search): \(url.absoluteString)")
+            dlog("[ContentView] Opening URL (not a search): \(url.absoluteString)")
             #endif
             tabManager.createNewTab(url: url)
         }
@@ -845,7 +845,7 @@ struct ContentView: View {
         }
         
         #if DEBUG
-        print("[ContentView] Found pending shared URL: \(urlString)")
+        dlog("[ContentView] Found pending shared URL: \(urlString)")
         #endif
         
         // Clear the pending URL
@@ -1254,7 +1254,7 @@ struct ContentView: View {
 //    - TabViewContainer.swift: Web view wrapper and scroll handling
 //
 // 9. DEBUGGING TIPS:
-//    - Use print() statements to trace state changes
+//    - Use dlog() statements to trace state changes
 //    - SwiftUI's Live Preview for rapid iteration
 //    - Xcode's View Hierarchy debugger to inspect layout
 //    - Look for @Published properties in manager classes (TabManager, etc.)

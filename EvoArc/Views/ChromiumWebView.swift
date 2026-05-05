@@ -116,7 +116,7 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         // Set coordinator's webView reference
         context.coordinator.webView = webView
         
-        print("🔵 Chromium iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
+        dlog("🔵 Chromium iOS: Setting up KVO observers for webView=\(Unmanaged.passUnretained(webView).toOpaque()) tab=\(tab.id)")
         // Add observers for loading state
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.isLoading), options: .new, context: nil)
         webView.addObserver(context.coordinator, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
@@ -196,10 +196,10 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
                 case #keyPath(WKWebView.title):
                     self.parent.tab.title = webView.title ?? "New Tab"
                 case #keyPath(WKWebView.canGoBack):
-                    print("🔙 Chromium iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
+                    dlog("🔙 Chromium iOS KVO canGoBack=\(webView.canGoBack) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoBack = webView.canGoBack
                 case #keyPath(WKWebView.canGoForward):
-                    print("🔜 Chromium iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
+                    dlog("🔜 Chromium iOS KVO canGoForward=\(webView.canGoForward) for tab=\(self.parent.tab.id)")
                     self.parent.tab.canGoForward = webView.canGoForward
                 default:
                     break
@@ -209,8 +209,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         
         // MARK: - Navigation Delegate Methods
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🔄 Chromium iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 Chromium iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("🔄 Chromium iOS: didStartProvisionalNavigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 Chromium iOS: At nav start - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
@@ -223,8 +223,8 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ Chromium iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
-            print("🔍 Chromium iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
+            dlog("✅ Chromium iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
+            dlog("🔍 Chromium iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")
             Task { @MainActor in
                 if let url = webView.url {
                     parent.tab.url = url
@@ -237,7 +237,7 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
                     // Add to browsing history
                     let title = webView.title ?? parent.tab.title
                     HistoryManager.shared.addEntry(url: url, title: title)
-                    print("📚 Chromium iOS: Added to history: \(title) - \(url.absoluteString)")
+                    dlog("📚 Chromium iOS: Added to history: \(title) - \(url.absoluteString)")
                 }
                 
                 // Inject Chrome-specific features after page load
@@ -265,7 +265,7 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
             if nsError.code == NSURLErrorCancelled {
                 return
             }
-            print("Chromium mode navigation failed: \(error)")
+            dlog("Chromium mode navigation failed: \(error)")
         }
         
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -273,7 +273,7 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
             if let url = navigationAction.request.url {
                 if url.scheme == "chrome" || url.scheme == "chrome-extension" {
                     // Handle Chrome-specific URLs
-                    print("Chrome-specific URL detected: \(url)")
+                    dlog("Chrome-specific URL detected: \(url)")
                     decisionHandler(.cancel)
                     return
                 }

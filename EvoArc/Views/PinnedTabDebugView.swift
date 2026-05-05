@@ -10,7 +10,6 @@ import SwiftUI
 struct PinnedTabDebugView: View {
     @ObservedObject private var hybridManager = HybridPinnedTabManager.shared
     @ObservedObject private var cloudKitManager = CloudKitPinnedTabManager.shared
-    @ObservedObject private var safeManager = SafePinnedTabManager.shared
     
     var tabManager: TabManager?
     
@@ -59,8 +58,6 @@ struct PinnedTabDebugView: View {
                 Text("Pinned (Hybrid): \(hybridManager.pinnedTabs.count)")
                     .font(.caption)
                 Text("Pinned (CloudKit): \(cloudKitManager.pinnedTabs.count)")
-                    .font(.caption)
-                Text("Pinned (Safe): \(safeManager.pinnedTabs.count)")
                     .font(.caption)
             }
             

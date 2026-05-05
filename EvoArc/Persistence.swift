@@ -60,19 +60,13 @@ struct PersistenceController {
             newItem.timestamp = Date()
         }
         
-        /// Try to save the sample data to the in-memory store.
-        /// do-catch is Swift's error handling mechanism.
         do {
             try viewContext.save()
         } catch {
-            /// If saving fails, crash the app with a descriptive error.
-            /// 
-            /// For Swift beginners:
-            /// - fatalError() immediately terminates the app (should only be used in development)
-            /// - In production code, handle errors gracefully instead
-            /// - This is Xcode's template code and should be improved for shipping apps
+            #if DEBUG
             let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            assertionFailure("Preview Core Data save failed: \(nsError), \(nsError.userInfo)")
+            #endif
         }
         return result
     }()
@@ -114,32 +108,39 @@ struct PersistenceController {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }
         
-        /// Load the persistent stores (databases) from disk (or /dev/null).
-        /// This is asynchronous - it happens in the background.
-        /// The completionHandler closure runs when loading finishes.
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            /// Check if an error occurred during loading.
-            /// 'if let' safely unwraps the optional error.
-            if let error = error as NSError? {
-                /// Core Data loading failed - this is a serious error.
-                /// 
-                /// Common causes:
-                /// - Corrupted database file
-                /// - Insufficient disk space  
-                /// - File permissions issue
-                /// - Failed migration when app model changed
-                /// - Device locked with data protection enabled
-                /// 
-                /// For production apps, this should:
-                /// 1. Log the error to analytics
-                /// 2. Attempt to recover (delete and rebuild database)
-                /// 3. Show user-friendly error message
-                /// 4. NOT crash the app
-                /// 
-                /// This Xcode template uses fatalError for development simplicity.
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+        // Load the persistent stores. On failure (corrupt file, failed migration,
+        // disk full, locked device) attempt one rebuild before giving up. We never
+        // crash in production — App Store review treats Core Data crashes as a hard
+        // rejection trigger.
+        container.loadPersistentStores { [weak container] storeDescription, error in
+            guard let error = error as NSError? else { return }
+
+            #if DEBUG
+            dlog("⚠️ Core Data load failed: \(error), \(error.userInfo)")
+            #endif
+
+            guard
+                let container = container,
+                let storeURL = storeDescription.url,
+                storeURL.isFileURL
+            else { return }
+
+            let coordinator = container.persistentStoreCoordinator
+            try? coordinator.destroyPersistentStore(at: storeURL, ofType: NSSQLiteStoreType, options: nil)
+
+            do {
+                try coordinator.addPersistentStore(
+                    ofType: NSSQLiteStoreType,
+                    configurationName: nil,
+                    at: storeURL,
+                    options: storeDescription.options
+                )
+            } catch {
+                #if DEBUG
+                dlog("❌ Core Data rebuild failed: \(error)")
+                #endif
             }
-        })
+        }
         
         /// Enable automatic merging of changes from CloudKit.
         /// When data syncs from other devices, automatically update the view context.

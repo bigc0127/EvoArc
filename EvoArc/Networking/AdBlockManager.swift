@@ -245,9 +245,9 @@ final class AdBlockManager: ObservableObject {
             
             activeRuleCount = mergedDomains.count + extraSelectors.count
             lastUpdated = Date()
-            print("✅ AdBlock: Compiled rules: domains=\(mergedDomains.count), selectors=\(extraSelectors.count)")
+            dlog("✅ AdBlock: Compiled rules: domains=\(mergedDomains.count), selectors=\(extraSelectors.count)")
         } catch {
-            print("❌ AdBlock update failed: \(error)")
+            dlog("❌ AdBlock update failed: \(error)")
         }
     }
     
@@ -277,7 +277,7 @@ final class AdBlockManager: ObservableObject {
     private func fetchHostsList(url: URL) async throws -> Set<String> {
         // Security check: Enforce HTTPS
         guard url.scheme?.lowercased() == "https" else {
-            print("⚠️ AdBlock: Skipped non-HTTPS URL: \(url.absoluteString)")
+            dlog("⚠️ AdBlock: Skipped non-HTTPS URL: \(url.absoluteString)")
             return []
         }
 
@@ -361,31 +361,38 @@ final class AdBlockManager: ObservableObject {
             rules.append(rule)
         }
         
-        // Serialize to JSON
-        let data = try! JSONSerialization.data(withJSONObject: rules, options: [])
-        return String(data: data, encoding: .utf8) ?? "[]"
+        // Serialize to JSON. Fall back to empty rule list on any encoding error.
+        do {
+            let data = try JSONSerialization.data(withJSONObject: rules, options: [])
+            return String(data: data, encoding: .utf8) ?? "[]"
+        } catch {
+            #if DEBUG
+            dlog("❌ AdBlock: Failed to serialize rules: \(error)")
+            #endif
+            return "[]"
+        }
     }
     
     private func compileAndInstallRules(json: String) async throws {
         guard let store = self.store else {
-            print("⚠️ AdBlock: WKContentRuleListStore is nil")
+            dlog("⚠️ AdBlock: WKContentRuleListStore is nil")
             throw URLError(.unknown)
         }
         
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             store.compileContentRuleList(forIdentifier: ruleIdentifier, encodedContentRuleList: json) { [weak self] list, error in
                 if let error = error { 
-                    print("❌ AdBlock compilation error: \(error.localizedDescription)")
+                    dlog("❌ AdBlock compilation error: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                     return
                 }
                 guard let list = list else { 
-                    print("❌ AdBlock: No rule list returned")
+                    dlog("❌ AdBlock: No rule list returned")
                     continuation.resume(throwing: URLError(.cannotParseResponse))
                     return
                 }
                 self?.compiledRuleList = list
-                print("✅ AdBlock: Rules compiled successfully")
+                dlog("✅ AdBlock: Rules compiled successfully")
                 continuation.resume()
             }
         }

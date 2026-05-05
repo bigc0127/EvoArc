@@ -233,7 +233,7 @@ class TabManager: ObservableObject {
             /// Views watching isInitialized will update from "loading" to "ready" state.
             self?.isInitialized = true
             #if DEBUG
-            print("✅ TabManager initialization complete with \(self?.tabs.count ?? 0) tabs")
+            dlog("✅ TabManager initialization complete with \(self?.tabs.count ?? 0) tabs")
             #endif
         }
     }
@@ -257,7 +257,7 @@ class TabManager: ObservableObject {
     /// - You can call: createNewTab() or createNewTab(url: someURL)
     func createNewTab(url: URL? = nil) {
         #if DEBUG
-        print("[TabManager] createNewTab called with URL: \(url?.absoluteString ?? "nil")")
+        dlog("[TabManager] createNewTab called with URL: \(url?.absoluteString ?? "nil")")
         #endif
         
         /// Create the new tab object with the specified URL.
@@ -292,7 +292,7 @@ class TabManager: ObservableObject {
         isTabDrawerVisible = false
         
         #if DEBUG
-        print("[TabManager] New tab created and selected. Total tabs: \(tabs.count)")
+        dlog("[TabManager] New tab created and selected. Total tabs: \(tabs.count)")
         #endif
         
         /// Record in browsing history if a URL was provided.
@@ -484,7 +484,7 @@ class TabManager: ObservableObject {
     func pinTab(_ tab: Tab) {
         /// Tabs without URLs can't be pinned (nothing to restore).
         guard let url = tab.url else { 
-            print("Cannot pin tab without URL")
+            dlog("Cannot pin tab without URL")
             return 
         }
         
@@ -499,7 +499,7 @@ class TabManager: ObservableObject {
     /// Unpins a tab, making it ephemeral (won't persist).
     func unpinTab(_ tab: Tab) {
         guard let url = tab.url else {
-            print("Cannot unpin tab without URL")
+            dlog("Cannot unpin tab without URL")
             return
         }
         
@@ -544,7 +544,7 @@ class TabManager: ObservableObject {
         /// Check if user wants pinned tabs to persist across launches.
         guard BrowserSettings.shared.persistPinnedTabs else {
             #if DEBUG
-            print("[TabManager] Pinned tab persistence is disabled, skipping restore")
+            dlog("[TabManager] Pinned tab persistence is disabled, skipping restore")
             #endif
             return
         }
@@ -647,7 +647,7 @@ class TabManager: ObservableObject {
         let pinnedTabs = tabs.filter { $0.isPinned }
         tabs = pinnedTabs + sortedNonPinned
         
-        print("🔄 Repositioned tabs: \(pinnedTabs.count) pinned + \(sortedNonPinned.count) grouped/ungrouped")
+        dlog("🔄 Repositioned tabs: \(pinnedTabs.count) pinned + \(sortedNonPinned.count) grouped/ungrouped")
     }
     
     // MARK: - Tab Groups
@@ -718,7 +718,7 @@ class TabManager: ObservableObject {
             self.objectWillChange.send()
         }
         
-        print("📝 Added tab '\(tab.title)' to group '\(group.name)'")
+        dlog("📝 Added tab '\(tab.title)' to group '\(group.name)'")
     }
     
     /// Removes a tab from its current group (if any).
@@ -730,7 +730,7 @@ class TabManager: ObservableObject {
             self.objectWillChange.send()
         }
         
-        print("📝 Removed tab '\(tab.title)' from group")
+        dlog("📝 Removed tab '\(tab.title)' from group")
     }
     
     /// Convenience method that calls saveTabGroupsIfNeeded.
@@ -823,7 +823,7 @@ class TabManager: ObservableObject {
             if let data = try? Data(contentsOf: groupsURL),
                let decoded = try? JSONDecoder().decode([TabGroup].self, from: data) {
                 tabGroups = decoded.sorted { $0.createdAt < $1.createdAt }
-                print("📂 Loaded \(tabGroups.count) tab groups from file")
+                dlog("📂 Loaded \(tabGroups.count) tab groups from file")
                 return
             }
             
@@ -831,7 +831,7 @@ class TabManager: ObservableObject {
             if let data = UserDefaults.standard.data(forKey: "savedTabGroups"),
                let decoded = try? JSONDecoder().decode([TabGroup].self, from: data) {
                 tabGroups = decoded.sorted { $0.createdAt < $1.createdAt }
-                print("🔄 Migrated \(tabGroups.count) tab groups from UserDefaults")
+                dlog("🔄 Migrated \(tabGroups.count) tab groups from UserDefaults")
             }
         }
     }
@@ -849,7 +849,7 @@ class TabManager: ObservableObject {
             // Try to load from file (new method)
             if let data = try? Data(contentsOf: statesURL),
                let tabStates = try? JSONDecoder().decode([String: TabState].self, from: data) {
-                print("📂 Restoring \(tabStates.count) tab states from file")
+                dlog("📂 Restoring \(tabStates.count) tab states from file")
                 restoreFromTabStates(tabStates)
                 repositionGroupedTabs()
                 return
@@ -859,12 +859,12 @@ class TabManager: ObservableObject {
             if let data = UserDefaults.standard.data(forKey: "savedTabStates"),
                let tabStates = try? JSONDecoder().decode([String: TabState].self, from: data) {
                 
-                print("🔄 Migrating \(tabStates.count) tab states from UserDefaults")
+                dlog("🔄 Migrating \(tabStates.count) tab states from UserDefaults")
                 restoreFromTabStates(tabStates)
                 
             } else {
                 // Final fallback to legacy format
-                print("⚠️ Using legacy format for tab group restoration")
+                dlog("⚠️ Using legacy format for tab group restoration")
                 restoreFromLegacyFormat()
             }
             
@@ -884,7 +884,7 @@ class TabManager: ObservableObject {
                    let groupID = UUID(uuidString: groupIDString),
                    tabGroups.contains(where: { $0.id == groupID }) {
                     tab.groupID = groupID
-                    print("🔄 Restored group assignment for tab: \(tab.title) -> \(groupID)")
+                    dlog("🔄 Restored group assignment for tab: \(tab.title) -> \(groupID)")
                 }
                 
                 // Restore browser engine
@@ -911,7 +911,7 @@ class TabManager: ObservableObject {
             guard let groupIDString = tabState.groupID,
                   let groupID = UUID(uuidString: groupIDString),
                   tabGroups.contains(where: { $0.id == groupID }) else {
-                print("⏭️ Skipping ungrouped tab restoration: \(urlString)")
+                dlog("⏭️ Skipping ungrouped tab restoration: \(urlString)")
                 continue
             }
             
@@ -920,7 +920,7 @@ class TabManager: ObservableObject {
                 let browserEngine = BrowserEngine(rawValue: tabState.browserEngine) ?? .webkit
                 let title = (tabState.title?.isEmpty == false) ? tabState.title! : "New Tab"
                 let newTab = createRestoredTab(title: title, url: url, isPinned: false, groupID: groupID, engine: browserEngine)
-                print("🆕 Recreated grouped tab from saved state: \(newTab.title) [\(newTab.browserEngine.displayName)]")
+                dlog("🆕 Recreated grouped tab from saved state: \(newTab.title) [\(newTab.browserEngine.displayName)]")
             }
         }
         
@@ -936,7 +936,7 @@ class TabManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
             
             let validGroups = tabGroups.map { $0.id }
-            print("📂 Found \(validGroups.count) valid groups for legacy restoration")
+            dlog("📂 Found \(validGroups.count) valid groups for legacy restoration")
             
             // First, restore assignments for existing tabs
             for tab in tabs {
@@ -958,7 +958,7 @@ class TabManager: ObservableObject {
                 if let groupID = groupID,
                    validGroups.contains(groupID) {
                     tab.groupID = groupID
-                    print("🔄 Restored tab group assignment (legacy): \(tab.title) -> Group ID: \(groupID)")
+                    dlog("🔄 Restored tab group assignment (legacy): \(tab.title) -> Group ID: \(groupID)")
                 }
             }
             
@@ -979,7 +979,7 @@ class TabManager: ObservableObject {
                 // Create new tab for this URL (with default browser engine)
                 if let url = URL(string: urlString) {
                     let newTab = createRestoredTab(title: "New Tab", url: url, isPinned: false, groupID: groupID)
-                    print("🆕 Recreated grouped tab from legacy format: \(newTab.title)")
+                    dlog("🆕 Recreated grouped tab from legacy format: \(newTab.title)")
                 }
             }
             

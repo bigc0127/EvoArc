@@ -282,7 +282,7 @@ class UIViewModel: ObservableObject {
         } catch {
             /// Network error (no connection, timeout, etc.)
             /// Log error and return nil (suggestions won't show).
-            print("Fetch error: \(error.localizedDescription)")
+            dlog("Fetch error: \(error.localizedDescription)")
             return nil
         }
     }

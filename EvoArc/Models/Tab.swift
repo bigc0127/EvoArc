@@ -273,7 +273,7 @@ class Tab: ObservableObject, Identifiable {
         
         /// Log to Xcode console for debugging.
         /// \(variable) is string interpolation - embeds variable values in strings.
-        print("🚀 Starting \(loadingTimeout)s loading timeout for tab: \(title) (\(id))")
+        dlog("🚀 Starting \(loadingTimeout)s loading timeout for tab: \(title) (\(id))")
         
         /// Create and schedule a new timer.
         /// 
@@ -295,7 +295,7 @@ class Tab: ObservableObject, Identifiable {
                 /// self? is optional chaining - if self was deallocated, this safely does nothing.
                 if self?.isLoading == true {
                     /// Log that we're forcing a stop due to timeout.
-                    print("⚠️ Loading timeout reached for tab: \(self?.title ?? "Unknown") (\(self?.id.description ?? "unknown"))")
+                    dlog("⚠️ Loading timeout reached for tab: \(self?.title ?? "Unknown") (\(self?.id.description ?? "unknown"))")
                     
                     /// Force-stop the loading process.
                     self?.forceStopLoading()
@@ -311,7 +311,7 @@ class Tab: ObservableObject, Identifiable {
         /// This check avoids unnecessary console logs and operations.
         if loadingTimer != nil {
             /// Log that we're stopping the timer.
-            print("🛑 Stopping loading timeout for tab: \(title) (\(id))")
+            dlog("🛑 Stopping loading timeout for tab: \(title) (\(id))")
             
             /// Stop the timer permanently.
             loadingTimer?.invalidate()
@@ -326,7 +326,7 @@ class Tab: ObservableObject, Identifiable {
     /// Called when the timeout expires or when the user manually stops loading.
     func forceStopLoading() {
         /// Debug logging to track when force-stop is triggered.
-        print("🚫 Force stopping loading for tab: \(title) (\(id))")
+        dlog("🚫 Force stopping loading for tab: \(title) (\(id))")
         
         /// Reset loading state to false.
         /// This will automatically update any UI showing loading indicators.
@@ -344,7 +344,7 @@ class Tab: ObservableObject, Identifiable {
         stopLoadingTimeout()
         
         /// Log completion for debugging.
-        print("🔄 Forced loading stop completed for tab: \(title)")
+        dlog("🔄 Forced loading stop completed for tab: \(title)")
     }
     
     // MARK: - URL Loading
