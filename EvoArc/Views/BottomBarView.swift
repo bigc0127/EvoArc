@@ -1045,34 +1045,43 @@ struct CollapsedURLBarPill: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 6) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundColor(.secondary)
-                Text(displayText)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+        // Wrap the pill in an HStack with Spacers so it stays centered
+        // without expanding the Button's hit area. A previous version
+        // applied .frame(maxWidth: .infinity) + .contentShape(Rectangle())
+        // directly to the Button, which made the *entire* bottom row of
+        // the screen tappable and swallowed taps meant for web content
+        // sitting beneath the pill (e.g. a website's own bottom-anchored
+        // Save button).
+        HStack {
+            Spacer(minLength: 0)
+            Button(action: onTap) {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    Text(displayText)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color(uiColor: .systemBackground).opacity(0.55))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.gray.opacity(0.25), lineWidth: 0.5)
+                )
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(Color(uiColor: .systemBackground).opacity(0.55))
-            )
-            .overlay(
-                Capsule()
-                    .stroke(Color.gray.opacity(0.25), lineWidth: 0.5)
-            )
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Show URL bar"))
+            .accessibilityHint(Text("Double tap to restore the full address bar"))
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
         .padding(.bottom, 8)
-        .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .accessibilityLabel(Text("Show URL bar"))
-        .accessibilityHint(Text("Double tap to restore the full address bar"))
     }
 }
 
