@@ -315,21 +315,37 @@ class ThumbnailManager: ObservableObject {
     ///
     /// **Parameter**:
     /// - tab: The tab to generate a new tab page thumbnail for
+
+    /// Reads the current interface style on the main thread (UITraitCollection.current
+    /// is undefined off-main). Safe to call from any thread without deadlocking.
+    private static func currentInterfaceIsDark() -> Bool {
+        if Thread.isMainThread {
+            return UITraitCollection.current.userInterfaceStyle == .dark
+        }
+        return DispatchQueue.main.sync {
+            UITraitCollection.current.userInterfaceStyle == .dark
+        }
+    }
+
     func generateNewTabPageThumbnail(for tab: Tab) {
+        // UITraitCollection.current is only valid on the main thread, so resolve the
+        // interface style here before hopping onto the background rendering queue.
+        // (UIGraphicsImageRenderer itself is documented as safe off the main thread.)
+        let isDark = Self.currentInterfaceIsDark()
         queue.async { [weak self] in
             guard let self = self else { return }
-            
+
             // Use portrait aspect ratio (2:3) to match TabThumbnailView
             let targetSize = CGSize(width: 400, height: 600)
             let renderer = UIGraphicsImageRenderer(size: targetSize)
-            
+
             let thumbnail = renderer.image { context in
                 // Create gradient background
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let colors: [CGFloat]
-                
+
                 // Use system colors for light/dark mode compatibility
-                if UITraitCollection.current.userInterfaceStyle == .dark {
+                if isDark {
                     colors = [0.0, 0.0, 0.0, 1.0, 0.05, 0.05, 0.05, 1.0]  // Dark gradient
                 } else {
                     colors = [0.98, 0.98, 0.98, 1.0, 1.0, 1.0, 1.0, 1.0]  // Light gradient
