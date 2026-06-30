@@ -559,7 +559,7 @@ class BrowserSettings: ObservableObject {
             self.autoOpenDownloads = false
         }
         
-        // Load default search engine setting with default to Google
+        // Load default search engine setting with default to DuckDuckGo
         if let seString = UserDefaults.standard.string(forKey: "defaultSearchEngine"),
            let se = SearchEngine(rawValue: seString) {
             self.defaultSearchEngine = se

@@ -226,7 +226,9 @@ struct CommandBarView: View {
             return searchURL.absoluteString
         }
         
-        // Fallback
-        return "https://www.google.com/search?q=" + trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        // Fallback. Avoid force-unwrapping the percent-encoded string; fall back to the
+        // raw input if encoding ever returns nil rather than crashing the command bar.
+        let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmed
+        return "https://www.google.com/search?q=" + encoded
     }
 }

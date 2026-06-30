@@ -13,16 +13,13 @@ struct SetupPage: Identifiable {
 // First run setup coordinator
 class SetupCoordinator: ObservableObject {
     static let firstRunKey = "hasCompletedFirstRunSetup"
-    
-    var objectWillChange: ObservableObjectPublisher = ObservableObjectPublisher()
-    
-    @Published var currentPage = 0 {
-        willSet { objectWillChange.send() }
-    }
-    
-    @Published var showSetup: Bool {
-        willSet { objectWillChange.send() }
-    }
+
+    // @Published already drives the synthesized objectWillChange publisher; the previous
+    // custom publisher + manual willSet sends fired it a second time on every change,
+    // causing double re-renders. Let ObservableObject synthesize it.
+    @Published var currentPage = 0
+
+    @Published var showSetup: Bool
     
     let pages: [SetupPage]
     

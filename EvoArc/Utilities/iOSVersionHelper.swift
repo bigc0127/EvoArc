@@ -294,9 +294,15 @@ public class iOSVersionHelper {
         
         // Extract the machine field (device model) using unsafe pointer access
         // This is complex because we're bridging Swift and C:
+        // Compute the field size before taking the inout pointer below, so we don't read
+        // systemInfo.machine while it's under exclusive access inside withUnsafePointer.
+        let machineByteCount = MemoryLayout.size(ofValue: systemInfo.machine)
         let modelCode = withUnsafePointer(to: &systemInfo.machine) {
-            // $0 is the pointer to the machine field (tuple of CChars)
-            $0.withMemoryRebound(to: CChar.self, capacity: 1) {
+            // $0 is the pointer to the machine field (a fixed-size tuple of CChars).
+            // Rebind over the whole field, not just a single element, so the pointer
+            // legitimately spans the bytes that String(validatingUTF8:) reads up to the
+            // null terminator.
+            $0.withMemoryRebound(to: CChar.self, capacity: machineByteCount) {
                 // Reinterpret the memory as a C string (CChar pointer)
                 ptr in String.init(validatingUTF8: ptr)
                 // Convert the C string to a Swift String

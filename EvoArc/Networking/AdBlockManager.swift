@@ -258,9 +258,13 @@ final class AdBlockManager: ObservableObject {
         if let list = compiledRuleList {
             webView.configuration.userContentController.add(list)
         } else {
-            // Attempt to load from store if already compiled previously
+            // Attempt to load from store if already compiled previously.
+            // The lookup completion handler is not guaranteed to run on the main thread,
+            // but mutating @Published state and touching the web view's userContentController
+            // must happen on main, so hop there explicitly.
             store?.lookUpContentRuleList(forIdentifier: ruleIdentifier) { [weak self] list, _ in
-                if let list = list {
+                guard let list = list else { return }
+                DispatchQueue.main.async {
                     self?.compiledRuleList = list
                     webView.configuration.userContentController.add(list)
                 }
@@ -403,7 +407,13 @@ final class AdBlockManager: ObservableObject {
         activeRuleCount = 0
         guard let store = self.store else { return }
         try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            store.removeContentRuleList(forIdentifier: ruleIdentifier) { _ in continuation.resume() }
+            store.removeContentRuleList(forIdentifier: ruleIdentifier) { error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
         }
     }
     // MARK: - EasyList parsing (subset)
@@ -893,9 +903,14 @@ private func sanitizeDomain(_ input: String) -> String? {
     while s.hasSuffix(".") { s.removeLast() }
     s = s.lowercased()
     if s.isEmpty { return nil }
-    
+
     /// Allow only host-like characters (letters, numbers, dots, hyphens).
     if s.range(of: "^[a-z0-9.-]+$", options: .regularExpression) == nil { return nil }
+
+    /// Reject malformed hostnames the character class alone would let through:
+    /// a leading/trailing hyphen, or empty labels ("a..b"). These can't be real
+    /// domains and would only add dead entries to the block list.
+    if s.hasPrefix("-") || s.hasSuffix("-") || s.contains("..") { return nil }
     
     /// Avoid accidental wildcards or rule options sneaking in.
     /// These characters have special meaning in filter lists.

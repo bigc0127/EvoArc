@@ -168,11 +168,12 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
                 do {
                     destinationURL = try manager.saveDownloadedFile(sourceURL: safeTempURL, filename: fileName)
                 } catch {
-                    Task { @MainActor in
-                        manager.handleDownloadError(url: url, error: error)
-                        // Clean up our temp file if final move failed
-                        try? FileManager.default.removeItem(at: safeTempURL)
-                    }
+                    // Already inside the outer `Task { @MainActor in }`, so call directly.
+                    // The previous nested Task deferred error handling by a run-loop cycle,
+                    // which could let the temp-file cleanup race ahead of the UI error report.
+                    manager.handleDownloadError(url: url, error: error)
+                    // Clean up our temp file if final move failed
+                    try? FileManager.default.removeItem(at: safeTempURL)
                     return
                 }
                 
@@ -212,7 +213,12 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         
         /// Calculate progress as a percentage (0.0 to 1.0).
         /// Example: 5MB / 10MB = 0.5 (50%)
-        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        /// URLSession reports totalBytesExpectedToWrite as -1 (NSURLSessionTransferSizeUnknown)
+        /// when the server omits Content-Length. Guard against that so we never divide by a
+        /// non-positive value, which would yield NaN or a negative progress and break the bar.
+        let progress = totalBytesExpectedToWrite > 0
+            ? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+            : 0
         
         /// Update UI on main thread.
         Task { @MainActor in
