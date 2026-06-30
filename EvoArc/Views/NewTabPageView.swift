@@ -251,25 +251,36 @@ struct NewTabPageView: View {
         dlog("[NewTabPage] WebView exists: \(selectedTab.webView != nil)")
         #endif
         
-        // Transition from new tab page to normal browsing
+        // Transition from new tab page to normal browsing.
         selectedTab.showURLInBar = true
-        
-        // Navigate to the formatted URL
+
+        // Set the tab's URL off the "evoarc://newtab" sentinel so the new-tab-page
+        // overlay is dismissed. TabViewContainer decides whether to show the overlay
+        // from selectedTab.url, so this must happen here rather than relying on the
+        // navigation delegate to update it later (which races with tab close/unpin).
+        selectedTab.url = formattedURL
+
+        // Navigate to the formatted URL.
         if let webView = selectedTab.webView {
             #if DEBUG
             dlog("[NewTabPage] Loading URL in webView: \(formattedURL.absoluteString)")
             #endif
+            // We load explicitly here, so clear the deferred-load flag set by the url setter.
+            selectedTab.needsInitialLoad = false
             webView.load(URLRequest(url: formattedURL))
         } else {
             #if DEBUG
-            dlog("[NewTabPage] WebView is nil, setting tab.url instead")
+            dlog("[NewTabPage] WebView is nil, deferring load via needsInitialLoad")
             #endif
-            // If webView doesn't exist yet, set the URL on the tab
-            // The webView will load it when it's created
-            selectedTab.url = formattedURL
+            // The webView will load tab.url when it is created (makeUIView/handleInitialLoad).
             selectedTab.needsInitialLoad = true
         }
-        
+
+        // TabViewContainer observes the TabManager, not the individual Tab, so changing
+        // selectedTab.url alone won't re-evaluate shouldShowNewTabPage. Nudge the manager
+        // so the overlay dismisses immediately.
+        tabManager.objectWillChange.send()
+
         // Clear search text
         searchText = ""
         
@@ -300,16 +311,22 @@ struct NewTabPageView: View {
         // Mark that we should now show URLs in the bar (transitioning from new tab page)
         if let selectedTab = tabManager.selectedTab {
             selectedTab.showURLInBar = true
-            
-            // Load the bookmark URL. If the webView doesn't exist yet, defer the load to
-            // tab creation via needsInitialLoad — mirroring performSearch — so the bookmark
-            // isn't silently dropped.
+
+            // Set the URL so the new-tab-page overlay is dismissed (see performSearch).
+            selectedTab.url = bookmark.url
+
+            // Load the bookmark URL, or defer to webView creation if it doesn't exist yet
+            // so the bookmark isn't silently dropped.
             if let webView = selectedTab.webView {
+                selectedTab.needsInitialLoad = false
                 webView.load(URLRequest(url: bookmark.url))
             } else {
-                selectedTab.url = bookmark.url
                 selectedTab.needsInitialLoad = true
             }
+
+            // Force TabViewContainer to re-evaluate the overlay (it observes the manager,
+            // not the individual Tab).
+            tabManager.objectWillChange.send()
         }
     }
 }
