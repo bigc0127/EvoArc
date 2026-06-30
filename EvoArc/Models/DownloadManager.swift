@@ -137,7 +137,10 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         /// Extract the original URL we were downloading from.
         /// Guard ensures we have it - if not, can't track this download.
         guard let url = downloadTask.originalRequest?.url else { return }
-        
+        /// Match by the download's unique id (see startDownload) rather than URL,
+        /// so concurrent downloads of the same URL update independent entries.
+        let downloadID = downloadTask.taskDescription.flatMap { UUID(uuidString: $0) }
+
         // CRITICAL FIX: The file at `location` is DELETED automatically when this delegate method returns.
         // We MUST move it immediately, synchronously, on this background thread.
         // We cannot use Task { @MainActor } here for the file move because the task runs later.
@@ -171,14 +174,14 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
                     // Already inside the outer `Task { @MainActor in }`, so call directly.
                     // The previous nested Task deferred error handling by a run-loop cycle,
                     // which could let the temp-file cleanup race ahead of the UI error report.
-                    manager.handleDownloadError(url: url, error: error)
+                    manager.handleDownloadError(id: downloadID, url: url, error: error)
                     // Clean up our temp file if final move failed
                     try? FileManager.default.removeItem(at: safeTempURL)
                     return
                 }
-                
+
                 // Success!
-                if let index = manager.activeDownloads.firstIndex(where: { $0.url == url }) {
+                if let index = manager.downloadIndex(id: downloadID, url: url) {
                     manager.activeDownloads[index].status = .completed
                     manager.activeDownloads[index].localURL = destinationURL
                     
@@ -193,7 +196,7 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         } catch {
             dlog("❌ Critical error moving temp file: \(error)")
             Task { @MainActor in
-                manager.handleDownloadError(url: url, error: error)
+                manager.handleDownloadError(id: downloadID, url: url, error: error)
             }
         }
     }
@@ -210,7 +213,8 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
     /// - totalBytesExpectedToWrite: Total file size (may be -1 if unknown)
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard let url = downloadTask.originalRequest?.url else { return }
-        
+        let downloadID = downloadTask.taskDescription.flatMap { UUID(uuidString: $0) }
+
         /// Calculate progress as a percentage (0.0 to 1.0).
         /// Example: 5MB / 10MB = 0.5 (50%)
         /// URLSession reports totalBytesExpectedToWrite as -1 (NSURLSessionTransferSizeUnknown)
@@ -222,7 +226,7 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         
         /// Update UI on main thread.
         Task { @MainActor in
-            if let index = manager.activeDownloads.firstIndex(where: { $0.url == url }) {
+            if let index = manager.downloadIndex(id: downloadID, url: url) {
                 manager.activeDownloads[index].progress = progress
             }
         }
@@ -242,10 +246,11 @@ private class DownloadDelegateHelper: NSObject, URLSessionDownloadDelegate {
         /// Only handle actual errors (error != nil).
         guard let error = error,
               let url = task.originalRequest?.url else { return }
-        
+        let downloadID = task.taskDescription.flatMap { UUID(uuidString: $0) }
+
         /// Report error to manager on main thread.
         Task { @MainActor in
-            manager.handleDownloadError(url: url, error: error)
+            manager.handleDownloadError(id: downloadID, url: url, error: error)
         }
     }
 }
@@ -646,10 +651,14 @@ final class DownloadManager: NSObject, ObservableObject {
             status: .downloading
         )
         
+        /// Tag the task with our download's unique id so delegate callbacks can match
+        /// the correct DownloadProgress even when two downloads share the same URL.
+        task.taskDescription = progress.id.uuidString
+
         /// Add to tracking arrays.
         activeDownloads.append(progress)           // For UI display
         downloadTasks[progress.id] = task          // For cancellation
-        
+
         /// Start the download.
         /// From this point, delegate callbacks will fire with progress updates.
         task.resume()
@@ -665,15 +674,27 @@ final class DownloadManager: NSObject, ObservableObject {
     /// 1. Mark download as failed
     /// 2. Store error for display
     /// 3. Broadcast failure notification
-    fileprivate func handleDownloadError(url: URL, error: Error) {
-        /// Find the download in our tracking array.
-        if let index = activeDownloads.firstIndex(where: { $0.url == url }) {
+    fileprivate func handleDownloadError(id: UUID? = nil, url: URL, error: Error) {
+        /// Find the download in our tracking array, preferring the unique id so a
+        /// failed download can't accidentally mark a sibling that shares its URL.
+        if let index = downloadIndex(id: id, url: url) {
             activeDownloads[index].status = .failed
             activeDownloads[index].error = error
         }
-        
+
         /// Notify other app components about the failure.
         NotificationCenter.default.post(name: .downloadFailed, object: nil, userInfo: ["error": error])
+    }
+
+    /// Locates a tracked download, matching on the unique id when available and
+    /// falling back to URL only when no id was supplied. Centralises the lookup so
+    /// every delegate callback stays consistent.
+    fileprivate func downloadIndex(id: UUID?, url: URL) -> Int? {
+        if let id = id,
+           let index = activeDownloads.firstIndex(where: { $0.id == id }) {
+            return index
+        }
+        return activeDownloads.firstIndex(where: { $0.url == url })
     }
     
     // MARK: - Download Control
