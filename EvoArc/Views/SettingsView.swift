@@ -19,8 +19,10 @@ struct SettingsView: View {
     /// SwiftUI environment value for dismissing this modal view
 @Environment(\.dismiss) private var dismiss
     
-    /// Local state for the homepage text field to enable real-time validation
-    @State private var homepageText: String = ""
+    /// Local state for the homepage text field to enable real-time validation.
+    /// Seed it from the current setting so the field shows the real homepage on the
+    /// first render rather than briefly appearing empty until `.task` runs.
+    @State private var homepageText: String = BrowserSettings.shared.homepage
     
     /// Optional reference to the tab manager for creating new tabs
     var tabManager: TabManager?
