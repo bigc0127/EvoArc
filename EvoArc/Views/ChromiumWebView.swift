@@ -56,16 +56,19 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         preferences.allowsContentJavaScript = jsEnabled
         
         configuration.defaultWebpagePreferences = preferences
+        // Keep popup behavior consistent with the JavaScript-blocking setting. A leftover
+        // line here used to force this back to `true` unconditionally, re-enabling popups
+        // even on sites where JavaScript is blocked; that override has been removed.
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
         configuration.mediaTypesRequiringUserActionForPlayback = []
-        
-        // Apply content blocking (AdBlock) after webView creation below
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
-        configuration.mediaTypesRequiringUserActionForPlayback = []
-        
-        // Enable developer extras for Chromium-like dev tools
+
+        // Enable developer extras (Web Inspector) for Chromium-like dev tools. This uses a
+        // private WKPreferences KVC key, so restrict it to debug builds to keep it out of
+        // App Store release builds.
+        #if DEBUG
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
-        
+        #endif
+
         // Configure content rules for ad blocking (similar to Chrome's built-in features)
         let contentController = WKUserContentController()
         
