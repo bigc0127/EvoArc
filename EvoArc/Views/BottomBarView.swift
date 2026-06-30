@@ -391,7 +391,6 @@ struct BottomBarView: View {
         // MARK: Gesture Handlers
         .simultaneousGesture(horizontalSwipeGesture)
         .simultaneousGesture(verticalSwipeGesture)
-        .gesture(readerModeGesture)
         // MARK: Animations
         .animation(.easeInOut(duration: 0.2), value: selectedTab.isLoading)
         .animation(.easeInOut(duration: 0.2), value: isURLBarFocused)
@@ -886,20 +885,6 @@ struct BottomBarView: View {
                     }
                 }
             }
-    }
-    
-    private var readerModeGesture: some Gesture {
-        SimultaneousGesture(
-            DragGesture(minimumDistance: 20),
-            DragGesture(minimumDistance: 20)
-        )
-        .onEnded { value in
-            let verticalAmount = value.first?.translation.height ?? 0
-            let horizontalAmount = value.first?.translation.width ?? 0
-            if verticalAmount > abs(horizontalAmount) * 1.5 && verticalAmount > 50 {
-                toggleReaderMode()
-            }
-        }
     }
     
     // MARK: - Helper Methods
