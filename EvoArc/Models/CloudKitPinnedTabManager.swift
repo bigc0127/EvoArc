@@ -19,7 +19,19 @@ class CloudKitPinnedTabManager: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     private let entityName = "PinnedTab"
-    
+
+    /// Runs `work` on the main thread. Executes inline when already on main (so the
+    /// common UI-initiated path keeps its synchronous behavior) and only hops async
+    /// otherwise. Used to guarantee @Published `pinnedTabs` mutations — which drive
+    /// objectWillChange — always happen on the main thread.
+    private func onMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
+        }
+    }
+
     // Safe lazy initialization to prevent crashes
     private lazy var persistenceController: PersistenceController = {
         return PersistenceController.shared
@@ -56,7 +68,7 @@ class CloudKitPinnedTabManager: ObservableObject {
         )
         
         // Add to local array immediately for responsive UI
-        pinnedTabs.append(entity)
+        onMain { self.pinnedTabs.append(entity) }
         
         // Persist to Core Data asynchronously
         DispatchQueue.global(qos: .background).async { [weak self] in
@@ -73,7 +85,7 @@ class CloudKitPinnedTabManager: ObservableObject {
         }
         
         // Remove from local array immediately
-        pinnedTabs.removeAll { $0.urlString == url.absoluteString }
+        onMain { self.pinnedTabs.removeAll { $0.urlString == url.absoluteString } }
         
         // Remove from Core Data asynchronously
         DispatchQueue.global(qos: .background).async { [weak self] in
@@ -91,7 +103,7 @@ class CloudKitPinnedTabManager: ObservableObject {
         guard isReady else { return }
         
         // Update local array
-        pinnedTabs = entities
+        onMain { self.pinnedTabs = entities }
         
         // Update Core Data in background
         DispatchQueue.global(qos: .background).async { [weak self] in
