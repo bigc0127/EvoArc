@@ -66,32 +66,14 @@ class Tab: ObservableObject, Identifiable {
     /// Tracks whether the tab's web view can navigate backward in history.
     /// This controls the enabled/disabled state of the "back" button.
     /// 
-    /// didSet is a property observer that runs code after the value changes.
-    /// We use it here to force an immediate UI update by manually triggering objectWillChange.
-    @Published var canGoBack: Bool = false {
-        didSet {
-            /// oldValue is automatically provided by didSet - it's the previous value.
-            /// Only send a change notification if the value actually changed.
-            /// This prevents unnecessary UI updates when the value stays the same.
-            if canGoBack != oldValue {
-                /// objectWillChange is part of ObservableObject protocol.
-                /// .send() broadcasts a change notification to all observers.
-                /// This ensures SwiftUI immediately updates navigation button states.
-                objectWillChange.send()
-            }
-        }
-    }
-    
+    /// @Published already publishes objectWillChange on assignment, so no manual
+    /// didSet/objectWillChange.send() is needed — the previous version double-fired
+    /// the change notification on every value change.
+    @Published var canGoBack: Bool = false
+
     /// Tracks whether the tab's web view can navigate forward in history.
     /// Similar to canGoBack but for forward navigation.
-    /// Uses the same didSet pattern to force immediate UI updates.
-    @Published var canGoForward: Bool = false {
-        didSet {
-            if canGoForward != oldValue {
-                objectWillChange.send()
-            }
-        }
-    }
+    @Published var canGoForward: Bool = false
     
     /// Loading progress estimate from 0.0 (not started) to 1.0 (complete).
     /// Double is Swift's floating-point type for decimal numbers.
