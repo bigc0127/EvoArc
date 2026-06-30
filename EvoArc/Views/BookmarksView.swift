@@ -119,6 +119,15 @@ struct BookmarksView: View {
             }
             .navigationTitle("bookmarks".localized)
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: bookmarkManager.folders) { _, folders in
+                // If the currently selected folder was deleted, fall back to "all
+                // bookmarks" so the list doesn't filter on a folder id that no longer
+                // exists (which would silently show an empty list).
+                if let selected = selectedFolder,
+                   !folders.contains(where: { $0.id == selected.id }) {
+                    selectedFolder = nil
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {

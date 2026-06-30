@@ -460,6 +460,7 @@ struct TabRowView: View {
                 color: $newGroupColor,
                 onCancel: {
                     handleResetGroupCreation()
+                    dragOffset = 0
                     showingNewGroupAlert = false
                 },
                 onCreate: {

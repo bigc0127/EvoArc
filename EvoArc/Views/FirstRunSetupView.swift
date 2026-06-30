@@ -1316,7 +1316,13 @@ struct GesturePracticeView: View {
                 }
                 .tabViewStyle(.page)
                 .indexViewStyle(.page(backgroundDisplayMode: .always))
-                
+                // Reset the per-step gesture flag whenever the step changes — including
+                // manual page swipes, which otherwise leave hasPerformedGesture == true
+                // and let the user skip the new step's gesture.
+                .onChange(of: currentStep) { _, _ in
+                    hasPerformedGesture = false
+                }
+
                 if hasPerformedGesture {
                     Button(currentStep < steps.count - 1 ? "Next Gesture" : "Complete") {
                         if currentStep < steps.count - 1 {

@@ -951,6 +951,10 @@ struct BottomBarView: View {
             }
             isTextFieldFocused = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                // Only select-all if the field is still focused; the user may have
+                // dismissed the keyboard within the delay, in which case sending
+                // selectAll to the first responder would act on the wrong target.
+                guard isTextFieldFocused else { return }
                 UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
             }
         }

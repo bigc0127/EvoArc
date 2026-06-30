@@ -301,9 +301,14 @@ struct NewTabPageView: View {
         if let selectedTab = tabManager.selectedTab {
             selectedTab.showURLInBar = true
             
-            // Load the bookmark URL
+            // Load the bookmark URL. If the webView doesn't exist yet, defer the load to
+            // tab creation via needsInitialLoad — mirroring performSearch — so the bookmark
+            // isn't silently dropped.
             if let webView = selectedTab.webView {
                 webView.load(URLRequest(url: bookmark.url))
+            } else {
+                selectedTab.url = bookmark.url
+                selectedTab.needsInitialLoad = true
             }
         }
     }
