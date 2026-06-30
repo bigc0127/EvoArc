@@ -376,17 +376,22 @@ class BookmarkManager: ObservableObject {
     /// - bookmark: The bookmark to update
     /// - title: New title (if provided)
     /// - folderID: New folder ID (if provided, nil = ungrouped)
-    func updateBookmark(_ bookmark: Bookmark, title: String? = nil, folderID: UUID? = nil) {
+    func updateBookmark(_ bookmark: Bookmark, title: String? = nil, folderID: UUID?? = .none) {
         guard let index = bookmarks.firstIndex(where: { $0.id == bookmark.id }) else { return }
-        
+
         // Update title if provided
         if let title = title {
             bookmarks[index].title = title
         }
-        
-        // Update folder if provided (nil moves to ungrouped)
-        if folderID != nil {
-            bookmarks[index].folderID = folderID
+
+        // Update folder only when the caller actually passes the argument. The double
+        // optional lets us tell "omitted" (.none → leave unchanged) apart from an
+        // explicit value, where that value may itself be nil to mean "ungrouped".
+        // Previously `if folderID != nil` made it impossible to move a bookmark to
+        // ungrouped, so removeFolder(moveBookmarksToFolder: nil) silently left bookmarks
+        // pointing at the deleted folder.
+        if let newFolderID = folderID {
+            bookmarks[index].folderID = newFolderID
         }
         
         // Always update modification timestamp
