@@ -175,9 +175,6 @@ ForEach(BrowserEngine.allCases, id: \.self) { engine in
                     
                     // iPad-specific: Navigation button position when sidebar is hidden
                     if UIDevice.current.userInterfaceIdiom == .pad {
-                        Divider()
-                            .padding(.vertical, 8)
-                        
                         Toggle("Hide navigation buttons when sidebar is hidden", isOn: $settings.hideNavigationButtonsOnIPad)
                             .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                         
@@ -463,9 +460,7 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         }
                         .padding(.vertical, 4)
                     }
-                    
-                    Divider()
-                    
+
                     DownloadSettingsView()
                 } header: {
                     Text("downloads".localized)
