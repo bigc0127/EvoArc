@@ -39,6 +39,18 @@ struct EvoArcApp: App {
     /// - The ! negates it, so showFirstRunSetup becomes true
     /// - After setup completes, the key is set to true, preventing future displays
     @State private var showFirstRunSetup = !UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
+
+    /// Whether the one-time "What's New" welcome screen is presented (existing users,
+    /// on the first launch after an update that introduces new features).
+    ///
+    /// Seeded at declaration (like showFirstRunSetup) so it presents reliably on the
+    /// first render rather than via a launch-time onAppear. Shown only when first-run
+    /// is already complete (existing user) and this release hasn't been seen yet.
+    @State private var showWhatsNew: Bool = {
+        let firstRunDone = UserDefaults.standard.bool(forKey: SetupCoordinator.firstRunKey)
+        let lastSeen = UserDefaults.standard.string(forKey: "lastWhatsNewVersion") ?? ""
+        return firstRunDone && lastSeen != WhatsNewView.currentVersion
+    }()
     
     // MARK: - Scene Configuration
     
@@ -80,6 +92,16 @@ struct EvoArcApp: App {
                         /// We also save this completion to UserDefaults so setup doesn't show again.
                         showFirstRunSetup = false
                         UserDefaults.standard.set(true, forKey: SetupCoordinator.firstRunKey)
+                        /// A brand-new user has just been onboarded — everything is new to
+                        /// them, so mark the "What's New" screen as already seen.
+                        WhatsNewView.markSeen()
+                    }
+                    /// One-time "What's New" welcome screen for existing users after an
+                    /// update. Uses fullScreenCover so it doesn't collide with the
+                    /// first-run .sheet above (two .sheet(isPresented:) on one view are
+                    /// unreliable in SwiftUI).
+                    .fullScreenCover(isPresented: $showWhatsNew) {
+                        WhatsNewView()
                     }
                 
                 /// DownloadProgressOverlay shows download progress at the bottom of the screen.
