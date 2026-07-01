@@ -352,6 +352,15 @@ ForEach([SearchEngine.perplexity, .google, .bing, .yahoo], id: \.self) { engine 
                         .font(.caption)
                 }
                 
+                // Privacy Section
+                Section {
+                    Toggle("Strip tracking parameters from links", isOn: $settings.stripTrackingParams)
+                } header: {
+                    Text("Privacy")
+                } footer: {
+                    Text("Removes tracking parameters (utm_*, fbclid, gclid, and similar) from links you tap.")
+                }
+
                 // Ad Blocking Section
                 Section {
                     Toggle("enable_ad_blocking".localized, isOn: $settings.adBlockEnabled)

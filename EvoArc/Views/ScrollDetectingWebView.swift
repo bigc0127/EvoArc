@@ -396,6 +396,22 @@ struct ScrollAwareWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             dlog("🎯 Navigation policy requested for: \(navigationAction.request.url?.absoluteString ?? "unknown URL")")
             dlog("🎯 Navigation type: \(navigationAction.navigationType.rawValue)")
+
+            // Link Sanitizer: strip tracking params from clicked links (only when the
+            // setting is on and something was actually removed). Loading the cleaned URL
+            // has no tracking params, so this can't loop.
+            if BrowserSettings.shared.stripTrackingParams,
+               navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url {
+                let result = URLSanitizer.sanitize(url)
+                if !result.removed.isEmpty {
+                    dlog("🧼 Stripped \(result.removed.count) tracking param(s) from link")
+                    decisionHandler(.cancel)
+                    webView.load(URLRequest(url: result.url))
+                    return
+                }
+            }
+
             decisionHandler(.allow)
         }
         

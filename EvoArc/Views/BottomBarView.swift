@@ -23,6 +23,7 @@
 
 import SwiftUI  // Apple's declarative UI framework
 import WebKit   // Web rendering - provides WKWebView
+import UIKit    // UIFindInteraction (Find on Page), UIActivityViewController
 
 /// The bottom toolbar view for iPhone browser layout.
 ///
@@ -183,6 +184,17 @@ struct BottomBarView: View {
     
     /// Whether the downloads sheet is being presented.
     @State private var showingDownloads = false
+
+    /// Which feature sheet (if any) is currently presented from the menu.
+    @State private var activeFeatureSheet: FeatureSheet?
+    /// Transient confirmation text shown after a menu action (e.g. "Saved to Reading List").
+    @State private var featureToast: String?
+
+    /// Identifies the menu-driven feature sheets so they can share a single .sheet(item:).
+    private enum FeatureSheet: Int, Identifiable {
+        case readingList, sessions, sitePrivacy
+        var id: Int { rawValue }
+    }
     
     /// Progress of the current gesture (0.0 to 1.0).
     ///
@@ -402,8 +414,40 @@ struct BottomBarView: View {
         .onDisappear {
             searchTimer?.invalidate()
         }
+        // Feature sheets presented from the "..." menu.
+        .sheet(item: $activeFeatureSheet) { sheet in
+            switch sheet {
+            case .readingList:
+                ReadingListView(tabManager: tabManager)
+            case .sessions:
+                SessionManagerView(tabManager: tabManager)
+            case .sitePrivacy:
+                SitePrivacyView(tabManager: tabManager)
+            }
+        }
+        // Brief confirmation toast for menu actions.
+        .overlay(alignment: .top) {
+            if let toast = featureToast {
+                Text(toast)
+                    .font(.subheadline.weight(.medium))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .shadow(radius: 6)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
     }
-    
+
+    /// Shows a short-lived confirmation toast.
+    private func showFeatureToast(_ message: String) {
+        withAnimation(.spring(response: 0.3)) { featureToast = message }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            withAnimation(.easeOut(duration: 0.25)) { featureToast = nil }
+        }
+    }
+
     // MARK: - Subviews (UI Components)
     // These computed properties return reusable views that compose the bottom bar.
     // Breaking the UI into smaller pieces improves readability and maintainability.
@@ -654,7 +698,50 @@ struct BottomBarView: View {
                         systemImage: "textformat.size"
                     )
                 }
-                
+
+                Divider()
+
+                // Find on Page (native find bar)
+                Button(action: {
+                    if #available(iOS 16.0, *) {
+                        tabManager.currentWebView?.findInteraction?.presentFindNavigator(showingReplace: false)
+                    }
+                }) {
+                    Label("Find on Page", systemImage: "magnifyingglass")
+                }
+
+                // Reading List
+                if let url = selectedTab.url, url.absoluteString != "evoarc://newtab" {
+                    Button(action: {
+                        ReadingListManager.shared.addItem(title: selectedTab.title, url: url)
+                        showFeatureToast("Saved to Reading List")
+                    }) {
+                        Label("Add to Reading List", systemImage: "book")
+                    }
+                }
+                Button(action: { activeFeatureSheet = .readingList }) {
+                    Label("Reading List", systemImage: "books.vertical")
+                }
+
+                // Sessions
+                Button(action: {
+                    if SessionManager.shared.saveSession(name: "", tabManager: tabManager) {
+                        showFeatureToast("Session saved")
+                    }
+                }) {
+                    Label("Save Tabs as Session", systemImage: "square.and.arrow.down")
+                }
+                Button(action: { activeFeatureSheet = .sessions }) {
+                    Label("Sessions", systemImage: "square.stack.3d.up")
+                }
+
+                // Site privacy panel
+                Button(action: { activeFeatureSheet = .sitePrivacy }) {
+                    Label("Site Privacy", systemImage: "checkmark.shield")
+                }
+
+                Divider()
+
                 Button(action: { showingSettings = true }) {
                     Label("settings".localized, systemImage: "gear")
                 }

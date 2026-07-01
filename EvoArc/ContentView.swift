@@ -115,6 +115,9 @@ struct ContentView: View {
     
     /// Whether the settings sheet is presented (iPhone layout).
     @State private var showingSettings: Bool = false
+
+    /// Whether the one-time "What's New" welcome screen is presented.
+    @State private var showWhatsNew: Bool = false
     
     /// Triggers navigation to the current URL when set to true.
     ///
@@ -465,10 +468,22 @@ struct ContentView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView(tabManager: tabManager)
         }
+        .sheet(isPresented: $showWhatsNew) {
+            WhatsNewView()
+        }
         .sheet(item: $perplexityManager.currentRequest) { request in
             PerplexityModalView(request: request, onDismiss: {
                 perplexityManager.dismissModal()
             })
+        }
+        .onAppear {
+            // Show the one-time "What's New" screen after an update introducing new
+            // features — but only for existing users (skip on a brand-new install where
+            // the first-run setup runs instead, to avoid two sheets at once).
+            if WhatsNewView.shouldPresent,
+               UserDefaults.standard.bool(forKey: "hasCompletedFirstRunSetup") {
+                showWhatsNew = true
+            }
         }
         .onChange(of: tabManager.selectedTab?.id) {
             // Update URL bar when switching tabs

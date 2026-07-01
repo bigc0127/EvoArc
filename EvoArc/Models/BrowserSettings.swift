@@ -381,7 +381,23 @@ class BrowserSettings: ObservableObject {
             NotificationCenter.default.post(name: .adBlockSettingsChanged, object: nil)
         }
     }
-    
+
+    /// Strip tracking/analytics query parameters (utm_*, fbclid, gclid, …) from
+    /// clicked links before navigating. Enabled by default.
+    @Published var stripTrackingParams: Bool {
+        didSet {
+            UserDefaults.standard.set(stripTrackingParams, forKey: "stripTrackingParams")
+        }
+    }
+
+    /// The app version for which the "What's New" welcome screen was last shown.
+    /// Empty until the greeter has been shown once for a given version.
+    @Published var lastWhatsNewVersion: String {
+        didSet {
+            UserDefaults.standard.set(lastWhatsNewVersion, forKey: "lastWhatsNewVersion")
+        }
+    }
+
     // Selected ad block lists
     @Published var selectedAdBlockLists: [String] {
         didSet {
@@ -623,7 +639,17 @@ class BrowserSettings: ObservableObject {
         } else {
             self.adBlockEnabled = true
         }
-        
+
+        // Load Link Sanitizer setting (default true)
+        if UserDefaults.standard.object(forKey: "stripTrackingParams") != nil {
+            self.stripTrackingParams = UserDefaults.standard.bool(forKey: "stripTrackingParams")
+        } else {
+            self.stripTrackingParams = true
+        }
+
+        // Version for which the "What's New" screen was last shown (default empty)
+        self.lastWhatsNewVersion = UserDefaults.standard.string(forKey: "lastWhatsNewVersion") ?? ""
+
         // Load selected ad block lists (default to EasyList + EasyList Privacy)
         if let stored = UserDefaults.standard.array(forKey: "selectedAdBlockLists") as? [String] {
             self.selectedAdBlockLists = stored
