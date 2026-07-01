@@ -55,7 +55,10 @@ struct BrowserEngineView: View {
 
 /// Extension for ScrollDetectingWebView to use BrowserEngineView
 struct EngineSwitchableScrollDetectingWebView: View {
-    let tab: Tab
+    // Must observe the tab so the WebKit/Blink branch below re-evaluates when
+    // tab.browserEngine changes (otherwise an engine toggle wouldn't switch the
+    // rendered web view until an unrelated re-render).
+    @ObservedObject var tab: Tab
     @Binding var urlString: String
     @Binding var shouldNavigate: Bool
     @Binding var urlBarVisible: Bool

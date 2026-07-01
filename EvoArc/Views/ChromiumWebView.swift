@@ -96,6 +96,10 @@ struct ChromiumWebViewRepresentable: UIViewRepresentable {
         
         // Create the WebView with Chromium configuration
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        // Enable the native system Find-on-Page interaction.
+        if #available(iOS 16.0, *) {
+            webView.isFindInteractionEnabled = true
+        }
         AdBlockManager.shared.applyContentBlocking(to: webView)
         
         // Set delegates

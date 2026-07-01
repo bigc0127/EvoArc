@@ -144,7 +144,12 @@ struct ScrollAwareWebView: UIViewRepresentable {
         configuration.defaultWebpagePreferences = preferences
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = jsEnabled
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        
+
+        // Enable the native system Find-on-Page interaction (Find feature).
+        if #available(iOS 16.0, *) {
+            webView.isFindInteractionEnabled = true
+        }
+
         // Configure for optimal mobile site display
         webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
         webView.scrollView.automaticallyAdjustsScrollIndicatorInsets = true
@@ -324,10 +329,14 @@ struct ScrollAwareWebView: UIViewRepresentable {
                     parent.tab.url = url
                     parent.urlString = url.absoluteString
                     parent.onNavigate(url)
+                    // TabViewContainer derives the new-tab-page overlay from selectedTab.url
+                    // but observes the TabManager, not the Tab, so nudge it to re-evaluate
+                    // and dismiss the overlay now that navigation has started.
+                    parent.tabManager.objectWillChange.send()
                 }
             }
         }
-        
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             dlog("✅ iOS: didFinish navigation - \(webView.url?.absoluteString ?? "unknown")")
             dlog("🔍 iOS: At nav finish - canGoBack=\(webView.canGoBack) canGoForward=\(webView.canGoForward)")

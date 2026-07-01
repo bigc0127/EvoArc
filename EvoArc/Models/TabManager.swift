@@ -498,9 +498,11 @@ class TabManager: ObservableObject {
         /// Register with persistence manager.
         pinnedTabManager.pinTab(url: url, title: tab.title)
         tab.isPinned = true
-        
+
         /// Move to front of tabs array.
         repositionPinnedTabs()
+        /// Ensure observers re-render immediately after the in-place reorder.
+        objectWillChange.send()
     }
     
     /// Unpins a tab, making it ephemeral (won't persist).
@@ -513,9 +515,11 @@ class TabManager: ObservableObject {
         /// Unregister from persistence.
         pinnedTabManager.unpinTab(url: url)
         tab.isPinned = false
-        
+
         /// Reorder tabs array.
         repositionPinnedTabs()
+        /// Ensure observers re-render immediately after the in-place reorder.
+        objectWillChange.send()
     }
     
     /// Checks if a tab is currently pinned.
